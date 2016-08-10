@@ -2,8 +2,8 @@ function nt=int2ntIndels(indelInt)
 
 indelStr(indelInt>2^52)={'INF'};
 %indelStr(indelInt<=2^52)=num2str(dec2base(indelInt(indelInt<=2^52),5),'%64d');
-indelStr(indelInt<=2^52)=regexprep(cellstr(dec2base(indelInt(indelInt<=2^52),5)),'^0+','');
-indelStr(indelInt==0)={'X'};
+indelStr(indelInt<=2^52 & indelInt>0)=regexprep(cellstr(dec2base(indelInt(indelInt<=2^52 & indelInt>0),5)),'^0+','');
+indelStr(indelInt<=0)={'X'};
 
 pos=cellfun('isempty',strfind(indelStr,'e')) & cellfun('isempty',strfind(indelStr,'I')) & cellfun('isempty',strfind(indelStr,'X'));
 indelChar=char(indelStr');

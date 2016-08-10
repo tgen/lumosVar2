@@ -1,4 +1,4 @@
-function [postComb, pDataSum, pDataComb,cloneId,prior]=jointSNV(Tcell, exonRD, fIn, W, inputParam)
+function [postComb, pDataSum, pDataComb,cloneId,prior,countsAll]=jointSNV(Tcell, exonRD, fIn, W, inputParam)
 
 f=zeros(length(Tcell),inputParam.numClones);
 tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
@@ -53,7 +53,7 @@ ApopAF=zeros(size(Amat));
 ApopAF(min(Amat,[],2)-max(Amat,[],2)==0,:)=ApopAForig(min(Amat,[],2)-max(Amat,[],2)==0,:);
 
 B=NaN(size(posList,1),1);
-B(min(Bmat,[],2)-max(Bmat,[],2)==0,:)=Amat(min(Bmat,[],2)-max(Bmat,[],2)==0,1);
+B(min(Bmat,[],2)-max(Bmat,[],2)==0,:)=Bmat(min(Bmat,[],2)-max(Bmat,[],2)==0,1);
 Bcounts=zeros(size(Bmat));
 Bcounts(min(Bmat,[],2)-max(Bmat,[],2)==0,:)=BcountsOrig(min(Bmat,[],2)-max(Bmat,[],2)==0,:);
 BpopAF=zeros(size(Amat));
@@ -299,8 +299,11 @@ pOther=prod(pDataOther,2).*priorOther./pData;
 pNonDip=prod(pDataNonDip,2).*priorNonDip./pData;
 
 postComb=array2table([posList pSomatic pGermline pHom pOther pNonDip],'VariableNames',{'Chr', 'Pos', 'Somatic','Het','Hom','Other','NonDip'});
+countsAll=array2table([posList Ref A B],'VariableNames',{'Chr','Pos','Ref','A','B'});
 for i=1:size(Acounts,2)
     pDataComb{i}=array2table([posList pDataSomatic(:,i) pDataHet(:,i) pDataHom(:,i) pDataOther(:,i) pDataNonDip(:,i)],'VariableNames',{'Chr', 'Pos', 'Somatic','Het','Hom','Other','NonDip'});
+    countsAll.Acounts(:,i)=Acounts(:,i);
+    countsAll.Bcounts(:,i)=Bcounts(:,i);
 end
 
 pDataSum=sum(pData);

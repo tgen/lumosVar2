@@ -92,10 +92,10 @@ fprintf(fout,['##FILTER=<ID=NoCall,Description="PG<0.5 and PS<0.5 and pass filte
 fprintf(fout,['##FILTER=<ID=REJECT,Description="Below at least one QC filter">\n']);
 
 %%% get reference and alternate bases
-RefNT=int2ntIndels(T.Ref);
-AltNT(T.Ref~=T.A & T.Ref~=T.B,:)=cellstr(strcat(int2ntIndels(T.A(T.Ref~=T.A & T.Ref~=T.B)),',', int2ntIndels(T.B(T.Ref~=T.A & T.Ref~=T.B))));
-AltNT(T.Ref==T.A,:)=cellstr(int2ntIndels(T.B(T.Ref==T.A)));
-AltNT(T.Ref==T.B,:)=cellstr(int2ntIndels(T.A(T.Ref==T.B)));
+RefNT=int2ntIndels(T.RefComb);
+AltNT(T.RefComb~=T.Acomb & T.RefComb~=T.Bcomb,:)=cellstr(strcat(int2ntIndels(T.Acomb(T.RefComb~=T.Acomb & T.RefComb~=T.Bcomb)),',', int2ntIndels(T.Bcomb(T.RefComb~=T.Acomb & T.RefComb~=T.Bcomb))));
+AltNT(T.RefComb==T.Acomb,:)=cellstr(int2ntIndels(T.Bcomb(T.RefComb==T.Acomb)));
+AltNT(T.RefComb==T.Bcomb,:)=cellstr(int2ntIndels(T.Acomb(T.RefComb==T.Bcomb)));
 
 %%% calculate quality
 Qual=zeros(size(T.Pos));
@@ -120,8 +120,8 @@ Filter(1-P.artifact(:,n)<inputParam.pGoodThresh,:)={'REJECT'};
 %%% construct info fields
 ABfrac=(T.ACountF+T.ACountR+T.BCountF+T.BCountR)./T.ReadDepthPass;
 Info=cellstr(strcat('DP=',num2str(T.ReadDepth,'%-d'),';DPQC=',num2str(T.ReadDepthPass,'%-d')));
-Info(T.Ref==T.A,:)=strcat(Info(T.Ref==T.A,:),';AF=',num2str((T.BCountF(T.Ref==T.A,:)+T.BCountR(T.Ref==T.A,:))./T.ReadDepthPass(T.Ref==T.A,:),'%-.3f'));
-Info(T.Ref==T.B,:)=strcat(Info(T.Ref==T.B,:),';AF=',num2str((T.ACountF(T.Ref==T.B,:)+T.ACountR(T.Ref==T.B,:))./T.ReadDepthPass(T.Ref==T.B,:),'%-.3f'));
+Info(T.RefComb==T.Acomb,:)=strcat(Info(T.RefComb==T.Acomb,:),';AF=',num2str(T.BcountsComb(T.RefComb==T.Acomb,:)./T.ReadDepthPass(T.RefComb==T.Acomb,:),'%-.3f'));
+Info(T.RefComb==T.Bcomb,:)=strcat(Info(T.RefComb==T.Bcomb,:),';AF=',num2str(T.AcountsComb(T.RefComb==T.Bcomb,:)./T.ReadDepthPass(T.RefComb==T.Bcomb,:),'%-.3f'));
 Info=strcat(Info,';PT=',num2str(P.trust(:,n),'%-.5f'),';PV=',num2str(P.artifact(:,n),'%-.5f'),';PS=',num2str(P.Somatic(:,n),'%-.5f'),';PGAB=',num2str(P.Het(:,n),'%-.5f'),';PGAA=',num2str(P.Hom(:,n),'%-.5f'),';PND=',num2str(P.NonDip(:,n),'%-.5f'));
 Info=strcat(Info,';LS=',num2str(P.DataSomatic(:,n),'%-.5f'),';LGAB=',num2str(P.DataHet(:,n),'%-.5f'),';LGAA=',num2str(P.DataHom(:,n),'%-.5f'),';LND=',num2str(P.DataNonDip(:,n),'%-.5f'));
 Info=strcat(Info,';A=',int2ntIndels(T.A),';B=',int2ntIndels(T.B));
