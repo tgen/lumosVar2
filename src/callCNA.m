@@ -72,6 +72,8 @@ NmatExon=Nseg(idxExon,:);
 %%% find liklihoods of read counts and depth
 for i=1:length(f)
     corr(:,i)=f(i).*Mmat(:,i)./Nmat(:,i)+(1-f(i))*0.5;
+    corr(corr(:,i)>1,i)=1;
+    corr(corr(:,i)<0,i)=0;
     corr(Nmat(:,i)==0,i)=0.5;
     hetlik(:,i)=bbinopdf_ln(D.MinorReadCount,D.TotalReadCount,W(i)*corr(:,i),W(i)*(1-corr(:,i)))+inputParam.minLik;
     expReadCount(:,i)=f(i)*E.NormalRD.*NmatExon(:,i)./CNAscale+(1-f(i))*E.NormalRD*2./CNAscale;

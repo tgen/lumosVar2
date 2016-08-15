@@ -1,4 +1,4 @@
-function [segsTable, W, f, c, nll, pCNA]=fitCNA(dataHet,dataSom,exonRD,segs,inputParam)
+function [segsTable, W, f, c, nll, pCNA, V]=fitCNA(dataHet,dataSom,exonRD,segs,inputParam)
 %fitCNA - uses EM to fit copy number parameters and estimate copy number
 %
 % Syntax: [segsTable, W, f, c, nll, pCNA]=fitCNA(dataHet,dataSom,exonRD,segs,inputParam)
@@ -44,12 +44,17 @@ diploidPos=dataHet(:,5)./dataHet(:,4)>inputParam.minHetAF;
 cr=median(2*dataHet(diploidPos,3)./dataHet(diploidPos,4));
 
 %%%optimize parameters
+%[param, nll] = fminsearchbnd(@(param)nllCNA_lnorm(dataHet,dataSom,exonRD,segs,inputParam,param),[cr nanmedian(exonRD(:,4)*ones(1,inputParam.numClones)) 1/(inputParam.numClones+1):1/(inputParam.numClones+1):1-1/(inputParam.numClones+1) ones(1,inputParam.numClones)*nanstd(log(exonRD(:,4)))],[0.5*cr inputParam.minW*ones(1,inputParam.numClones) zeros(1,inputParam.numClones) zeros(1,inputParam.numClones)],[2*cr inputParam.maxW*ones(1,inputParam.numClones) ones(1,inputParam.numClones) 10*ones(1,inputParam.numClones)]);
 [param, nll] = fminsearchbnd(@(param)nllCNA(dataHet,dataSom,exonRD,segs,inputParam,param),[cr nanmedian(exonRD(:,4)*ones(1,inputParam.numClones)) 1/(inputParam.numClones+1):1/(inputParam.numClones+1):1-1/(inputParam.numClones+1)],[0.5*cr inputParam.minW*ones(1,inputParam.numClones) zeros(1,inputParam.numClones)],[2*cr inputParam.maxW*ones(1,inputParam.numClones) ones(1,inputParam.numClones)]);
 c=param(1);
 W=param(2:(length(param)-1)./2+1);
 f=param((length(param)-1)./2+2:end);
+%W=param(2);
+%f=param(3);
+%V=param(4);
 
 %%%use optimized parameters to call copy number
+%[N, M, F, Wtable, log2FC, pCNA]=callCNA(dataHet,exonRD,segs,inputParam,param(1:end-1));
 [N, M, F, Wtable, log2FC, pCNA]=callCNA(dataHet,exonRD,segs,inputParam,param);
 segsTable=[segs N M F Wtable log2FC];
 

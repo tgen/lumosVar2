@@ -60,7 +60,7 @@ end
 tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
 fInit=fInit(tIdx,:)
 fOld=[];
-chi2p(1)=0;
+%chi2p(1)=0;
 opts=optimoptions('fmincon','TolX',1e-1,'TolFun',1e-1);
 opts2=optimoptions('fmincon','Display','iter','UseParallel',true,'TolX',1e-2,'TolFun',1e-2);
 j=1;
@@ -87,7 +87,7 @@ while 1
     fOld=reshape(param{j}(2*length(Tcell)+1:end),[],inputParam.numClones)
     if j>1
     %    chi2p(j)=1-chi2cdf(2*(nll(j-1)-nll(j)),length(Tcell)-1)
-        if (2*(nll(j-1)-nll(j))<length(tIdx)
+        if 2*(nll(j-1)-nll(j))<length(tIdx)
             break;
         end
     end
@@ -95,7 +95,8 @@ while 1
 end
 
 %%%use optimized parameters to call copy number
-cloneIdx=find(chi2p<0.05,1,'last');
+%cloneIdx=find(chi2p<0.05,1,'last');
+cloneIdx=j-1;
 CNAscale=param{cloneIdx}(1:length(Tcell))./100;
 W=param{cloneIdx}(length(Tcell)+1:2*length(Tcell));
 fOld=reshape(param{cloneIdx}(2*length(Tcell)+1:end),[],cloneIdx);

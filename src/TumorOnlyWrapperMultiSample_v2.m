@@ -121,7 +121,7 @@ parfor i=1:size(Tcell,2)
     else
         dataSom=[Tcell{i}.Chr(somPos) Tcell{i}.Pos(somPos) Tcell{i}.ControlRD(somPos) Tcell{i}.ReadDepthPass(somPos) Tcell{i}.BCountF(somPos)+Tcell{i}.BCountR(somPos)];
     end
-    [segsTable{i}, W{i}, f{i}, c{i}, nll{i}]=fitCNA(dataHet,dataSom,exonRD{i},segsMerged,inputParam);
+    [segsTable{i}, W{i}, f{i}, c{i}, nll{i}, ~]=fitCNA(dataHet,dataSom,exonRD{i},segsMerged,inputParam);
     ['clonal fractions ' num2str(i) ': ' num2str(f{i})]
 end
 %[segsTable{1}, W{1}, f{1}, c{1}, nll{1}]=fitCNAmulti(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam);
@@ -143,7 +143,7 @@ end
 
 %%%Initial Bayesian Variant Calling
 pDataSum(1)=0;
-[postComb, pDataSum(2),somaticFlag,pDataComb,clones,prior]=jointSNVinit(Tcell, exonRD, cell2mat(f)', cell2mat(W)', inputParam);
+[postComb, pDataSum(2),somaticFlag,pDataComb,clones,prior,countsAll]=jointSNVinit(Tcell, exonRD, cell2mat(f)', cell2mat(W)', inputParam);
 for j=1:length(Tcell)
     [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[postComb.Chr postComb.Pos],'rows');
     P.Somatic(:,j)=postComb.Somatic(locb).*somaticFlag(locb,j);
