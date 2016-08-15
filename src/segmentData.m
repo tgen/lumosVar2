@@ -37,5 +37,4 @@ for i=1:22
     segs=[segs; [clustsegs{i}.SegmentData(1).Chromosome*ones(size(clustsegs{i}.SegmentData(1).Start)) clustsegs{i}.SegmentData(1).Start clustsegs{i}.SegmentData(1).End clustsegs{i}.SegmentData(1).Mean]];
 end
 
-delete(gcp);
 return;

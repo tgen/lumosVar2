@@ -33,6 +33,11 @@ inputParam=readInputs(paramFile);
 cd(inputParam.workingDirectory);
 addpath(genpath(inputParam.workingDirectory));
 
+%%% start parallel pool
+delete(gcp('nocreate'));
+distcomp.feature( 'LocalUseMpiexec', true);
+parpool(inputParam.numCPU);
+
 Tcell=cell('');
 Ecell=cell('');
 %%%% If outmat exits, uses outmat, otherwise generates data tables
@@ -117,7 +122,7 @@ parfor i=1:size(Tcell,2)
         dataSom=[Tcell{i}.Chr(somPos) Tcell{i}.Pos(somPos) Tcell{i}.ControlRD(somPos) Tcell{i}.ReadDepthPass(somPos) Tcell{i}.BCountF(somPos)+Tcell{i}.BCountR(somPos)];
     end
     [segsTable{i}, W{i}, f{i}, c{i}, nll{i}]=fitCNA(dataHet,dataSom,exonRD{i},segsMerged,inputParam);
-    ['clonal fractions: ' num2str(f{i})]
+    ['clonal fractions ' num2str(i) ': ' num2str(f{i})]
 end
 %[segsTable{1}, W{1}, f{1}, c{1}, nll{1}]=fitCNAmulti(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam);
 
@@ -153,19 +158,18 @@ for j=1:length(Tcell)
     P.priorHet(:,j)=prior.Het(locb);
     P.priorHom(:,j)=prior.Hom(locb);
     P.priorNonDip(:,j)=prior.nonDiploid(locb);
-    cloneId{1,j}=clones(locb);
+    cloneId{j}=clones(locb);
 end
 
 %%%repeat fitting and variant calling until converges
 i=1;
-somPosOld=zeros(size(somPos));
+somPosOld=somPos;
+hetPos=max(P.Het,[],2)>inputParam.pGermlineThresh & filtPos;
+somPos=max(P.Somatic,[],2)>inputParam.pSomaticThresh & filtPos & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq;
+['Somatic positions: ' num2str(sum(somPos))]
+['Het positions: ' num2str(sum(hetPos))]
 while(sum(abs(somPos-somPosOld))>0 && i<inputParam.maxIter)
-    somPosOld=somPos;
-    hetPos=max(P.Het,[],2)>inputParam.pGermlineThresh & filtPos;
-    somPos=max(P.Somatic,[],2)>inputParam.pSomaticThresh & filtPos & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq;
-    ['Somatic positions: ' num2str(sum(somPos))]
-    ['Het positions: ' num2str(sum(hetPos))]
-    [segsTable, W, f, CNAscale, nll, t{i}]=fitCNAmulti(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam);
+     [segsTable, W, f, CNAscale, nll, t{i}]=fitCNAmulti(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam);
     %['clonal fractions: ' num2str(f)]
     for j=1:length(Tcell)
         T=Tcell{j};
@@ -173,14 +177,20 @@ while(sum(abs(somPos-somPosOld))>0 && i<inputParam.maxIter)
         T.NumCopies=segsTable.N(idx);
         T.MinAlCopies=segsTable.M(idx);
         T.cnaF=segsTable.F(idx,j);
+        Tcell{j}=T;
     end
     save([inputParam.outMat]);
     i=i+1
     inputParam.numClones=size(f,2);
-    [postComb, pDataSum(i+1),pDataComb,clones]=jointSNV(Tcell, exonRD, f, W, inputParam);  
+    [postComb, pDataSum(i+1),pDataComb,clones,prior,countsAll]=jointSNV(Tcell, exonRD, f, W, inputParam);  
     for j=1:length(Tcell)
         [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[postComb.Chr postComb.Pos],'rows');
-        P.Somatic(:,j)=postComb.Somatic(locb).*somaticFlag(locb,j);
+        Tcell{j}.RefComb=countsAll.Ref(locb);
+        Tcell{j}.Acomb=countsAll.A(locb);
+        Tcell{j}.Bcomb=countsAll.B(locb);
+        Tcell{j}.AcountsComb=countsAll.Acounts(locb,j);
+        Tcell{j}.BcountsComb=countsAll.Bcounts(locb,j);
+        P.Somatic(:,j)=postComb.Somatic(locb);
         P.Het(:,j)=postComb.Het(locb);
         P.Hom(:,j)=postComb.Hom(locb);
         P.NonDip(:,j)=postComb.NonDip(locb);
@@ -192,8 +202,13 @@ while(sum(abs(somPos-somPosOld))>0 && i<inputParam.maxIter)
         P.priorHet(:,j)=prior.Het(locb);
         P.priorHom(:,j)=prior.Hom(locb);
         P.priorNonDip(:,j)=prior.nonDiploid(locb);
-        cloneId{1,j}=clones(locb);
+        cloneId{j}=clones(locb,j);
     end
+    somPosOld=somPos;
+    hetPos=max(P.Het,[],2)>inputParam.pGermlineThresh & filtPos;
+    somPos=max(P.Somatic,[],2)>inputParam.pSomaticThresh & filtPos & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq;
+    ['Somatic positions: ' num2str(sum(somPos))]
+    ['Het positions: ' num2str(sum(hetPos))] 
 end
 
 ['converged at iteration' num2str(i)]

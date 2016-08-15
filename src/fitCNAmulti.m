@@ -64,7 +64,8 @@ chi2p(1)=0;
 opts=optimoptions('fmincon','TolX',1e-1,'TolFun',1e-1);
 opts2=optimoptions('fmincon','Display','iter','UseParallel',true,'TolX',1e-2,'TolFun',1e-2);
 j=1;
-while max(chi2p)<0.05
+%while max(chi2p)<0.05
+while 1
     inputParam.numClones=j;
     tic
     ms=MultiStart('Display','iter','UseParallel',true);
@@ -85,7 +86,10 @@ while max(chi2p)<0.05
     Wcurr=param{j}(length(Tcell)+1:2*length(Tcell));
     fOld=reshape(param{j}(2*length(Tcell)+1:end),[],inputParam.numClones)
     if j>1
-        chi2p(j)=1-chi2cdf(2*(nll(j-1)-nll(j)),length(Tcell)-1)
+    %    chi2p(j)=1-chi2cdf(2*(nll(j-1)-nll(j)),length(Tcell)-1)
+        if (2*(nll(j-1)-nll(j))<length(tIdx)
+            break;
+        end
     end
     j=j+1;
 end

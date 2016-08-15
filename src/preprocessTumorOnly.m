@@ -33,10 +33,6 @@ fid=fopen(inputParam.regionsFile);
 Regions=cell2mat(textscan(fid,'%d%d%d %*[^\n]'));
 fclose(fid);
 
-%%% start parallel pool
-delete(gcp('nocreate'));
-parpool(inputParam.numCPU);
-
 fid=fopen(inputParam.bamList);
 bamList=textscan(fid,'%s');
 sampleCount=length(bamList{1});
