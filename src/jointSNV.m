@@ -273,7 +273,7 @@ for j=1:size(Acounts,2)
     if inputParam.NormalSample>0
         pDataNonDip(:,j)=bbinopdf_ln(Bcounts(:,j),RDmat(:,j),meanAF.*W(j),(1-meanAF).*W(j));
     else
-        pDataNonDip(:,j)=zeros(size(alpha2));
+        pDataNonDip(:,j)=zeros(size(alpha));
     end
 end
 pDataNonDip(isnan(pDataNonDip))=0;
