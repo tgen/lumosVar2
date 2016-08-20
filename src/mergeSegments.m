@@ -2,7 +2,7 @@ function mergeSeg=mergeSegments(segs,Ecell,inputParam)
 
 segPosList=[];
 for i=1:length(segs)
-    segPosList=[segPosList; segs{i}(:,1:2); segs{i}(end,[1 3])];
+    segPosList=[segPosList; segs{i}(:,1:2); segs{i}(:,[1 3])];
 end
 
 segPosList=sortrows(segPosList,[1 2]);

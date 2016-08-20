@@ -70,8 +70,8 @@ end
 if(sum(segsMerged(:,4))==0)
     return;
 else
-    sum(segsMerged(:,4))
-    c=c+1
+    sum(segsMerged(:,4));
+    c=c+1;
     segsMerged=removeSegs(segsMerged,Ecell,inputParam,c);
 end
     
