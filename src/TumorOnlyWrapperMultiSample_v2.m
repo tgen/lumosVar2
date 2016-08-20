@@ -95,7 +95,7 @@ for i=1:size(Tcell,2)
     clear T E;
     %['PASS positions: ' num2str(sum(filtPos{i}))]
 end
-filtPos=1-prod(1-P.trust,2)>inputParam.pGoodThresh & 1-prod(1-P.artifact,2)<inputParam.pGoodThresh;
+filtPos=mean(P.trust,2)>inputParam.pGoodThresh & mean(P.artifact,2)<inputParam.pGoodThresh;
     
 %%%Preliminary Variant Classification
 if inputParam.NormalSample>0
