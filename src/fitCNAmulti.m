@@ -58,6 +58,8 @@ parfor i=1:length(Tcell)
 end
 
 tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
+CNAscale
+Wcurr
 fInit=fInit(tIdx,:)
 fOld=[];
 %chi2p(1)=0;
@@ -74,16 +76,16 @@ while 1
     else
         pts=makeFstart(fOld);
     end
-    problem=createOptimProblem('fmincon','objective',@(fNew)nllCNAaddClone(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,CNAscale,Wcurr,fOld,fNew),'x0',pts(:,1),'lb',zeros(size(fInit)),'ub',100*ones(size(fInit)),'options',opts);
+    problem=createOptimProblem('fmincon','objective',@(fNew)nllCNAaddClone(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,cInit,Wcurr,fOld,fNew),'x0',pts(:,1),'lb',zeros(size(fInit)),'ub',100*ones(size(fInit)),'options',opts);
     startPoints=CustomStartPointSet(pts');
     paramMS=run(ms,problem,startPoints);
     t(j)=toc;
     fOld=[fOld paramMS]
     tic
-    [param{j}, nll(j)]=fmincon(@(param)nllCNAmulti_v2(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,param),[100.*CNAscale(:); Wcurr(:); fOld(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fOld(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fOld(:)));],[],opts2);
+    [param{j}, nll(j)]=fmincon(@(param)nllCNAmulti_v2(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,param),[100.*cInit(:); Wcurr(:); fOld(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fOld(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fOld(:)));],[],opts2);
     t2(j)=toc;
-    CNAscale=param{j}(1:length(Tcell))./100;
-    Wcurr=param{j}(length(Tcell)+1:2*length(Tcell));
+    CNAscale=param{j}(1:length(Tcell))./100
+    Wcurr=param{j}(length(Tcell)+1:2*length(Tcell))
     fOld=reshape(param{j}(2*length(Tcell)+1:end),[],inputParam.numClones)
     if j>1
     %    chi2p(j)=1-chi2cdf(2*(nll(j-1)-nll(j)),length(Tcell)-1)
