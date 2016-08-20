@@ -85,7 +85,7 @@ priorMinAllele(Mmat>=length(inputParam.minAllelePrior)-1)=inputParam.minAllelePr
 for i=1:length(f)
     corr(:,i)=f(i).*Mmat(:,i)./Nmat(:,i)+(1-f(i))*0.5;
     corr(Nmat(:,i)==0,i)=0.5;
-    hetlik(:,i)=bbinopdf_ln(D.MinorReadCount,D.TotalReadCount,W(i)*corr(:,i),W(i)*(1-corr(:,i)))+inputParam.minLik;
+    hetlik(:,i)=bbinopdf_ln(D.MinorReadCount,D.TotalReadCount,W(i)*corr(:,i),W(i)*(1-corr(:,i)))+bbinopdf_ln(D.MinorReadCount,D.TotalReadCount,W(i)*(1-corr(:,i)),W(i)*corr(:,i))+inputParam.minLik;
     expReadCount(:,i)=f(i)*E.NormalRD.*NmatExon(:,i)./CNAscale+(1-f(i))*E.NormalRD*2./CNAscale;
     depthlik(:,i)=poisspdf(round(E.TumorRD),round(expReadCount(:,i)))+inputParam.minLik;
     segLik(:,i)=getMeanInRegions([D.Chr D.Pos],log(hetlik(:,i)),segs)+getMeanInRegions([E.Chr E.StartPos],log(depthlik(:,i)),segs);
@@ -122,11 +122,11 @@ if isempty(dataSom)
 else
     idxSom=getPosInRegions([S.Chr S.Pos], segs);
     for i=1:length(f)
-        alpha(:,i)=expAF(idxSom,i)*W(i);
-        beta(:,i)=(1-expAF(idxSom,i))*W(i);
+        alpha(:,i)=max(expAF(idxSom,i),inputParam.minLik)*W(i);
+        beta(:,i)=(1-max(expAF(idxSom,i),inputParam.minLik))*W(i);
         cloneLik(:,i)=bbinopdf_ln(S.MinorReadCount,S.TotalReadCount,alpha(:,i),beta(:,i))+inputParam.minLik;
     end
-    cloneLik(isnan(cloneLik))=1;
+    %cloneLik(isnan(cloneLik))=1;
     [somLik,somIdx]=max(cloneLik,[],2);
     priorF=betapdf(f(somIdx),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2);
 end

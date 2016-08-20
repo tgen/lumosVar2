@@ -127,7 +127,7 @@ for i=1:size(f,2)
 %             %Nmat(idx,i) 
 %             %Mmat(idx,i)
          end
-        hetlik(:,i,j)=bbinopdf_ln(D.MinorReadCount(:,j),D.TotalReadCount(:,j),W(j)*corr(:,i,j),W(j)*(1-corr(:,i,j)))+inputParam.minLik;
+        hetlik(:,i,j)=bbinopdf_ln(D.MinorReadCount(:,j),D.TotalReadCount(:,j),W(j)*corr(:,i,j),W(j)*(1-corr(:,i,j)))+bbinopdf_ln(D.MinorReadCount(:,j),D.TotalReadCount(:,j),W(j)*(1-corr(:,i,j)),W(j)*corr(:,i,j))+inputParam.minLik;
         hetlik(corr(:,i,j)==0,i,j)=inputParam.minLik;
         expReadCount(:,i,j)=f(j,i)*E.NormalRD(:,j).*NmatExon(:,i)./CNAscale(j)+(1-f(j,i))*E.NormalRD(:,j)*2./CNAscale(j);
         depthlik(:,i,j)=poisspdf(round(E.TumorRD(:,j)),round(expReadCount(:,i,j)))+inputParam.minLik;
@@ -168,8 +168,8 @@ end
 idxSom=getPosInRegions([S.Chr S.Pos], segsMerged);
 for i=1:size(f,2)
     for j=1:length(Tcell)
-        alpha(:,i,j)=expAF(idxSom,i,j)*W(j);
-        beta(:,i,j)=(1-expAF(idxSom,i,j))*W(j);
+        alpha(:,i,j)=max(expAF(idxSom,i,j),inputParam.minLik)*W(j);
+        beta(:,i,j)=(1-max(expAF(idxSom,i,j),inputParam.minLik))*W(j);
         cloneLik(:,i,j)=bbinopdf_ln(S.MinorReadCount(:,j),S.TotalReadCount(:,j),alpha(:,i,j),beta(:,i,j))+inputParam.minLik;
     end
 end
