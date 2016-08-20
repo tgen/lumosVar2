@@ -15,5 +15,6 @@ end
 
 nt=regexprep(cellstr(ntChar),'[\x0]','');
 nt(~pos)={'*LongIndel*'};
+nt(indelInt<=0)={'*'};
 
 return;

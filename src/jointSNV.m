@@ -213,8 +213,8 @@ BpopAF=max(BpopAF,[],2);
 cosmic=max(cosmic,[],2);
 
 %%% find priors
-indelPos=A>4 | B>4 | Ref >4;
-priorNonDip=max(mapQC,[],2);
+indelPos=A>4 | B>4 | Ref >4 | A<0 | B<0 | Ref <0;
+priorNonDip=max(mapQC,[],2)-inputParam.minLik;
 priorSomatic(indelPos,:)=((cosmic(indelPos)+1).*inputParam.priorSomaticIndel).*(1-priorNonDip(indelPos));
 priorSomatic(~indelPos,:)=((cosmic(~indelPos)+1).*inputParam.priorSomaticSNV).*(1-priorNonDip(~indelPos));
 priorHet=2*ApopAF.*BpopAF.*(1-priorSomatic-priorNonDip);
@@ -263,8 +263,8 @@ for j=1:size(Acounts,2)
         pDataSomatic(:,j)=pDataHom(:,j);
     else
         for i=1:length(f(j,:))
-            alpha(:,i)=expAF(:,i,j)*W(j);
-            beta(:,i)=(1-expAF(:,i,j))*W(j);
+            alpha(:,i)=max(expAF(:,i,j),inputParam.minLik)*W(j);
+            beta(:,i)=(1-max(expAF(:,i,j),inputParam.minLik))*W(j);
             cloneLik(bIdx,i)=bbinopdf_ln(Bcounts(bIdx,j),RDmat(bIdx,j),alpha(bIdx,i),beta(bIdx,i));
             cloneLik(aIdx,i)=bbinopdf_ln(Acounts(aIdx,j),RDmat(aIdx,j),alpha(aIdx,i),beta(aIdx,i));
         end
@@ -273,7 +273,7 @@ for j=1:size(Acounts,2)
     if inputParam.NormalSample>0
         pDataNonDip(:,j)=bbinopdf_ln(Bcounts(:,j),RDmat(:,j),meanAF.*W(j),(1-meanAF).*W(j));
     else
-        pDataNonDip(:,j)=zeros(size(alpha));
+        pDataNonDip(:,j)=zeros(size(Bcounts(:,j)));
     end
 end
 pDataNonDip(isnan(pDataNonDip))=0;

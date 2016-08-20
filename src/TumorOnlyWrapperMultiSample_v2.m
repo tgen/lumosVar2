@@ -84,6 +84,11 @@ P=table();
 for i=1:size(Tcell,2)
     T=Tcell{i};
     E=Ecell{i};
+    idx1=T.ApopAF+T.BpopAF>1 & T.ApopAF<T.BpopAF;
+    T.BpopAF(idx1)=1-T.ApopAF(idx1)-3*inputParam.pvFreqIndel;
+    idx2=T.ApopAF+T.BpopAF>1 & T.ApopAF>=T.BpopAF;
+    T.ApopAF(idx2)=1-T.BpopAF(idx2)-3*inputParam.pvFreqIndel;
+    Tcell{i}=T;
     [F{i},postTrust,postArtifact]=qualDiscrim(T,E,inputParam);
     P.trust(:,i)=postTrust(:,2);
     P.artifact(:,i)=postArtifact(:,1);
@@ -219,9 +224,11 @@ tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
 fAll(tIdx,1:end)=reshape(f,[],inputParam.numClones);
 
 save([inputParam.outMat]);
-for i=1:length(Tcell)
-    writeVCF(Tcell{i},P,fAll(i,:),cloneId{i},F{i},inputParam,i);
-end
+writeJointVCF(Tcell,P,f,cloneId,F,inputParam)
+
+%for i=1:length(Tcell)
+%writeVCF(Tcell{i},P,fAll(i,:),cloneId{i},F{i},inputParam,i);
+% end
     
 %writeSegVCF(segsTable(:,:,end),inputParam);
 %message='finished writing VCFs'
