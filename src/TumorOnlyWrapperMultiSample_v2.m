@@ -95,7 +95,7 @@ for i=1:size(Tcell,2)
     clear T E;
     %['PASS positions: ' num2str(sum(filtPos{i}))]
 end
-filtPos=mean(P.trust,2)>inputParam.pGoodThresh & mean(P.artifact,2)<inputParam.pGoodThresh;
+filtPos=max(P.trust,[],2)>inputParam.pGoodThresh & max(P.artifact,[],2)<inputParam.pGoodThresh;
     
 %%%Preliminary Variant Classification
 if inputParam.NormalSample>0
@@ -207,7 +207,7 @@ while(sum(abs(somPos-somPosOld))>0 && i<inputParam.maxIter)
         P.priorHet(:,j)=prior.Het(locb);
         P.priorHom(:,j)=prior.Hom(locb);
         P.priorNonDip(:,j)=prior.nonDiploid(locb);
-        cloneId{j}=clones(locb,j);
+        cloneId(:,j)=clones(locb);
     end
     somPosOld=somPos;
     hetPos=max(P.Het,[],2)>inputParam.pGermlineThresh & filtPos;
@@ -225,6 +225,7 @@ fAll(tIdx,1:end)=reshape(f,[],inputParam.numClones);
 
 save([inputParam.outMat]);
 writeJointVCF(Tcell,P,f,cloneId,F,inputParam)
+writeSegVCF(segsTable,inputParam)
 
 %for i=1:length(Tcell)
 %writeVCF(Tcell{i},P,fAll(i,:),cloneId{i},F{i},inputParam,i);

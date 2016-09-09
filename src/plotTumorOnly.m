@@ -1,4 +1,4 @@
-function plotTumorOnly(exonRD,segsTable,CNAscale,f,T,somPos,hetPos,cloneId,inputParam)
+function plotTumorOnly(exonRD,segsTable,CNAscale,f,Tcell,somPos,hetPos,cloneId,inputParam)
 %plotTumorOnly - plots summary figure of tumor only caller results
 %
 % Syntax: writeCloneSummary(segsTable,E,T,pSomatic,posterior,f,W,cloneId,inputParam)
@@ -36,80 +36,186 @@ function plotTumorOnly(exonRD,segsTable,CNAscale,f,T,somPos,hetPos,cloneId,input
 %------------- BEGIN CODE --------------
 
 %%% transform chromosome coord to linear coord
+T=Tcell{1};
 for i=1:22
-    chrLen(i)=max(segsTable(segsTable(:,1)==i,3))+1E7;
+    chrLen(i)=max(segsTable{segsTable.Chr==i,3})+1E7;
 end
 chrOffset=[0; cumsum(chrLen(1:21))'];
 for i=1:22
-    segCoord(segsTable(:,1)==i,1)=(segsTable(segsTable(:,1)==i,2)+chrOffset(i))/1E6;
-    segCoord(segsTable(:,1)==i,2)=(segsTable(segsTable(:,1)==i,3)+chrOffset(i))/1E6;
-    exonCoord(exonRD(:,1)==i,1)=(exonRD(exonRD(:,1)==i,2)+chrOffset(i))/1E6;
-    exonCoord(exonRD(:,1)==i,2)=(exonRD(exonRD(:,1)==i,3)+chrOffset(i))/1E6;
+    segCoord(segsTable.Chr==i,1)=(segsTable{segsTable.Chr==i,2}+chrOffset(i))/1E6;
+    segCoord(segsTable.Chr==i,2)=(segsTable{segsTable.Chr==i,3}+chrOffset(i))/1E6;
+    exonCoord(exonRD{1}(:,1)==i,1)=(exonRD{1}(exonRD{1}(:,1)==i,2)+chrOffset(i))/1E6;
+    exonCoord(exonRD{1}(:,1)==i,2)=(exonRD{1}(exonRD{1}(:,1)==i,3)+chrOffset(i))/1E6;
     Tcoord(T.Chr==i,1)=(T.Pos(T.Chr==i)+chrOffset(i))/1E6;
 end
 
 %%% calculate log2FC
-log2FC=log2((CNAscale./2).*exonRD(:,4)./exonRD(:,5));
-Nlog2R=log2(median(segsTable(:,7)).*segsTable(:,5)/2+(1-median(segsTable(:,7))));
-Mlog2R=log2(median(segsTable(:,7)).*segsTable(:,6)/2+(1-median(segsTable(:,7))));
+for i=1:length(Tcell)
+    log2FC(:,i)=log2((CNAscale(i)./2).*exonRD{i}(:,4)./exonRD{i}(:,5));
+    Nlog2R(:,i)=log2(segsTable.F(:,i).*segsTable.N/2+(1-segsTable.F(:,i)));
+end
 
 %%% plot exon log2FC
-subplot(2,1,1);
-for i=1:2:22
-    idx=exonRD(:,1)==i;
-    scatter(mean(exonCoord(idx,:),2),log2FC(idx),1,'.','MarkerFaceColor',[0.5 0.5 0.5],'MarkerEdgeColor',[0.5 0.5 0.5])
-    hold on;
+for j=1:length(Tcell)
+    subplot(length(Tcell)+1,5,[j*5-4 j*5-1]);
+    for i=1:2:22
+        idx=exonRD{j}(:,1)==i;
+        scatter(mean(exonCoord(idx,:),2),log2FC(idx,j),1,'.','MarkerFaceColor',[0.5 0.5 0.5],'MarkerEdgeColor',[0.5 0.5 0.5])
+        hold on;
+    end
+    for i=2:2:22
+        idx=exonRD{j}(:,1)==i;
+        scatter(mean(exonCoord(idx,:),2),log2FC(idx,j),1,'.','MarkerFaceColor',[0.8235    0.7059    0.5490],'MarkerEdgeColor',[0.8235    0.7059    0.5490])
+        hold on;
+    end
+    ylabel('log2(FoldChange)','FontSize',10);
 end
-for i=2:2:22
-    idx=exonRD(:,1)==i;
-    scatter(mean(exonCoord(idx,:),2),log2FC(idx),1,'.','MarkerFaceColor',[0.8235    0.7059    0.5490],'MarkerEdgeColor',[0.8235    0.7059    0.5490])
+
+for j=1:length(Tcell)
+    subplot(length(Tcell)+1,5,j*5);
     hold on;
+    for i=1:size(f,2)
+        b=bar(i,f(j,i));
+        b.FaceColor=colors(i,:);
+    end
+    ylim([0 1]);
+    ylabel('Sample Fraction','FontSize',10);
 end
 
 %%% plot segments
-colors='rgbcmy';
-for i=1:size(f,2)
-    pos=segsTable(:,7)==f(1,i) & (segsTable(:,5)~=2 | segsTable(:,6)~=1);
-    plot(segCoord(pos,:)',ones(2,1)*Nlog2R(pos)',colors(i),'linewidth',8);
-    plot(segCoord(pos,:)',ones(2,1)*Mlog2R(pos)',colors(i),'linewidth',4);
+samples=regexp(inputParam.sampleNames,',','split');
+cmap=colormap('hsv');
+colors=cmap(1:64./size(f,2):64,:);
+for j=1:length(Tcell)
+    subplot(length(Tcell)+1,5,[j*5-4 j*5-1])
+    for i=1:size(f,2)
+        pos=segsTable.F(:,j)==f(j,i) & (segsTable.N~=2 | segsTable.M~=1);
+        plot(segCoord(pos,:)',ones(2,1)*Nlog2R(pos,j)','Color',colors(i,:),'linewidth',4);
+        %plot(segCoord(pos,:)',ones(2,1)*Mlog2R(pos)',colors(i),'linewidth',4);
+    end
+    pos=(segsTable.N==2 & segsTable.M==1);
+    plot(segCoord(pos,:)',ones(2,1)*Nlog2R(pos,j)','k','linewidth',3);
+    %plot(segCoord(pos,:)',ones(2,1)*Mlog2R(pos)','k','linewidth',4);
+    %ticks=[0 2.^[1:7]];
+    %tickpos=log2(median(segsTable(:,7)).*ticks/2+(1-median(segsTable(:,7))));
+    %set(gca,'YTick',tickpos,'YTickLabel',ticks,'tickDir','out');
+    set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',[1:22],'FontSize',6);
+    axis([0 max(segCoord(:,2)) min(Nlog2R(:))-1 max(Nlog2R(:))+1])
+    title(samples{j},'FontSize',10);
 end
-pos=(segsTable(:,5)==2 & segsTable(:,6)==1);
-plot(segCoord(pos,:)',ones(2,1)*Nlog2R(pos)','k','linewidth',8);
-plot(segCoord(pos,:)',ones(2,1)*Mlog2R(pos)','k','linewidth',4);
-ticks=[0 2.^[1:7]];
-tickpos=log2(median(segsTable(:,7)).*ticks/2+(1-median(segsTable(:,7))));    
+subplot(length(Tcell)+1,5,[5*(length(Tcell)+1)-4 5*(length(Tcell)+1)-1])
+hold on;
+for i=1:size(f,2)
+    pos=segsTable.F(:,1)==f(1,i) & (segsTable.N~=2 | segsTable.M~=1);
+    plot(segCoord(pos,:)',log2(ones(2,1)*segsTable.N(pos)'+1),'Color',colors(i,:),'linewidth',3);
+    %plot(segCoord(pos,:)',ones(2,1)*Mlog2R(pos)',colors(i),'linewidth',4);
+end
+pos=(segsTable.N==2 & segsTable.M==1);
+plot(segCoord(pos,:)',log2(ones(2,1)*2'+1),'k','linewidth',4);
+%plot(segCoord(pos,:)',ones(2,1)*Mlog2R(pos)','k','linewidth',4);
+ticks=[0 2.^[0:7]];
+tickpos=log2(ticks+1);
 set(gca,'YTick',tickpos,'YTickLabel',ticks,'tickDir','out');
-set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',[1:22],'FontSize',8);
-axis([0 max(segCoord(:,2)) min(Mlog2R)-1 max(Nlog2R)+1])
+set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',[1:22],'FontSize',6);
+axis([0 max(segCoord(:,2)) log2(1) log2(max(segsTable.N)+1)])
 title('Copy Number','FontSize',10);
 
+set(gcf, 'PaperPositionMode', 'manual');
+set(gcf, 'PaperUnits', 'inches');
+set(gcf, 'PaperPosition', [1 1 7.5 10]);
+print(gcf,'-dpng',[inputParam.outName '.cnaPlot.png'],'-r300');
+close(gcf);
+
+
 %%% plot het AF
-AF=(T.BCountF+T.BCountR)./T.ReadDepthPass;
-subplot(2,1,2)
-for i=1:2:22
-    scatter(Tcoord(hetPos & T.Chr==i),AF(hetPos & T.Chr==i),1,'.','MarkerFaceColor',[0.5 0.5 0.5],'MarkerEdgeColor',[0.5 0.5 0.5])
-    hold on;
-end
-for i=2:2:22
-    scatter(Tcoord(hetPos & T.Chr==i),AF(hetPos & T.Chr==i),1,'.','MarkerFaceColor',[0.8235    0.7059    0.5490],'MarkerEdgeColor',[0.8235    0.7059    0.5490])
+for j=1:length(Tcell)
+    subplot(length(Tcell)+1,5,[j*5-4 j*5-1])
+    T=Tcell{j};
+    bIdx=T.ApopAF>=T.BpopAF;
+    aIdx=T.ApopAF<T.BpopAF;
+    AF(bIdx)=(T.BCountF(bIdx)+T.BCountR(bIdx))./T.ReadDepthPass(bIdx);
+    AF(aIdx)=(T.ACountF(aIdx)+T.ACountR(aIdx))./T.ReadDepthPass(aIdx);
+    for i=1:2:22
+        scatter(Tcoord(hetPos & T.Chr==i),AF(hetPos & T.Chr==i),1,'.','MarkerFaceColor',[0.5 0.5 0.5],'MarkerEdgeColor',[0.5 0.5 0.5])
+        hold on;
+    end
+    for i=2:2:22
+        scatter(Tcoord(hetPos & T.Chr==i),AF(hetPos & T.Chr==i),1,'.','MarkerFaceColor',[0.8235    0.7059    0.5490],'MarkerEdgeColor',[0.8235    0.7059    0.5490])
+    end
 end
 
 %%% plot somatic AF
+for j=1:length(Tcell)
+    subplot(length(Tcell)+1,5,[j*5-4 j*5-1])
+    T=Tcell{j};
+    bIdx=T.ApopAF>=T.BpopAF;
+    aIdx=T.ApopAF<T.BpopAF;
+    AF(bIdx)=(T.BCountF(bIdx)+T.BCountR(bIdx))./T.ReadDepthPass(bIdx);
+    AF(aIdx)=(T.ACountF(aIdx)+T.ACountR(aIdx))./T.ReadDepthPass(aIdx);
+    for i=1:size(f,2)
+        pos=cloneId(:,1)==i & somPos;
+        scatter(Tcoord(pos),AF(pos),100,'.','MarkerEdgeColor',colors(i,:));
+    end
+    axis([0 max(segCoord(:,2)) 0 1]);
+    set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',[1:22],'tickDir','out','FontSize',8);
+    title('Allele Frequencies','FontSize',10);
+end
+
+for j=1:length(Tcell)
+    subplot(length(Tcell)+1,5,j*5);
+    hold on;
+    for i=1:size(f,2)
+        b=bar(i,f(j,i));
+        b.FaceColor=colors(i,:);
+    end
+    ylim([0 1]);
+    ylabel('Sample Fraction','FontSize',10);
+end
+
+for j=1:length(Tcell)
+    cnCorr(:,j)=segsTable.F(:,j).*segsTable.M./segsTable.N+(1-segsTable.F(:,j))*0.5;
+    cnCorr(segsTable.N==0,j)=0.5;
+end
+
+for j=1:length(Tcell)
+    subplot(length(Tcell)+1,5,[j*5-4 j*5-1])
+    for i=1:size(f,2)
+        pos=segsTable.F(:,j)==f(j,i) & (segsTable.N~=2 | segsTable.M~=1);
+        plot(segCoord(pos,:)',ones(2,1)*cnCorr(pos,j)','Color','k','linewidth',2);
+        plot(segCoord(pos,:)',1-ones(2,1)*cnCorr(pos,j)','Color','k','linewidth',2);
+        %plot(segCoord(pos,:)',ones(2,1)*Mlog2R(pos)',colors(i),'linewidth',4);
+    end
+    pos=(segsTable.N==2 & segsTable.M==1);
+    plot(segCoord(pos,:)',ones(2,1)*cnCorr(pos,j)','k','linewidth',2);
+    %plot(segCoord(pos,:)',ones(2,1)*Mlog2R(pos)','k','linewidth',4);
+    %ticks=[0 2.^[1:7]];
+    %tickpos=log2(median(segsTable(:,7)).*ticks/2+(1-median(segsTable(:,7))));
+    %set(gca,'YTick',tickpos,'YTickLabel',ticks,'tickDir','out');
+    set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',[1:22],'FontSize',6);
+    axis([0 max(segCoord(:,2)) 0 1])
+    title(samples{j},'FontSize',10);
+end
+subplot(length(Tcell)+1,5,[5*(length(Tcell)+1)-4 5*(length(Tcell)+1)-1])
+hold on;
 for i=1:size(f,2)
-    pos=cloneId(:,1)==i & somPos;
-    scatter(Tcoord(pos),AF(pos),2,[colors(i) '*']);
+    pos=segsTable.F(:,1)==f(1,i) & (segsTable.N~=2 | segsTable.M~=1);
+    plot(segCoord(pos,:)',ones(2,1)*(segsTable.M(pos)'./segsTable.N(pos)'),'Color',colors(i,:),'linewidth',3);
+    %plot(segCoord(pos,:)',ones(2,1)*Mlog2R(pos)',colors(i),'linewidth',4);
 end
-axis([0 max(segCoord(:,2)) 0 0.5]);
-set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',[1:22],'tickDir','out','FontSize',8);
-title('Minor Allele Frequencies','FontSize',10);
-for i=1:length(f)
-    annotation('textbox',[0.8 0.9-0.03*i 0.1 0.1],'String',['Clone ' num2str(i) ', f=',num2str(f(1,i))],'Color',colors(i),'EdgeColor','none','FontSize',10);
-end
+pos=(segsTable.N==2 & segsTable.M==1);
+plot(segCoord(pos,:)',ones(2,1)*(segsTable.M(pos)'./segsTable.N(pos)'),'k','linewidth',2);
+%plot(segCoord(pos,:)',ones(2,1)*Mlog2R(pos)','k','linewidth',4);
+%ticks=[0 2.^[0:7]];
+%tickpos=log2(ticks+1);
+%set(gca,'YTick',tickpos,'YTickLabel',ticks,'tickDir','out');
+set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',[1:22],'FontSize',6);
+axis([0 max(segCoord(:,2)) 0 0.5])
+title('M/N','FontSize',10);
 
 %%% print plot
 set(gcf, 'PaperPositionMode', 'manual');
 set(gcf, 'PaperUnits', 'inches');
-set(gcf, 'PaperPosition', [1 1 7 4]);
-print(gcf,'-dpng',[inputParam.outName '.png'],'-r300');
+set(gcf, 'PaperPosition', [1 1 10 7.5]);
+print(gcf,'-dpng',[inputParam.outName '.vafPlot.png'],'-r300');
 close(gcf);
 return;

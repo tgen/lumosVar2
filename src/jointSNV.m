@@ -265,16 +265,19 @@ for j=1:size(Acounts,2)
         for i=1:length(f(j,:))
             alpha(:,i)=max(expAF(:,i,j),inputParam.minLik)*W(j);
             beta(:,i)=(1-max(expAF(:,i,j),inputParam.minLik))*W(j);
-            cloneLik(bIdx,i)=bbinopdf_ln(Bcounts(bIdx,j),RDmat(bIdx,j),alpha(bIdx,i),beta(bIdx,i));
-            cloneLik(aIdx,i)=bbinopdf_ln(Acounts(aIdx,j),RDmat(aIdx,j),alpha(aIdx,i),beta(aIdx,i));
+            cloneLik(bIdx,i,j)=bbinopdf_ln(Bcounts(bIdx,j),RDmat(bIdx,j),alpha(bIdx,i),beta(bIdx,i));
+            cloneLik(aIdx,i,j)=bbinopdf_ln(Acounts(aIdx,j),RDmat(aIdx,j),alpha(aIdx,i),beta(aIdx,i));
         end
-        [pDataSomatic(:,j),cloneId(:,j)]=max(cloneLik,[],2);
     end
     if inputParam.NormalSample>0
         pDataNonDip(:,j)=bbinopdf_ln(Bcounts(:,j),RDmat(:,j),meanAF.*W(j),(1-meanAF).*W(j));
     else
         pDataNonDip(:,j)=zeros(size(Bcounts(:,j)));
     end
+end
+[~,cloneId]=max(prod(cloneLik,3),[],2);
+for i=1:size(f,2)
+    pDataSomatic(cloneId==i,:)=squeeze(cloneLik(cloneId==i,i,:));
 end
 pDataNonDip(isnan(pDataNonDip))=0;
 

@@ -47,24 +47,32 @@ fprintf(fout,['##INFO=<ID=END,Number=1,Type=String,Description="End of Variant">
 fprintf(fout,['##INFO=<ID=CNF,Number=1,Type=Float,Description="Fraction containg Copy Number Alteration">\n']);
 
 %%% determine alteration type
-type(segsTable(:,5)>2 & segsTable(:,6)>0,:)={'DUP'};
-type(segsTable(:,5)>2 & segsTable(:,6)==0,:)={'DUPLOH'};
-type(segsTable(:,5)==2 & segsTable(:,6)==1,:)={'NONE'};
-type(segsTable(:,5)==2 & segsTable(:,6)==0,:)={'LOH'};
-type(segsTable(:,5)<2,:)={'DEL'};
+type(segsTable.N>2 & segsTable.M>0,:)={'DUP'};
+type(segsTable.N>2 & segsTable.M==0,:)={'DUPLOH'};
+type(segsTable.N==2 & segsTable.M==1,:)={'NONE'};
+type(segsTable.N==2 & segsTable.M==0,:)={'LOH'};
+type(segsTable.N<2,:)={'DEL'};
 
 %%% construct info field
-Info=cellstr(strcat('CN=',num2str(segsTable(:,5)),';MACN=',num2str(segsTable(:,6))));
-Info=strcat(Info,';LOG2FC=',num2str(segsTable(:,9)),';SVLEN=',num2str(segsTable(:,3)-segsTable(:,2)));
-Info=strcat(Info,';SVTYPE=',type,';END=',num2str(segsTable(:,3)),';CNF=',num2str(segsTable(:,7)));
+Info=cellstr(strcat('CN=',num2str(segsTable.N,'%-.0f'),';MACN=',num2str(segsTable.M,'%-.0f')));
+Info=strcat(Info,';SVLEN=',num2str(segsTable.EndPos-segsTable.StartPos,'%-.0f'));
+Info=strcat(Info,';SVTYPE=',type,';END=',num2str(segsTable.EndPos,'%-.0f'));
+
+for i=1:size(segsTable.F,2)
+    formatStr(segsTable.N~=2 | segsTable.M~=1,i)=cellstr(strcat(num2str(segsTable.F(segsTable.N~=2 | segsTable.M~=1,i),'%-.3f'),':',num2str(segsTable.log2FC(segsTable.N~=2 | segsTable.M~=1,i),'%-.2f')));
+    formatStr(segsTable.N==2 & segsTable.M==1,i)=cellstr(strcat('NA:',num2str(segsTable.log2FC(segsTable.N==2 & segsTable.M==1,i),'%-.2f')));
+end
+    
+formatFields=repmat({'CNF:LOG2FC'},size(segsTable,1),1);
 
 %%% write output
-outData=[num2cell(segsTable(:,1)) num2cell(segsTable(:,2)) num2cell(segsTable(:,3)) cellstr(char(ones(size(segsTable,1),1)*78)) strcat('<',type,'>') num2cell(segsTable(:,9)) cellstr(char(ones(size(segsTable,1),1)*46)) Info];
-headers={'#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILT', 'INFO'};
+outData=[num2cell(segsTable.Chr) num2cell(segsTable.StartPos) num2cell(segsTable.EndPos) cellstr(char(ones(size(segsTable,1),1)*78)) strcat('<',type,'>') num2cell(abs(mean(segsTable.log2FC,2))) cellstr(char(ones(size(segsTable,1),1)*46)) Info formatFields formatStr];
+headers={'#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILT', 'INFO', 'FORMAT'};
+headers=[headers regexp(inputParam.sampleNames,',','split')];
 for i=1:length(headers)
     fprintf(fout,'%s\t',headers{i});
 end
 for i=1:size(outData,1)
-    fprintf(fout,'\n%d\t%d\t%d\t%s\t%s\t%f\t%s\t%s',outData{i,:});
+    fprintf(fout,strcat('\n%d\t%d\t%d\t%s\t%s\t%f\t%s\t%s\t%s',repmat('\t%s',1,size(segsTable.F,2))),outData{i,:});
 end
 

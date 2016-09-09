@@ -58,7 +58,7 @@ for i=1:size(f,2)
     for j=1:size(f,1)
         outString=[outString ',f' num2str(j) '=' num2str(f(j,i))];
     end
-    outString=[outString ',PassCount=' num2str(sum(P.Somatic(:,1)>inputParam.pSomaticThresh & mean(P.trust,2)>inputParam.pGoodThresh & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq & cloneId{1}==i))];
+    outString=[outString ',PassCount=' num2str(sum(P.Somatic(:,1)>inputParam.pSomaticThresh & max(P.trust,[],2)>inputParam.pGoodThresh & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq & cloneId(:,1)==i))];
     fprintf(fout,[outString '\n']);
 end
 
@@ -120,10 +120,10 @@ Qual=-10*log10(1-mean([mean(P.trust,2) mean(1-P.artifact,2) max([P.Het P.Hom P.S
 %Qual(P.NonDip(:,n)>0.5,:)=min(min(-10*log10(1-P.NonDip(P.NonDip(:,n)>0.5,n)),-10*log10(1-P.trust(P.NonDip(:,n)>0.5,n))),-10*log10(P.artifact(P.NonDip(:,n)>0.5,n)));
 
 %%% assign filters
-passPos=mean(P.trust,2)>inputParam.pGoodThresh & T.RefComb>0 & T.Acomb>0 & T.Bcomb>0;
+passPos=max(P.trust,[],2)>inputParam.pGoodThresh & T.RefComb>0 & T.Acomb>0 & T.Bcomb>0;
 Filter(P.Somatic(:,1)>0.5,:)={'SomaticLowQC'};
 Filter(P.Somatic(:,1)>inputParam.pSomaticThresh & passPos,:)={'SomaticPASS'};
-Filter(P.Somatic(:,1)>0.5 & min([T.ApopAF T.BpopAF],[],2)>inputParam.maxSomPopFreq,:)={'SomaticDBsnp'};
+Filter(P.Somatic(:,1)>0.5 & min([T.ApopAF T.BpopAF],[],2)>=inputParam.maxSomPopFreq,:)={'SomaticDBsnp'};
 Filter(P.Het(:,1)>0.5,:)={'GermlineHetLowQC'};
 Filter(P.Het(:,1)>inputParam.pGermlineThresh & passPos,:)={'GermlineHetPASS'};
 Filter(P.Hom(:,1)>0.5,:)={'GermlineHomLowQC'};
@@ -131,7 +131,7 @@ Filter(P.Hom(:,1)>inputParam.pGermlineThresh & passPos,:)={'GermlineHomPASS'};
 Filter(P.NonDip(:,1)>0.5,:)={'GermlineShiftLowQC'};
 Filter(P.NonDip(:,1)>inputParam.pGermlineThresh & passPos,:)={'GermlineShiftPASS'};
 Filter(P.Somatic(:,1)<0.5 & P.Het(:,1)<0.5 & P.Hom(:,1)<0.5 & P.NonDip(:,1)<0.5,:)={'NoCall'};
-Filter(mean(P.artifact,2)>inputParam.pGoodThresh,:)={'REJECT'};
+Filter(max(P.artifact,[],2)>inputParam.pGoodThresh,:)={'REJECT'};
 
 %%% construct info fields
 %Info=cellstr(strcat('DP=',num2str(T.ReadDepth,'%-.0f'),';DPQC=',num2str(T.ReadDepthPass,'%-.0f')));
@@ -142,24 +142,26 @@ Info=cellstr(strcat('JPT=',num2str(-10*log10(1-mean(P.trust,2)),'%-.1f'),';JPA='
 Info=strcat(Info,';A=',int2ntIndels(T.Acomb),';B=',int2ntIndels(T.Bcomb));
 %Info=strcat(Info,';ACountF=',num2str(T.ACountF,'%-.0f'),';ACountR=',num2str(T.ACountR,'%-.0f'),';BCountF=',num2str(T.BCountF,'%-.0f'),';BCountR=',num2str(T.BCountR,'%-.0f'));
 Info=strcat(Info,';ApopAF=',num2str(T.ApopAF,'%-.5f'),';BpopAF=',num2str(T.BpopAF,'%-.5f'),';CosmicCount=',num2str(T.CosmicCount,'%-.0f'));
-Info=strcat(Info,';CloneId=',num2str(cloneId{1}));
+Info=strcat(Info,';CloneId=',num2str(cloneId(:,1)));
 Info(T.NumCopies~=2 | T.MinAlCopies~=1)=strcat(Info(T.NumCopies~=2 | T.MinAlCopies~=1),';CN=',num2str(T.NumCopies(T.NumCopies~=2 | T.MinAlCopies~=1)),';MACN=',num2str(T.MinAlCopies(T.NumCopies~=2 | T.MinAlCopies~=1)));
 %Info=strcat(Info,';PCNA=',num2str(pCNA,'%-.5f'));
 %for i=1:size(F,2)
 %    Info=strcat(Info,';',F.Properties.VariableNames(i),'=',num2str(F{:,i},'%-.3f'));
 %end
 copyList=unique([T.NumCopies T.MinAlCopies],'rows');
+tumorGT=cell(1,size(T,1));
 for i=1:size(copyList,1)
     idx=T.NumCopies==copyList(i,1) & T.MinAlCopies==copyList(i,2);
     tumorGT(P.Hom(:,1)>0.5 & T.Acomb==T.Ref & idx)={strjoin(cellstr(num2str(zeros(copyList(i,1),1))),'/')};
     tumorGT(P.Hom(:,1)>0.5 & T.Bcomb==T.Ref & idx)={strjoin(cellstr(num2str(ones(copyList(i,1),1))),'/')};
     tumorGT(P.Het(:,1)>0.5 & T.Acomb==T.Ref & idx)={strjoin(cellstr(num2str([zeros(copyList(i,1)-copyList(i,2),1); ones(copyList(i,2),1)])),'/')};
     tumorGT(P.Het(:,1)>0.5 & T.Bcomb==T.Ref & idx)={strjoin(cellstr(num2str([zeros(copyList(i,2),1); ones(copyList(i,1)-copyList(i,2),1)])),'/')};
-    tumorGT(P.Somatic(:,1)>0.5 & T.cnaF==f(1,cloneId{1})' & idx)={strjoin(cellstr(num2str([zeros(copyList(i,2),1); ones(copyList(i,1)-copyList(i,2),1)])),'/')};
+    tumorGT(P.Somatic(:,1)>0.5 & T.cnaF==f(1,cloneId(:,1))' & idx)={strjoin(cellstr(num2str([zeros(copyList(i,2),1); ones(copyList(i,1)-copyList(i,2),1)])),'/')};
 end
-tumorGT(P.Somatic(:,1)>0.5 & T.cnaF~=f(1,cloneId{1})')={'0/1'};
+tumorGT(P.Somatic(:,1)>0.5 & T.cnaF~=f(1,cloneId(:,1))')={'0/1'};
 tumorGT(cellfun('isempty',tumorGT))={'.'};
 
+germGT=cell(1,size(T,1));
 germGT(P.Hom(:,1)>0.5 & T.Acomb==T.Ref)={'0/0'};
 germGT(P.Hom(:,1)>0.5 & T.Acomb~=T.Ref)={'1/1'};
 germGT(P.Het(:,1)>0.5)={'0/1'};
@@ -180,6 +182,9 @@ for i=1:length(Tcell)
     if inputParam.NormalSample==i
         formatStr(:,n)=germGT';
     else
+        n
+        size(formatStr)
+        size(tumorGT)
         formatStr(:,n)=tumorGT';
     end
     formatStr(:,n)=strcat(formatStr(:,n),':',num2str(T.ReadDepthPass,'%-.0f'));
@@ -202,7 +207,7 @@ for i=1:length(Tcell)
     else
         formatStr(:,n)=strcat(formatStr(:,n),':NA');
     end
-    formatStr(P.Somatic(:,i)>0.5,n)=strcat(formatStr(P.Somatic(:,i)>0.5,n),':',num2str(f(i,cloneId{i}(P.Somatic(:,i)>0.5))','%-.3f'));
+    formatStr(P.Somatic(:,i)>0.5,n)=strcat(formatStr(P.Somatic(:,i)>0.5,n),':',num2str(f(i,cloneId(P.Somatic(:,i)>0.5,1))','%-.3f'));
     formatStr(P.Somatic(:,i)<=0.5,n)=strcat(formatStr(P.Somatic(:,i)<0.5,n),':1');
     formatStr(T.NumCopies==2 & T.MinAlCopies==1,n)=strcat(formatStr(T.NumCopies==2 & T.MinAlCopies==1,n),':NA');
     formatStr(T.NumCopies~=2 | T.MinAlCopies~=1,n)=strcat(formatStr(T.NumCopies~=2 | T.MinAlCopies~=1,n),':',num2str(T.cnaF(T.NumCopies~=2 | T.MinAlCopies~=1),'%-.3f'));

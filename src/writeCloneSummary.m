@@ -1,4 +1,4 @@
-function writeCloneSummary(segsTable,E,T,pSomatic,pTrust,pArtifact,f,W,cloneId,inputParam)
+function writeCloneSummary(segsTable,Ecell,Tcell,P,f,W,cloneId,inputParam)
 %writeCloneSummary - writes summary of variant counts by clone
 %
 % Syntax: writeCloneSummary(segsTable,E,T,pSomatic,posterior,f,W,cloneId,inputParam)
@@ -38,13 +38,16 @@ function writeCloneSummary(segsTable,E,T,pSomatic,pTrust,pArtifact,f,W,cloneId,i
 % Last revision: 3-June-2016
 %------------- BEGIN CODE --------------
 
-cloneTable=array2table([unique(cloneId) f(1,:)' W(1,:)'],'VariableNames',{'CloneID','f','W'});
+cloneTable=array2table(f','VariableNames',regexp(inputParam.sampleNames,',','split'));
 
+T=Tcell{1};
+rejectPos=max(P.artifact,[],2)>inputParam.pGoodThresh;
+passPos=max(P.trust,[],2)>inputParam.pGoodThresh & T.RefComb>0 & T.Acomb>0 & T.Bcomb>0 & ~rejectPos;
 %%% count variants by clone
-for i=1:length(unique(cloneId))
-    pass(i,:)=sum(cloneId(:,1)==i & pTrust>inputParam.pGoodThresh & pSomatic(:,1)>inputParam.pSomaticThresh & min([T.ApopAF T.BpopAF],[],2)<inputParam.maxSomPopFreq);
-    lowqc(i,:)=sum(cloneId(:,1)==i & pArtifact<inputParam.pGoodThresh & pSomatic(:,1)>0.5 & min([T.ApopAF T.BpopAF],[],2)<inputParam.maxSomPopFreq)-pass(i,:);
-    db(i,:)=sum(cloneId(:,1)==i & pArtifact<inputParam.pGoodThresh & pSomatic(:,1)>0.5 & min([T.ApopAF T.BpopAF],[],2)>inputParam.maxSomPopFreq);
+for i=1:size(cloneTable,1)
+    pass(i,:)=sum(cloneId(:,1)==i & passPos & P.Somatic(:,1)>inputParam.pSomaticThresh & min([T.ApopAF T.BpopAF],[],2)<inputParam.maxSomPopFreq);
+    lowqc(i,:)=sum(cloneId(:,1)==i & ~rejectPos & P.Somatic(:,1)>0.5 & min([T.ApopAF T.BpopAF],[],2)<inputParam.maxSomPopFreq)-pass(i,:);
+    db(i,:)=sum(cloneId(:,1)==i & ~rejectPos & P.Somatic(:,1)>0.5 & min([T.ApopAF T.BpopAF],[],2)>=inputParam.maxSomPopFreq);
 end
 cloneTable.somaticPass=pass;
 cloneTable.somaticLowQC=lowqc;
@@ -53,8 +56,9 @@ cloneTable.somaticDB=db;
 message=['made clone table']
 
 %%% find exon cloneId
-idx=getPosInRegions([E.Chr mean([E.StartPos E.EndPos],2)],segsTable(:,1:3,1));
-exonCN(~isnan(idx),:)=segsTable(idx(~isnan(idx)),5:7,1);
+E=Ecell{1};
+idx=getPosInRegions([E.Chr mean([E.StartPos E.EndPos],2)],segsTable{:,1:3});
+exonCN(~isnan(idx),:)=[segsTable.N(idx(~isnan(idx))) segsTable.M(idx(~isnan(idx))) segsTable.F(idx(~isnan(idx)),1)];
 exonCloneId=zeros(length(exonCN),1);
 for i=1:size(f,2)
     exonCloneId(exonCN(:,3)==f(1,i) & (exonCN(:,1)~=2 | exonCN(:,2)~=1))=i;
@@ -80,3 +84,18 @@ end
 message=['about summary table']
 
 writetable([cloneTable array2table(CNcount,'VariableNames',CNname)],[inputParam.outName '.cloneSummary.csv']);
+
+cmap=colormap('hsv');
+colors=cmap(1:64./size(f,2):64,:);
+hold on;
+for i=1:size(f,2)
+    plot(f(:,i),'-o','MarkerSize',50*cloneTable.somaticPass(i)./sum(cloneTable.somaticPass),'Color',colors(i,:),'MarkerFaceColor',colors(i,:),'LineWidth',10*sum(CNcount(i,:))./sum(CNcount(:)));
+end
+set(gca,'XTick',1:size(f,2),'XTickLabel',cloneTable.Properties.VariableNames(1:size(f,2)),'FontSize',14);
+ylabel('Variant Sample Fraction');
+
+set(gcf, 'PaperPositionMode', 'manual');
+set(gcf, 'PaperUnits', 'inches');
+set(gcf, 'PaperPosition', [1 1 7 4]);
+print(gcf,'-dpng',[inputParam.outName '.cloneSummary.png'],'-r300');
+close(gcf);

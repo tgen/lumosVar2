@@ -103,6 +103,7 @@ goodPos(:,14)=F.ReadPosDiff<inputParam.maxReadPosDiff;
 goodPos(:,15)=F.posMapQC>inputParam.minPosQual;
 goodPos(:,16)=F.exonMapQC>inputParam.minExonQual;
 
+
 %%%find positions that fail minimal quality thresholds
 badPos(:,1)=F.TumorPerPassReads<inputParam.perPassReadReject;
 badPos(:,2)=F.normalPerReadPass<inputParam.perPassReadReject;
@@ -151,4 +152,9 @@ groupIndel=[ones(sum(sum(goodPos(:,[1:10 12:16]),2)>11 & sum(badPos,2)==0 &indel
 discrIndel=fitcdiscr(trainingIndel(:,[1:10 12:16]),groupIndel,'DiscrimType', 'pseudoQuadratic');
 [class(indelPos & finitePos),pArtifact(indelPos & finitePos,:)] = predict(discrIndel,sampleIndel(:,[1:10 12:16]));
 
+F.goodPosSum=sum(goodPos,2);
+F.badPosSum=sum(badPos,2);
+
+F.Properties.VariableDescriptions(17)={'Number of PASS criteria met'};
+F.Properties.VariableDescriptions(18)={'Number of REJECT criteria met'};
 return;

@@ -81,8 +81,8 @@ fprintf(fout,['##INFO=<ID=CN,Number=1,Type=Integer,Description="Copy Number">\n'
 fprintf(fout,['##INFO=<ID=MACN,Number=1,Type=Integer,Description="Min Allele Copy Number">\n']);
 fprintf(fout,['##INFO=<ID=CNF,Number=1,Type=Float,Description="Fraction containg Copy Number Alteration">\n']);
 fprintf(fout,['##INFO=<ID=PCNA,Number=1,Type=Float,Description="Posterior Probability Copy Number is Correct">\n']);
-for i=1:size(F,2)
-    fprintf(fout,'%s',char(strcat('##INFO=<ID=',F.Properties.VariableNames(i),',Number=1,Type=Float,Description="',F.Properties.VariableDescriptions(i),'">\n')));
+for i=1:size(F{1},2)
+    fprintf(fout,'%s',char(strcat('##INFO=<ID=',F{1}.Properties.VariableNames(i),',Number=1,Type=Float,Description="',F{1}.Properties.VariableDescriptions(i),'">\n')));
 end
 fprintf(fout,['##FILTER=<ID=SomaticPASS,Description="PS>pSomaticThresh and pass filters">\n']);
 fprintf(fout,['##FILTER=<ID=SomaticLowQC,Description="PS>0.5 and pass filters">\n']);
