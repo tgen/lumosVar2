@@ -1,4 +1,4 @@
-function writeCloneSummary(segsTable,Ecell,Tcell,P,f,W,cloneId,inputParam)
+function writeCloneSummary(segsTable,Ecell,Tcell,P,fIn,cloneId,inputParam)
 %writeCloneSummary - writes summary of variant counts by clone
 %
 % Syntax: writeCloneSummary(segsTable,E,T,pSomatic,posterior,f,W,cloneId,inputParam)
@@ -37,6 +37,10 @@ function writeCloneSummary(segsTable,Ecell,Tcell,P,f,W,cloneId,inputParam)
 % Website: https://github.com/tgen
 % Last revision: 3-June-2016
 %------------- BEGIN CODE --------------
+
+f=zeros(length(Tcell),inputParam.numClones);
+tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
+f(tIdx,1:end)=reshape(fIn,[],inputParam.numClones);
 
 cloneTable=array2table(f','VariableNames',regexp(inputParam.sampleNames,',','split'));
 
@@ -89,7 +93,7 @@ cmap=colormap('hsv');
 colors=cmap(1:64./size(f,2):64,:);
 hold on;
 for i=1:size(f,2)
-    plot(f(:,i),'-o','MarkerSize',50*cloneTable.somaticPass(i)./sum(cloneTable.somaticPass),'Color',colors(i,:),'MarkerFaceColor',colors(i,:),'LineWidth',10*sum(CNcount(i,:))./sum(CNcount(:)));
+    plot(f(:,i),'-o','MarkerSize',50*(cloneTable.somaticPass(i)+1)./sum(cloneTable.somaticPass),'Color',colors(i,:),'MarkerFaceColor',colors(i,:),'LineWidth',10*(sum(CNcount(i,:))+1)./sum(CNcount(:)));
 end
 set(gca,'XTick',1:size(f,2),'XTickLabel',cloneTable.Properties.VariableNames(1:size(f,2)),'FontSize',14);
 ylabel('Variant Sample Fraction');

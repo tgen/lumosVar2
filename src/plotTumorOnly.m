@@ -1,4 +1,4 @@
-function plotTumorOnly(exonRD,segsTable,CNAscale,f,Tcell,somPos,hetPos,cloneId,inputParam)
+function plotTumorOnly(exonRD,segsTable,CNAscale,fIn,Tcell,somPos,hetPos,cloneId,inputParam)
 %plotTumorOnly - plots summary figure of tumor only caller results
 %
 % Syntax: writeCloneSummary(segsTable,E,T,pSomatic,posterior,f,W,cloneId,inputParam)
@@ -34,6 +34,10 @@ function plotTumorOnly(exonRD,segsTable,CNAscale,f,Tcell,somPos,hetPos,cloneId,i
 % Website: https://github.com/tgen
 % Last revision: 3-June-2016
 %------------- BEGIN CODE --------------
+
+f=zeros(length(Tcell),inputParam.numClones);
+tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
+f(tIdx,1:end)=reshape(fIn,[],inputParam.numClones);
 
 %%% transform chromosome coord to linear coord
 T=Tcell{1};
@@ -71,6 +75,8 @@ for j=1:length(Tcell)
     ylabel('log2(FoldChange)','FontSize',10);
 end
 
+cmap=colormap('hsv');
+colors=cmap(1:64./size(f,2):64,:);
 for j=1:length(Tcell)
     subplot(length(Tcell)+1,5,j*5);
     hold on;
@@ -84,8 +90,6 @@ end
 
 %%% plot segments
 samples=regexp(inputParam.sampleNames,',','split');
-cmap=colormap('hsv');
-colors=cmap(1:64./size(f,2):64,:);
 for j=1:length(Tcell)
     subplot(length(Tcell)+1,5,[j*5-4 j*5-1])
     for i=1:size(f,2)

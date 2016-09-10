@@ -1,4 +1,4 @@
-function writeJointVCF(Tcell,P,f,cloneId,F,inputParam)
+function writeJointVCF(Tcell,P,fIn,cloneId,F,inputParam)
 %writeVCF - writes VCF for SNV and indel calls
 %
 % Syntax: writeVCF(T,pSomatic,posterior,pArtifact,pGermline,pHom,cloneId,f,W,inputParam,pDataSomatic,pDataHet,pDataHom,pCNA,F)
@@ -39,6 +39,10 @@ function writeJointVCF(Tcell,P,f,cloneId,F,inputParam)
 % Website: https://github.com/tgen
 % Last revision: 3-June-2016
 %------------- BEGIN CODE --------------
+
+f=zeros(length(Tcell),inputParam.numClones);
+tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
+f(tIdx,1:end)=reshape(fIn,[],inputParam.numClones);
 
 fout=fopen([inputParam.outName '.tumorOnly.all.vcf'],'w');
 
@@ -170,7 +174,7 @@ germGT(cellfun('isempty',germGT))={'.'};
 
 
 if inputParam.NormalSample<1
-    formatStr(:,1)=strcat(germGT',':.:.:.:.:.:.:.:.:.:.');
+    formatStr(:,1)=strcat(germGT',':.:.:.:.:.:.:.:.:.:.:.');
 end
 for i=1:length(Tcell)
     if inputParam.NormalSample<1
@@ -196,9 +200,16 @@ for i=1:length(Tcell)
     filtStr(P.trust(:,i)>=inputParam.pGoodThresh)={'PASS'};
     filtStr(P.trust(:,i)<inputParam.pGoodThresh & P.artifact(:,i)<inputParam.pGoodThresh)={'LowQC'};
     filtStr(P.artifact(:,i)>=inputParam.pGoodThresh)={'REJECT'};
-    filtStr(P.Somatic(:,i)>0.5 & P.DataSomatic(:,i)>P.DataHom(:,i) & (T.BcountsComb>0 | T.A~=T.RefComb))=strcat(filtStr(P.Somatic(:,i)>0.5 & P.DataSomatic(:,i)>P.DataHom(:,i) & (T.BcountsComb>0 | T.A~=T.RefComb)),';SomaticDetected');
-    filtStr(P.Somatic(:,i)>0.5 & (P.DataSomatic(:,i)<=P.DataHom(:,i) | (T.BcountsComb==0 & T.A==T.RefComb)))=strcat(filtStr(P.Somatic(:,i)>0.5 & (P.DataSomatic(:,i)<=P.DataHom(:,i) | (T.BcountsComb==0 & T.A==T.RefComb))),';SomaticNotDetected');
-    formatStr(:,n)=strcat(formatStr(:,n),':',filtStr',':',num2str(-10*log10(1-P.trust(:,i)),'%-.0f'),':',num2str(-10*log10(1-P.artifact(:,i)),'%-.0f'),':',num2str(P.DataSomatic(:,i),'%-.0f'));
+    if inputParam.NormalSample<1
+        filtStr(P.Somatic(:,i)>0.5 & P.DataSomatic(:,i)>P.DataHom(:,i) & (T.BcountsComb>0 | T.A~=T.RefComb))=strcat(filtStr(P.Somatic(:,i)>0.5 & P.DataSomatic(:,i)>P.DataHom(:,i) & (T.BcountsComb>0 | T.A~=T.RefComb)),';SomaticDetected');
+        filtStr(P.Somatic(:,i)>0.5 & (P.DataSomatic(:,i)<=P.DataHom(:,i) | (T.BcountsComb==0 & T.A==T.RefComb)))=strcat(filtStr(P.Somatic(:,i)>0.5 & (P.DataSomatic(:,i)<=P.DataHom(:,i) | (T.BcountsComb==0 & T.A==T.RefComb))),';SomaticNotDetected');
+        formatStr(:,n)=strcat(formatStr(:,n),':',filtStr',':NA');
+    else
+        filtStr(P.SomaticPair(:,i)>0.5)=strcat(filtStr(P.SomaticPair(:,i)>0.5),';SomaticDetected');
+        filtStr(P.Somatic(:,i)>0.5 & P.SomaticPair(:,i)<=0.5)=strcat(filtStr(P.Somatic(:,i)>0.5 & P.SomaticPair(:,i)<=0.5),';SomaticNotDetected');
+        formatStr(:,n)=strcat(formatStr(:,n),':',filtStr',':',num2str(P.SomaticPair(:,i),'%-.3f'));
+    end
+    formatStr(:,n)=strcat(formatStr(:,n),':',num2str(-10*log10(1-P.trust(:,i)),'%-.0f'),':',num2str(-10*log10(1-P.artifact(:,i)),'%-.0f'),':',num2str(P.DataSomatic(:,i),'%-.0f'));
     formatStr(aIdx,n)=strcat(formatStr(aIdx,n),':',num2str(-10*log10(P.DataHom(aIdx,i)),'%-.0f'),',',num2str(-10*log10(P.DataHet(aIdx,i)),'%-.0f'),',NA');
     formatStr(bIdx,n)=strcat(formatStr(bIdx,n),':NA,',num2str(-10*log10(P.DataHet(bIdx,i)),'%-.0f'),',',num2str(-10*log10(P.DataHom(bIdx,i)),'%-.0f'));
     formatStr(~aIdx & ~bIdx,n)=strcat(formatStr(~aIdx & ~bIdx,n),':.');
@@ -214,7 +225,7 @@ for i=1:length(Tcell)
 end
 
 
-formatFields=repmat({'GT:DP:AD:FT:PT:PA:PLS:PL:PLND:VSF:CNF'},size(P,1),1);
+formatFields=repmat({'GT:DP:AD:FT:PPS:PT:PA:PLS:PL:PLND:VSF:CNF'},size(P,1),1);
 
 %%% print output
 outData=[num2cell(T.Chr) num2cell(T.Pos) cellstr(char(ones(size(T.Pos))*46)) cellstr(RefNT) squeeze(AltNT) num2cell(Qual) Filter Info formatFields formatStr];

@@ -260,7 +260,7 @@ aIdx=ApopAF<BpopAF;
 meanAF=mean(Bcounts(:,tumorIdx)./RDmat(:,tumorIdx),2);
 for j=1:size(Acounts,2)
     if j==inputParam.NormalSample
-        pDataSomatic(:,j)=pDataHom(:,j);
+        cloneLik(:,:,j)=pDataHom(:,j)*ones(1,size(Acounts,2));
     else
         for i=1:length(f(j,:))
             alpha(:,i)=max(expAF(:,i,j),inputParam.minLik)*W(j);
