@@ -69,18 +69,21 @@ j=1;
 %while max(chi2p)<0.05
 while 1
     inputParam.numClones=j;
-    tic
-    ms=MultiStart('Display','iter','UseParallel',true);
+  %ms=MultiStart('Display','iter','UseParallel',true);
     if j==1
         pts=[fInit makeFstart(fInit)];
     else
         pts=makeFstart(fOld);
     end
-    problem=createOptimProblem('fmincon','objective',@(fNew)nllCNAaddClone(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,cInit,Wcurr,fOld,fNew),'x0',pts(:,1),'lb',zeros(size(fInit)),'ub',100*ones(size(fInit)),'options',opts);
-    startPoints=CustomStartPointSet(pts');
-    paramMS=run(ms,problem,startPoints);
-    t(j)=toc;
-    fOld=[fOld paramMS]
+    %problem=createOptimProblem('fmincon','objective',@(fNew)nllCNAaddClone(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,cInit,Wcurr,fOld,fNew),'x0',pts(:,1),'lb',zeros(size(fInit)),'ub',100*ones(size(fInit)),'options',opts);
+    %startPoints=CustomStartPointSet(pts');
+    %paramMS=run(ms,problem,startPoints);
+    parfor i=1:size(pts,2)
+        [paramPTS{i}, nllPTS(i)]=fmincon(@(fNew)nllCNAaddClone(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,cInit,Wcurr,fOld,fNew),pts(:,i),[],[],[],[],zeros(size(fInit)),100*ones(size(fInit)),[],opts);
+    end
+    [~,idx]=max(nllPTS);
+    t(j)=toc
+    fOld=[fOld paramPTS{idx}]
     tic
     [param{j}, nll(j)]=fmincon(@(param)nllCNAmulti_v2(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,param),[100.*cInit(:); Wcurr(:); fOld(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fOld(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fOld(:)));],[],opts2);
     t2(j)=toc;
