@@ -163,7 +163,7 @@ for j=1:length(Tcell)
     P.priorHet(:,j)=prior.Het(locb);
     P.priorHom(:,j)=prior.Hom(locb);
     P.priorNonDip(:,j)=prior.nonDiploid(locb);
-    cloneId{j}=clones(locb);
+    cloneId(:,j)=clones(locb);
 end
 
 %%%repeat fitting and variant calling until converges
@@ -197,6 +197,8 @@ while(sum(abs(somPos-somPosOld))>0 && i<inputParam.maxIter)
                 P.SomaticPair(:,j)=postComb.Somatic(locb);
             end
         end
+    else
+        P.SomaticPair=zeros(size(P,1),length(Tcell));
     end
     for j=1:length(Tcell)
         [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[postComb.Chr postComb.Pos],'rows');
