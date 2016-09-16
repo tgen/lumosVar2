@@ -41,6 +41,13 @@ fclose(fid);
 %%% process by chromosome
 chrList=[1:22];
 parfor chrIdx=1:length(chrList)
+    if exist([inputParam.outName '_' num2str(chrList(chrIdx)) '_pos.txt'],'file') & exist([inputParam.outName '_' num2str(chrList(chrIdx)) '_exon.txt'],'file')
+        tempData=dlmread([inputParam.outName '_' num2str(chrList(chrIdx)) '_pos.txt']);
+        tempExonRD=dlmread([inputParam.outName '_' num2str(chrList(chrIdx)) '_exon.txt']);
+        AllData{chrIdx}=tempData;
+        AllExonData{chrIdx}=reshape(tempExonRD,[],8,sampleCount); 
+        continue;
+    end
     outname=[inputParam.outName '_' num2str(chrList(chrIdx)) '_log.txt'];
     fout=fopen(outname,'w');
     currRegion=double(Regions(Regions(:,1)==chrList(chrIdx),:));

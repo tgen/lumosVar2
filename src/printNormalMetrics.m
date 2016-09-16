@@ -40,9 +40,16 @@ blockSize=inputParam.blockSize;
 priorMapError=inputParam.priorMapError;
 
 %%% read in bedfile
-fid=fopen(regionsFile);
-Regions=cell2mat(textscan(fid,'%d%d%d %*[^\n]'));
-fclose(fid);
+regTable=readtable(regionsFile,'FileType','text','Delimiter','\t');
+size(regTable)
+chr=cellfun(@str2num,regTable{:,1},'UniformOutput',0);
+size(chr)
+pos=~cellfun(@isempty,chr);
+sum(pos)
+Regions=[cell2mat(chr(pos)) regTable{pos,2:3}];
+% fid=fopen(regionsFile);
+% Regions=cell2mat(textscan(fid,'%d%d%d %*[^\n]'));
+% fclose(fid);
 
 %%% start parrellel pool
 delete(gcp);
@@ -87,6 +94,7 @@ parfor chrIdx=1:length(chrList)
             for i=1:length(output)
                 fprintf(ferror,'%s\n',output{i});
             end
+            startIdx=endIdx+1;
             continue;
         end
         %%% calculate normal metrics
