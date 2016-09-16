@@ -78,15 +78,16 @@ while 1
     %problem=createOptimProblem('fmincon','objective',@(fNew)nllCNAaddClone(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,cInit,Wcurr,fOld,fNew),'x0',pts(:,1),'lb',zeros(size(fInit)),'ub',100*ones(size(fInit)),'options',opts);
     %startPoints=CustomStartPointSet(pts');
     %paramMS=run(ms,problem,startPoints);
+    tic
     parfor i=1:size(pts,2)
         [paramPTS{i}, nllPTS(i)]=fmincon(@(fNew)nllCNAaddClone(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,cInit,Wcurr,fOld,fNew),pts(:,i),[],[],[],[],zeros(size(fInit)),100*ones(size(fInit)),[],opts);
     end
-    [~,idx]=max(nllPTS);
-    t(j)=toc
+    [~,idx]=min(nllPTS);
+    t(j,1)=toc
     fOld=[fOld paramPTS{idx}]
     tic
     [param{j}, nll(j)]=fmincon(@(param)nllCNAmulti_v2(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,param),[100.*cInit(:); Wcurr(:); fOld(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fOld(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fOld(:)));],[],opts2);
-    t2(j)=toc;
+    t(j,2)=toc;
     CNAscale=param{j}(1:length(Tcell))./100
     Wcurr=param{j}(length(Tcell)+1:2*length(Tcell))
     fOld=reshape(param{j}(2*length(Tcell)+1:end),[],inputParam.numClones)
