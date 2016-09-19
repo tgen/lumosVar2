@@ -145,10 +145,10 @@ for i=1:size(f,2)
     end
     priorCNAMax(cnaIdx(idxExon)==i,:)=priorCNA(cnaIdx(idxExon)==i,i);
     priorMinAlleleMax(cnaIdx(idx)==i,:)=priorMinAllele(cnaIdx(idx)==i,i);
-    %priorCNAf(cnaIdx(idx)==i,j)=betapdf(f(j,i),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2);
+    priorCNAf(cnaIdx(idx)==i,:)=betapdf(max(f(:,i)),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2)+inputParam.minLik;
 end
-%priorCNAf(NsegMax==2 & MsegMax==1)=NaN;
-priorCNAf=1;
+priorCNAf(NsegMax==2 & MsegMax==1)=NaN;
+%priorCNAf=1;
 
 %%% find expected allele frequency for somatic variants
 for i=1:size(f,2)
@@ -177,11 +177,12 @@ if (inputParam.NormalSample>0)
     cloneLik(:,end,:)=0;
     cloneLik(:,:,inputParam.NormalSample)=1;
 end
-[somLik,~]=max(prod(cloneLik,3),[],2);
+[somLik,somIdx]=max(prod(cloneLik,3),[],2);
 %for j=1:length(Tcell)
- %   priorF(:,j)=betapdf(f(j,somIdx),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2);
+fMax=max(f);
+priorF=betapdf(fMax(somIdx),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2)+inputParam.minLik;
 %end
-priorF=1;
+%priorF=1;
 
 %%% sum negative log likliehoods
 %nll=sum((-sum(log(somLik))-sum(log(hetlikMax))-sum(log(depthlikMax))-sum(log(priorCNAMax))-sum(log(priorMinAlleleMax))-sum(log(priorF))-nansum(log(priorCNAf)))./(length(somLik)+length(hetlikMax)+length(depthlikMax)+length(priorCNAMax)+length(priorMinAlleleMax)+length(priorF)+sum(~isnan(priorCNAf))));
