@@ -175,20 +175,18 @@ germGT(cellfun('isempty',germGT))={'.'};
 
 if inputParam.NormalSample<1
     formatStr(:,1)=strcat(germGT',':.:.:.:.:.:.:.:.:.:.:.');
+    n=2;
+else
+    n=1;
 end
 for i=1:length(Tcell)
-    if inputParam.NormalSample<1
-        n=i+1;
-    else
-        n=i;
-    end
     T=Tcell{i};
     if inputParam.NormalSample==i
         formatStr(:,n)=germGT';
     else
-        n
-        size(formatStr)
-        size(tumorGT)
+%        n
+ %       size(formatStr)
+ %       size(tumorGT)
         formatStr(:,n)=tumorGT';
     end
     formatStr(:,n)=strcat(formatStr(:,n),':',num2str(T.ReadDepthPass,'%-.0f'));
@@ -222,6 +220,7 @@ for i=1:length(Tcell)
     formatStr(P.Somatic(:,i)<=0.5,n)=strcat(formatStr(P.Somatic(:,i)<0.5,n),':1');
     formatStr(T.NumCopies==2 & T.MinAlCopies==1,n)=strcat(formatStr(T.NumCopies==2 & T.MinAlCopies==1,n),':NA');
     formatStr(T.NumCopies~=2 | T.MinAlCopies~=1,n)=strcat(formatStr(T.NumCopies~=2 | T.MinAlCopies~=1,n),':',num2str(T.cnaF(T.NumCopies~=2 | T.MinAlCopies~=1),'%-.3f'));
+    n=n+1;
 end
 
 

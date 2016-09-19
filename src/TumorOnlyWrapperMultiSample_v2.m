@@ -173,6 +173,7 @@ hetPos=max(P.Het,[],2)>inputParam.pGermlineThresh & filtPos;
 somPos=max(P.Somatic,[],2)>inputParam.pSomaticThresh & filtPos & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq;
 ['Somatic positions: ' num2str(sum(somPos))]
 ['Het positions: ' num2str(sum(hetPos))]
+tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
 while(sum(abs(somPos-somPosOld))>0 && i<inputParam.maxIter)
      [segsTable, W, f, CNAscale, nll, t{i}]=fitCNAmulti(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam);
     %['clonal fractions: ' num2str(f)]
@@ -189,12 +190,14 @@ while(sum(abs(somPos-somPosOld))>0 && i<inputParam.maxIter)
     inputParam.numClones=size(f,2);
     [postComb, pDataSum(i+1),pDataComb,clones,prior,countsAll]=jointSNV(Tcell, exonRD, f, W, inputParam);
     if inputParam.NormalSample>0
+        n=1;
         for j=1:length(Tcell)
             if j~=inputParam.NormalSample
                 idx=[inputParam.NormalSample j];
-                postComb=jointSNV(Tcell(idx), exonRD(idx), f(j-1,:), W, inputParam);
+                postComb=jointSNV(Tcell(idx), exonRD(idx), f(n,:), W, inputParam);
                 [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[postComb.Chr postComb.Pos],'rows');
                 P.SomaticPair(:,j)=postComb.Somatic(locb);
+                n=n+1;
             end
         end
     else
@@ -232,7 +235,7 @@ end
 
 %%%write output files
 fAll=zeros(length(Tcell),inputParam.numClones);
-tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
+
 fAll(tIdx,1:end)=reshape(f,[],inputParam.numClones);
 
 save([inputParam.outMat]);
