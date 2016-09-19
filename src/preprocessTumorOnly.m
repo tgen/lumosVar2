@@ -42,6 +42,9 @@ fclose(fid);
 chrList=[1:22];
 parfor chrIdx=1:length(chrList)
     if exist([inputParam.outName '_' num2str(chrList(chrIdx)) '_pos.txt'],'file') & exist([inputParam.outName '_' num2str(chrList(chrIdx)) '_exon.txt'],'file')
+        %fid=fopen([inputParam.outName '_' num2str(chrList(chrIdx)) '_pos.txt']);
+        %tempData=textscan(fid,'%u64');
+        %fclose(fid);
         tempData=dlmread([inputParam.outName '_' num2str(chrList(chrIdx)) '_pos.txt']);
         tempExonRD=dlmread([inputParam.outName '_' num2str(chrList(chrIdx)) '_exon.txt']);
         AllData{chrIdx}=tempData;
@@ -137,8 +140,8 @@ parfor chrIdx=1:length(chrList)
         fprintf(fout,'\n%s',[' found ' num2str(sum(Lia)) ' canidate positions']);
         waitbar(endIdx./length(currRegion));       
     end   
-    dlmwrite([inputParam.outName '_' num2str(chrList(chrIdx)) '_pos.txt'],tempData(tempData(:,1)>0,:));
-    dlmwrite([inputParam.outName '_' num2str(chrList(chrIdx)) '_exon.txt'],reshape(tempExonRD(tempExonRD(:,1)>0,:,:),[],8*sampleCount)); 
+    dlmwrite([inputParam.outName '_' num2str(chrList(chrIdx)) '_pos.txt'],tempData(tempData(:,1)>0,:),'precision',9);
+    dlmwrite([inputParam.outName '_' num2str(chrList(chrIdx)) '_exon.txt'],reshape(tempExonRD(tempExonRD(:,1)>0,:,:),[],8*sampleCount),'precision',9); 
     AllData{chrIdx}=tempData(tempData(:,1)>0,:);
     AllExonData{chrIdx}=tempExonRD(tempExonRD(:,1)>0,:,:); 
 end
