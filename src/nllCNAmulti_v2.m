@@ -180,7 +180,7 @@ if (inputParam.NormalSample>0)
 end
 [somLik,somIdx]=max(prod(cloneLik,3),[],2);
 %for j=1:length(Tcell)
-fMax=max(f)
+fMax=max(f);
 priorF=betapdf(fMax(somIdx),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2)+inputParam.minLik;
 %end
 %priorF=1;

@@ -131,7 +131,7 @@ parfor chrIdx=1:length(chrList)
         end
         startIdx=endIdx+1;
         %%%% combine tumor and normal data
-        if isempty(TumorData)
+        if isempty(TumorData) || isempty(NormalData)
             continue
         end
         [Lia,Locb]=ismember(TumorData(:,3),NormalData(:,2));
