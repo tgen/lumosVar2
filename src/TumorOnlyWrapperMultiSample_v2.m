@@ -151,6 +151,11 @@ pDataSum(1)=0;
 [postComb, pDataSum(2),somaticFlag,pDataComb,clones,prior,countsAll]=jointSNVinit(Tcell, exonRD, cell2mat(f)', cell2mat(W)', inputParam);
 for j=1:length(Tcell)
     [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[postComb.Chr postComb.Pos],'rows');
+    Tcell{j}.RefComb=countsAll.Ref(locb);
+    Tcell{j}.Acomb=countsAll.A(locb);
+    Tcell{j}.Bcomb=countsAll.B(locb);
+    Tcell{j}.AcountsComb=countsAll.Acounts(locb,j);
+    Tcell{j}.BcountsComb=countsAll.Bcounts(locb,j);
     P.Somatic(:,j)=postComb.Somatic(locb).*somaticFlag(locb,j);
     P.Het(:,j)=postComb.Het(locb);
     P.Hom(:,j)=postComb.Hom(locb);
@@ -165,6 +170,19 @@ for j=1:length(Tcell)
     P.priorNonDip(:,j)=prior.nonDiploid(locb);
     cloneId(:,j)=clones(locb);
 end
+
+
+for i=1:length(Tcell)
+    T=Tcell{i};
+    E=Ecell{i};
+    homPos=P.Hom(:,i)>0.5 | (P.Somatic(:,i)>0.5 & (max(P.DataSomatic(:,i),P.DataNonDip(:,i))<=P.DataHom(:,i) | (T.BcountsComb==0 & T.A==T.RefComb)));
+    [F{i},postTrust,postArtifact]=qualDiscrimCalls(T,E,homPos,inputParam);
+    P.trust(:,i)=postTrust(:,2);
+    P.artifact(:,i)=postArtifact(:,1);
+    clear T E;
+end
+filtPos=max(P.trust,[],2)>inputParam.pGoodThresh & max(P.artifact,[],2)<inputParam.pGoodThresh;
+
 
 %%%repeat fitting and variant calling until converges
 i=1;
