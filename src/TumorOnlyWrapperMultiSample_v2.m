@@ -243,8 +243,16 @@ while(sum(abs(somPos-somPosOld))>0 && i<inputParam.maxIter)
         P.priorHet(:,j)=prior.Het(locb);
         P.priorHom(:,j)=prior.Hom(locb);
         P.priorNonDip(:,j)=prior.nonDiploid(locb);
-        cloneId(:,j)=clones(locb);
+        cloneId(:,j)=clones(locb);    
+        T=Tcell{j};
+        E=Ecell{j};
+        homPos=P.Hom(:,j)>0.5 | (P.Somatic(:,j)>0.5 & (max(P.DataSomatic(:,j),P.DataNonDip(:,j))<=P.DataHom(:,j) | (T.BcountsComb==0 & T.A==T.RefComb)));
+        [F{j},postTrust,postArtifact]=qualDiscrimCalls(T,E,homPos,inputParam);
+        P.trust(:,j)=postTrust(:,2);
+        P.artifact(:,j)=postArtifact(:,1);
+        clear T E;
     end
+    filtPos=max(P.trust,[],2)>inputParam.pGoodThresh & max(P.artifact,[],2)<inputParam.pGoodThresh;
     somPosOld=somPos;
     hetPos=max(P.Het,[],2)>inputParam.pGermlineThresh & filtPos;
     somPos=max([P.Somatic P.SomaticPair],[],2)>inputParam.pSomaticThresh & filtPos & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq;
