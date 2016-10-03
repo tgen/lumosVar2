@@ -206,7 +206,6 @@ while(sum(abs(somPos-somPosOld))>0 && i<inputParam.maxIter)
     save([inputParam.outMat]);
     i=i+1
     inputParam.numClones=size(f,2);
-    [postComb, pDataSum(i+1),pDataComb,clones,prior,countsAll]=jointSNV(Tcell, exonRD, f, W, inputParam);
     if inputParam.NormalSample>0
         n=1;
         NormalSample=inputParam.NormalSample;
@@ -218,12 +217,15 @@ while(sum(abs(somPos-somPosOld))>0 && i<inputParam.maxIter)
                 [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[postComb.Chr postComb.Pos],'rows');
                 P.SomaticPair(:,j)=postComb.Somatic(locb);
                 n=n+1;
+            else
+                P.SomaticPair(:,j)=zeros(size(P,1),1);
             end
         end
         inputParam.NormalSample=NormalSample;
     else
         P.SomaticPair=zeros(size(P,1),length(Tcell));
     end
+    [postComb, pDataSum(i+1),pDataComb,clones,prior,countsAll]=jointSNV(Tcell, exonRD, f, W, inputParam);
     for j=1:length(Tcell)
         [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[postComb.Chr postComb.Pos],'rows');
         Tcell{j}.RefComb=countsAll.Ref(locb);
