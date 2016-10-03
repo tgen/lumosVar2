@@ -29,9 +29,17 @@ function [T, E]=preprocessTumorOnly(inputParam,paramFile)
 %------------- BEGIN CODE --------------
 
 %%%import bed file
-fid=fopen(inputParam.regionsFile);
-Regions=cell2mat(textscan(fid,'%d%d%d %*[^\n]'));
-fclose(fid);
+regTable=readtable(regionsFile,'FileType','text','Delimiter','\t');
+size(regTable)
+if ~isnumeric(regTable{:,1})
+    chr=cellfun(@str2num,regTable{:,1},'UniformOutput',0);
+    size(chr)
+    pos=~cellfun(@isempty,chr);
+    sum(pos)
+    Regions=[cell2mat(chr(pos)) regTable{pos,2:3}];
+else
+    Regions=regTable{:,1:3};
+end
 
 fid=fopen(inputParam.bamList);
 bamList=textscan(fid,'%s');
@@ -119,7 +127,7 @@ parfor chrIdx=1:length(chrList)
         fprintf(fout,'\n%s',['NormalData has length:' num2str(size(NormalData,1))]);
         cd(inputParam.workingDirectory);
         currRegion(startIdx:endIdx,:);
-        if isempty(readDepth)
+        if isempty(readDepth) || isempty(NormalData)
             startIdx=endIdx+1;
             continue
         end
@@ -131,7 +139,7 @@ parfor chrIdx=1:length(chrList)
         end
         startIdx=endIdx+1;
         %%%% combine tumor and normal data
-        if isempty(TumorData) || isempty(NormalData)
+        if isempty(TumorData)
             continue
         end
         [Lia,Locb]=ismember(TumorData(:,3),NormalData(:,2));
