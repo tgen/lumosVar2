@@ -50,6 +50,7 @@ T.BmeanReadPos(T.BCountF+T.BCountR==0)=NaN;
 F=table();
 F.TumorPerPassReads=T.ReadDepthPass./T.ReadDepth;
 F.normalPerReadPass=T.perReadPass;
+F.normalPerReadPass(~isfinite(T.perReadPass))=inputParam.minPerReadPASS;
 F.ABfrac=(T.ACountF+T.ACountR+T.BCountF+T.BCountR)./T.ReadDepthPass;
 F.normalABfrac=max(T.abFrac,0);
 F.minPerStrand=min([T.ACountF./(T.ACountF+T.ACountR) T.ACountR./(T.ACountF+T.ACountR) T.BCountF./(T.BCountF+T.BCountR) T.BCountR./(T.BCountF+T.BCountR)],[],2);

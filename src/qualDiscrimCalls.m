@@ -52,6 +52,7 @@ bIdx=homPos & T.Acomb==T.B;
 F=table();
 F.TumorPerPassReads=T.ReadDepthPass./T.ReadDepth;
 F.normalPerReadPass=T.perReadPass;
+F.normalPerReadPass(~isfinite(T.perReadPass))=inputParam.minPerReadPASS;
 F.ABfrac=(T.AcountsComb+T.BcountsComb)./T.ReadDepthPass;
 F.normalABfrac=max(T.abFrac,0);
 F.minPerStrand=NaN(size(F,1),1);
