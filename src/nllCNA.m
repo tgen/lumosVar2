@@ -106,13 +106,13 @@ priorCNAf(NsegMax==2 & MsegMax==1)=NaN;
 
 %%% find expected allele frequency for somatic variants
 for i=1:length(f)
-    expAF(cnaIdx==i,i)=f(i)*(NsegMax(cnaIdx==i)-MsegMax(cnaIdx==i))./(f(i)*NsegMax(cnaIdx==i)+(1-f(i))*2);
+    expAF(cnaIdx==i,i)=f(i)*(NsegMax(cnaIdx==i,:)-MsegMax(cnaIdx==i,:))./(f(i)*NsegMax(cnaIdx==i,:)+(1-f(i))*2);
+    subIdx=f(cnaIdx)+f(i)>1 & f(i)<f(cnaIdx);
     if sum(cnaIdx~=i)>0
-        expAF(cnaIdx~=i,i)=f(i)./(f(cnaIdx(cnaIdx~=i))'.*NsegMax(cnaIdx~=i)+(1-f(cnaIdx(cnaIdx~=i))')*2);
-        expAF(NsegMax==0 & cnaIdx~=i,i)=min([(1-f(cnaIdx(cnaIdx~=i))'); f(i)])./2;
+        expAF(cnaIdx~=i,i)=f(i)./(f(cnaIdx(cnaIdx~=i))'.*NsegMax(cnaIdx~=i,:)+(1-f(cnaIdx(cnaIdx~=i))')*2);
+        expAF(subIdx,i)=f(i)*MsegMax(subIdx)./(f(cnaIdx(subIdx)).*NsegMax(subIdx)+(1-f(cnaIdx(subIdx)))*2);
+        %expAF(NsegMax==0 & cnaIdx~=i,i,j)=min([(1-f(j,cnaIdx(cnaIdx~=i))'); f(j,i)])./2;
     end
-    [ones(sum(expAF(:,i)>1),1)*f(i) NsegMax(expAF(:,i)>1)' MsegMax(expAF(:,i)>1)' expAF(expAF(:,i)>1,i) i cnaIdx(expAF(:,i)>1)];
-    [ones(sum(expAF(:,i)<0),1)*f(i) NsegMax(expAF(:,i)<0)' MsegMax(expAF(:,i)<0)' expAF(expAF(:,i)<0,i) i cnaIdx(expAF(:,i)<0)];
 end
 
 %%% find likelihood of somatic variant
