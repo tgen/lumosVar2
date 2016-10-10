@@ -251,6 +251,7 @@ for j=1:size(Acounts,2)
         expAF(matchIdx,i,j)=f(j,i)*(N(matchIdx,j)-M(matchIdx,j))./(f(j,i)*N(matchIdx,j)+(1-f(j,i))*2);
         if sum(~matchIdx)>0
             expAF(~matchIdx,i,j)=f(j,i)./(cnaF(~matchIdx,j).*N(~matchIdx,j)+(1-cnaF(~matchIdx,j))*2);
+            expAF(N(:,j)==0 & ~matchIdx,i,j)=f(j,i)./2;
             expAF(subIdx,i,j)=f(j,i)*M(subIdx,j)./(cnaF(subIdx,j).*N(subIdx,j)+(1-cnaF(subIdx,j))*2);
             %expAF(N(:,j)==0 & ~matchIdx,i,j)=min([(1-cnaF(:,j)); f(j,i)])./2;
         end

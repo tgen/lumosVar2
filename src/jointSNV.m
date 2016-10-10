@@ -68,10 +68,10 @@ for i=1:size(pos)
     end
     [countSort,idx]=sort(counts,'descend');
     if(max(alleles(idx<=2))>4)
-        AinsIdx=Amat(pos(i),:)~=RefOrig(pos(i),:) & Amat(pos(i),:)>4;
-        BinsIdx=Bmat(pos(i),:)~=RefOrig(pos(i),:) & Bmat(pos(i),:)>4;
-        BdelIdx=Amat(pos(i),:)==RefOrig(pos(i),:) & Amat(pos(i),:)>4;
-        AdelIdx=(Bmat(pos(i),:)==RefOrig(pos(i),:) & Bmat(pos(i),:)>4) | (RefOrig(pos(i),:)>4 & BcountsOrig(pos(i),:)==0);
+        AinsIdx=RefOrig(pos(i),:)<=4 & Amat(pos(i),:)>4;
+        BinsIdx=RefOrig(pos(i),:)<=4 & Bmat(pos(i),:)>4;
+        BdelIdx=RefOrig(pos(i),:)>4 & Bmat(pos(i),:)<=4;
+        AdelIdx=RefOrig(pos(i),:)>4 & Amat(pos(i),:)<=4;
         ArefIdx=Amat(pos(i),:)==RefOrig(pos(i),:);
         BrefIdx=Bmat(pos(i),:)==RefOrig(pos(i),:);
         AaltIdx=Amat(pos(i),:)~=RefOrig(pos(i),:) & Amat(pos(i),:)<=4 & ~AdelIdx;
@@ -98,10 +98,15 @@ for i=1:size(pos)
             Acounts(pos(i),:)=AcountsOrig(pos(i),:).*AinsIdx+BcountsOrig(pos(i),:).*BinsIdx;
             ApopAF(pos(i),:)=ApopAForig(pos(i),:).*AinsIdx+BpopAForig(pos(i),:).*BinsIdx;
         elseif(tIdx(1)==1)
-            if length(unique([Amat(pos(i),ArefIdx) Bmat(pos(i),BrefIdx)]))>1
-                A(pos(i),:)=-1;
+            refAlleles=unique([Amat(pos(i),ArefIdx) Bmat(pos(i),BrefIdx)]);
+            if length(refAlleles)==1;
+                A(pos(i),:)=refAlleles;
+            elseif tIdx(2)==4 && length(refAlleles(refAlleles>4))==1
+                A(pos(i),:)=refAlleles(refAlleles>4);
+            elseif tIdx(2)~=4 &&  length(refAlleles(refAlleles<=4))==1
+                A(pos(i),:)=refAlleles(refAlleles<=4);
             else
-                A(pos(i),:)=unique([Amat(pos(i),ArefIdx) Bmat(pos(i),BrefIdx)]);
+                A(pos(i),:)=-1;
             end
             Acounts(pos(i),:)=AcountsOrig(pos(i),:).*ArefIdx+BcountsOrig(pos(i),:).*BrefIdx;
             ApopAF(pos(i),:)=ApopAForig(pos(i),:).*ArefIdx+BpopAForig(pos(i),:).*BrefIdx;
@@ -169,9 +174,9 @@ for i=1:size(pos)
             elseif A(pos(i))==Bmat(pos(i),j)
                 Acounts(pos(i),j)=BcountsOrig(pos(i),j);
                 ApopAF(pos(i),j)=BpopAForig(pos(i),j);
-            elseif A(pos(i))==RefOrig(pos(i),j)
-                Acounts(pos(i),j)=RDmat(pos(i),j);
-                ApopAF(pos(i),j)=max(ApopAF(:,j));
+%             elseif A(pos(i))==RefOrig(pos(i),j)
+%                 Acounts(pos(i),j)=RDmat(pos(i),j);
+%                 ApopAF(pos(i),j)=max(ApopAF(:,j));
             else
                 Acounts(pos(i),j)=0;
                 if A(pos(i))>4 | B(pos(i))>4 | RefOrig(pos(i),j)
@@ -191,9 +196,9 @@ for i=1:size(pos)
             elseif B(pos(i))==Bmat(pos(i),j)
                 Bcounts(pos(i),j)=BcountsOrig(pos(i),j);
                 BpopAF(pos(i),j)=BpopAForig(pos(i),j);
-            elseif B(pos(i))==RefOrig(pos(i),j)
-                Bcounts(pos(i),j)=RDmat(pos(i),j);
-                BpopAF(pos(i),j)=max(BpopAForig(:,j));
+%             elseif B(pos(i))==RefOrig(pos(i),j)
+%                 Bcounts(pos(i),j)=RDmat(pos(i),j);
+%                 BpopAF(pos(i),j)=max(BpopAForig(:,j));
             else
                 Bcounts(pos(i),j)=0;
                 if A(pos(i))>4 | B(pos(i))>4 | RefOrig(pos(i),j)
@@ -236,7 +241,7 @@ end
 Acounts(Acounts+Bcounts==0 & (A==Ref)*ones(1,size(Amat,2)))=RDmat(Acounts+Bcounts==0 & (A==Ref)*ones(1,size(Amat,2)));
 %%% calculate likliehoods of germline genotypes
 for i=1:size(Acounts,2)
-    pDataHom(:,i)=bbinopdf_ln(Acounts(:,i),RDmat(:,i),Wmat(:,i).*(1-10.^(-BmeanBQ(:,i)./10)),Wmat(:,i).*10.^(-BmeanBQ(:,i)./10));
+    pDataHom(:,i)=bbinopdf_ln(Acounts(:,i),RDmat(:,i),Wmat(:,i).*(1-10.^(-AmeanBQ(:,i)./10)),Wmat(:,i).*10.^(-AmeanBQ(:,i)./10));
     pDataHet(:,i)=bbinopdf_ln(Bcounts(:,i),RDmat(:,i),cnCorr(:,i).*Wmat(:,i),(1-cnCorr(:,i)).*Wmat(:,i));
     pDataOther(:,i)=bbinopdf_ln(max(RDmat(:,i)-Acounts(:,i)-Bcounts(:,i),0),RDmat(:,i),Wmat(:,i).*(1-10.^(-AmeanBQ(:,i)./10)),Wmat(:,i).*10.^(-AmeanBQ(:,i)./10));
 end
@@ -249,6 +254,7 @@ for j=1:size(Acounts,2)
         expAF(matchIdx,i,j)=f(j,i)*(N(matchIdx,j)-M(matchIdx,j))./(f(j,i)*N(matchIdx,j)+(1-f(j,i))*2);
         if sum(~matchIdx)>0
             expAF(~matchIdx,i,j)=f(j,i)./(cnaF(~matchIdx,j).*N(~matchIdx,j)+(1-cnaF(~matchIdx,j))*2);
+            expAF(N(:,j)==0 & ~matchIdx,i,j)=f(j,i)./2;
             expAF(subIdx,i,j)=f(j,i)*M(subIdx,j)./(cnaF(subIdx,j).*N(subIdx,j)+(1-cnaF(subIdx,j))*2);
             %expAF(N(:,j)==0 & ~matchIdx,i,j)=min((1-cnaF(N(:,j)==0 & ~matchIdx,j)),f(j,i))./2;
         end
@@ -282,7 +288,9 @@ for i=1:size(f,2)
     pDataSomatic(cloneId==i,:)=squeeze(cloneLik(cloneId==i,i,:));
 end
 pDataNonDip(isnan(pDataNonDip))=0;
-pDataNonDip(Bcounts(:,inputParam.NormalSample)==0,inputParam.NormalSample)=0;
+if inputParam.NormalSample>0
+    pDataNonDip(Bcounts(:,inputParam.NormalSample)==0,inputParam.NormalSample)=0;
+end
 
 
 
