@@ -29,7 +29,7 @@ function [T, E]=preprocessTumorOnly(inputParam,paramFile)
 %------------- BEGIN CODE --------------
 
 %%%import bed file
-regTable=readtable(regionsFile,'FileType','text','Delimiter','\t');
+regTable=readtable(inputParam.regionsFile,'FileType','text','Delimiter','\t');
 size(regTable)
 if ~isnumeric(regTable{:,1})
     chr=cellfun(@str2num,regTable{:,1},'UniformOutput',0);

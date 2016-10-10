@@ -145,6 +145,7 @@ for i=1:size(Tcell,2)
     Tcell{i}=T;
     clear T;
 end
+save([inputParam.outMat]);
 
 %%%Initial Bayesian Variant Calling
 pDataSum(1)=0;
@@ -191,6 +192,7 @@ hetPos=max(P.Het,[],2)>inputParam.pGermlineThresh & filtPos;
 somPos=max(P.Somatic,[],2)>inputParam.pSomaticThresh & filtPos & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq;
 ['Somatic positions: ' num2str(sum(somPos))]
 ['Het positions: ' num2str(sum(hetPos))]
+save([inputParam.outMat]);
 tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
 while(sum(abs(somPos-somPosOld))>0 && i<inputParam.maxIter)
      [segsTable, W, f, CNAscale, nll, t{i}]=fitCNAmulti(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam);
@@ -248,7 +250,8 @@ while(sum(abs(somPos-somPosOld))>0 && i<inputParam.maxIter)
         cloneId(:,j)=clones(locb);    
         T=Tcell{j};
         E=Ecell{j};
-        homPos=P.Hom(:,j)>0.5 | (P.Somatic(:,j)>0.5 & (max(P.DataSomatic(:,j),P.DataNonDip(:,j))<=P.DataHom(:,j) | (T.BcountsComb==0 & T.A==T.RefComb)));
+        homPos=P.Hom(:,j)>0.5  & P.SomaticPair(:,j)<0.5 | (max([P.Somatic P.SomaticPair],[],2)>0.5 & (max(P.DataSomatic(:,j),P.DataNonDip(:,j))<=P.DataHom(:,j) | (T.BcountsComb==0 & T.A==T.RefComb)));
+        P.homPos(:,j)=homPos;
         [F{j},postTrust,postArtifact]=qualDiscrimCalls(T,E,homPos,inputParam);
         P.trust(:,j)=postTrust(:,2);
         P.artifact(:,j)=postArtifact(:,1);

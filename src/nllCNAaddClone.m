@@ -93,8 +93,8 @@ end
 
 %%% lookup copy number for positions and exons
 idx=getPosInRegions([D.Chr D.Pos], segsMerged);
-Nmat=Nseg(idx,:);
-Mmat=Mseg(idx,:);
+Nmat(~isnan(idx),:)=Nseg(idx(~isnan(idx)),:);
+Mmat(~isnan(idx),:)=Mseg(idx(~isnan(idx)),:);
 idxExon=getPosInRegions([E.Chr E.StartPos],segsMerged);
 NmatExon=Nseg(idxExon,:);
 
@@ -140,12 +140,12 @@ for i=1:size(f,2)
     NsegMax(cnaIdx==i,:)=Nseg(cnaIdx==i,i);
     MsegMax(cnaIdx==i,:)=Mseg(cnaIdx==i,i);
     for j=1:length(Tcell)   
-        hetlikMax(cnaIdx(idx)==i,j)=hetlik(cnaIdx(idx)==i,i,j);
+        hetlikMax(cnaIdx(idx(~isnan(idx)))==i,j)=hetlik(cnaIdx(idx(~isnan(idx)))==i,i,j);
         depthlikMax(cnaIdx(idxExon)==i,j)=depthlik(cnaIdx(idxExon)==i,i,j); 
     end
     priorCNAMax(cnaIdx(idxExon)==i,:)=priorCNA(cnaIdx(idxExon)==i,i);
-    priorMinAlleleMax(cnaIdx(idx)==i,:)=priorMinAllele(cnaIdx(idx)==i,i);
-    priorCNAf(cnaIdx(idx)==i,:)=betapdf(max(f(:,i)),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2)+inputParam.minLik;
+    priorMinAlleleMax(cnaIdx(idx(~isnan(idx)))==i,:)=priorMinAllele(cnaIdx(idx(~isnan(idx)))==i,i);
+    priorCNAf(cnaIdx(idx(~isnan(idx)))==i,:)=betapdf(max(f(:,i)),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2)+inputParam.minLik;
 end
 priorCNAf(NsegMax==2 & MsegMax==1)=NaN;
 %priorCNAf=1;
@@ -157,11 +157,11 @@ for i=1:size(f,2)
         subIdx=f(j,cnaIdx)+f(j,i)>1 & f(j,i)<f(j,cnaIdx);
         if sum(cnaIdx~=i)>0
             expAF(cnaIdx~=i,i,j)=f(j,i)./(f(j,cnaIdx(cnaIdx~=i))'.*NsegMax(cnaIdx~=i,:)+(1-f(j,cnaIdx(cnaIdx~=i))')*2);
-            expAF(subIdx,i,j)=f(j,i)*MsegMax(subIdx,j)./(f(j,cnaIdx(subIdx)).*NsegMax(subIdx,j)+(1-f(j,cnaIdx(subIdx)))*2);
-            %expAF(NsegMax==0 & cnaIdx~=i,i,j)=min([(1-f(j,cnaIdx(cnaIdx~=i))'); f(j,i)])./2;
+            expAF(NsegMax==0 & cnaIdx~=i,i,j)=f(j,i)./2;
+            expAF(subIdx,i,j)=f(j,i)*MsegMax(subIdx,:)./(f(j,cnaIdx(subIdx))'.*NsegMax(subIdx,:)+(1-f(j,cnaIdx(subIdx))')*2);
         end
-        %[ones(sum(expAF(:,i,j)>1),1)*[i j f(j,i)] NsegMax(expAF(:,i,j)>1,j) MsegMax(expAF(:,i,j)>1,j) expAF(expAF(:,i,j)>1,i,j) cnaIdx(expAF(:,i,j)>1)]
-        %[ones(sum(expAF(:,i,j)<0),1)*[i j f(j,i)] NsegMax(expAF(:,i,j)<0,j) MsegMax(expAF(:,i,j)<0,j) expAF(expAF(:,i,j)<0,i,j) cnaIdx(expAF(:,i,j)<0)]
+        %[ones(sum(expAF(:,i,j)>1),1)*[i j f(j,i)] NsegMax(expAF(:,i,j)>1,:) MsegMax(expAF(:,i,j)>1,:) expAF(expAF(:,i,j)>1,i,j) cnaIdx(expAF(:,i,j)>1)]
+        %[ones(sum(expAF(:,i,j)<0),1)*[i j f(j,i)] NsegMax(expAF(:,i,j)<0,:) MsegMax(expAF(:,i,j)<0,:) expAF(expAF(:,i,j)<0,i,j) cnaIdx(expAF(:,i,j)<0)]
     end
 end
 
@@ -188,6 +188,6 @@ priorF=betapdf(fMax(somIdx),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.
 
 %%% sum negative log likliehoods
 %nll=sum((-sum(log(somLik))-sum(log(hetlikMax))-sum(log(depthlikMax))-sum(log(priorCNAMax))-sum(log(priorMinAlleleMax))-sum(log(priorF))-nansum(log(priorCNAf)))./(length(somLik)+length(hetlikMax)+length(depthlikMax)+length(priorCNAMax)+length(priorMinAlleleMax)+length(priorF)+sum(~isnan(priorCNAf))));
-nll=sum(-sum(log(somLik)./(inputParam.priorSomatic*sum(E.EndPos-E.StartPos)))-mean(log(hetlikMax))-mean(log(depthlikMax))-mean(log(priorCNAMax))-mean(log(priorMinAlleleMax))-mean(log(priorF))-nanmean(log(priorCNAf)));
+nll=sum(-sum(log(somLik)./(inputParam.priorSomaticSNV*sum(E.EndPos-E.StartPos)))-mean(log(hetlikMax))-mean(log(depthlikMax))-mean(log(priorCNAMax))-mean(log(priorMinAlleleMax))-mean(log(priorF))-nanmean(log(priorCNAf)));
 
 return;

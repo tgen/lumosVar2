@@ -158,9 +158,9 @@ for i=1:size(f,2)
         subIdx=f(j,cnaIdx)+f(j,i)>1 & f(j,i)<f(j,cnaIdx);
         if sum(cnaIdx~=i)>0
             expAF(cnaIdx~=i,i,j)=f(j,i)./(f(j,cnaIdx(cnaIdx~=i))'.*NsegMax(cnaIdx~=i,:)+(1-f(j,cnaIdx(cnaIdx~=i))')*2);
-            expAF(subIdx,i,j)=f(j,i)*MsegMax(subIdx,j)./(f(j,cnaIdx(subIdx)).*NsegMax(subIdx,j)+(1-f(j,cnaIdx(subIdx)))*2);
-            %expAF(NsegMax==0 & cnaIdx~=i,i,j)=min([(1-f(j,cnaIdx(cnaIdx~=i))'); f(j,i)])./2;
-        end
+            expAF(NsegMax==0 & cnaIdx~=i,i,j)=f(j,i)./2;
+            expAF(subIdx,i,j)=f(j,i)*MsegMax(subIdx,:)./(f(j,cnaIdx(subIdx))'.*NsegMax(subIdx,:)+(1-f(j,cnaIdx(subIdx))')*2);
+         end
         %[ones(sum(expAF(:,i,j)>1),1)*[i j f(j,i)] NsegMax(expAF(:,i,j)>1,j) MsegMax(expAF(:,i,j)>1,j) expAF(expAF(:,i,j)>1,i,j) cnaIdx(expAF(:,i,j)>1)]
         %[ones(sum(expAF(:,i,j)<0),1)*[i j f(j,i)] NsegMax(expAF(:,i,j)<0,j) MsegMax(expAF(:,i,j)<0,j) expAF(expAF(:,i,j)<0,i,j) cnaIdx(expAF(:,i,j)<0)]
     end
@@ -190,6 +190,6 @@ priorF=betapdf(fMax(somIdx),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.
 %%% sum negative log likliehoods
 %nll=sum((-sum(log(somLik))-sum(log(hetlikMax))-sum(log(depthlikMax))-sum(log(priorCNAMax))-sum(log(priorMinAlleleMax))-sum(log(priorF))-nansum(log(priorCNAf)))./(length(somLik)+length(hetlikMax)+length(depthlikMax)+length(priorCNAMax)+length(priorMinAlleleMax)+length(priorF)+sum(~isnan(priorCNAf))));
 
-nll=sum(-sum(log(somLik)./(inputParam.priorSomatic*sum(E.EndPos-E.StartPos)))-mean(log(hetlikMax))-mean(log(depthlikMax))-mean(log(priorCNAMax))-mean(log(priorMinAlleleMax))-mean(log(priorF))-nanmean(log(priorCNAf)));
+nll=sum(-sum(log(somLik)./(inputParam.priorSomaticSNV*sum(E.EndPos-E.StartPos)))-mean(log(hetlikMax))-mean(log(depthlikMax))-mean(log(priorCNAMax))-mean(log(priorMinAlleleMax))-mean(log(priorF))-nanmean(log(priorCNAf)));
 
 return;
