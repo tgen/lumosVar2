@@ -67,7 +67,7 @@ for i=1:size(pos)
         counts(j)=sum(AcountsOrig(pos(i),alleles(j)==Amat(pos(i),:)))+sum(BcountsOrig(pos(i),alleles(j)==Bmat(pos(i),:)));
     end
     [countSort,idx]=sort(counts,'descend');
-    if(max(alleles(idx<=2))>4)
+    if(max(alleles(idx(1:2)))>4)
         AinsIdx=RefOrig(pos(i),:)<=4 & Amat(pos(i),:)>4;
         BinsIdx=RefOrig(pos(i),:)<=4 & Bmat(pos(i),:)>4;
         BdelIdx=RefOrig(pos(i),:)>4 & Bmat(pos(i),:)<=4;
@@ -287,6 +287,7 @@ end
 for i=1:size(f,2)
     pDataSomatic(cloneId==i,:)=squeeze(cloneLik(cloneId==i,i,:));
 end
+pDataSomatic(Bcounts<1)=min(pDataSomatic(Bcounts<1),pDataHom(Bcounts<1));
 pDataNonDip(isnan(pDataNonDip))=0;
 if inputParam.NormalSample>0
     pDataNonDip(Bcounts(:,inputParam.NormalSample)==0,inputParam.NormalSample)=0;

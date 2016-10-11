@@ -258,7 +258,7 @@ while(sum(abs(somPos-somPosOld))>0 && i<inputParam.maxIter)
         clear T E;
     end
     filtPos=max(P.trust,[],2)>inputParam.pGoodThresh & max(P.artifact,[],2)<inputParam.pGoodThresh;
-    somPosOld=somPos;
+    %somPosOld=somPos;
     hetPos=max(P.Het,[],2)>inputParam.pGermlineThresh & filtPos;
     somPos=max([P.Somatic P.SomaticPair],[],2)>inputParam.pSomaticThresh & filtPos & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq;
     ['Somatic positions: ' num2str(sum(somPos))]
