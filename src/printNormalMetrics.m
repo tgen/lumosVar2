@@ -42,11 +42,17 @@ priorMapError=inputParam.priorMapError;
 %%% read in bedfile
 regTable=readtable(regionsFile,'FileType','text','Delimiter','\t');
 size(regTable)
-chr=cellfun(@str2num,regTable{:,1},'UniformOutput',0);
-size(chr)
-pos=~cellfun(@isempty,chr);
-sum(pos)
-Regions=[cell2mat(chr(pos)) regTable{pos,2:3}];
+if ~isnumeric(regTable{:,1})
+    chr=cellfun(@str2num,regTable{:,1},'UniformOutput',0);
+    size(chr)
+    pos=~cellfun(@isempty,chr);
+    sum(pos)
+    Regions=[cell2mat(chr(pos)) regTable{pos,2:3}];
+else
+    Regions=regTable{:,1:3};
+end
+
+
 % fid=fopen(regionsFile);
 % Regions=cell2mat(textscan(fid,'%d%d%d %*[^\n]'));
 % fclose(fid);
@@ -62,10 +68,20 @@ parfor chrIdx=1:length(chrList)
     if(exist([outfile '_' num2str(chrList(chrIdx)) '.txt.gz'],'file'))
         continue;
     end
-    fout=fopen([outfile '_' num2str(chrList(chrIdx)) '.txt'],'w');
-    ferror=fopen([outfile '_' num2str(chrList(chrIdx)) '.errorLog.txt'],'w');
-    %%% split up regions greater than block size
-    currRegion=double(Regions(Regions(:,1)==chrList(chrIdx),:));
+    if(exist([outfile '_' num2str(chrList(chrIdx)) '.txt'],'file'))
+        fout=fopen([outfile '_' num2str(chrList(chrIdx)) '.txt'],'a+');
+        ferror=fopen([outfile '_' num2str(chrList(chrIdx)) '.errorLog.txt'],'a+');
+        [q,w] = system(['tail -n 1 ' outfile '_' num2str(chrList(chrIdx)) '.txt']);
+        data=str2double(regexp(w,'\t','split'));
+        currRegion=double(Regions(Regions(:,1)==chrList(chrIdx),:));
+        idx=getPosInRegions([chrList(chrIdx) data(2)],currRegion);
+        currRegion=currRegion(idx:end,:);
+        currRegion(1,2)=data(2);
+    else
+        fout=fopen([outfile '_' num2str(chrList(chrIdx)) '.txt'],'w');
+        ferror=fopen([outfile '_' num2str(chrList(chrIdx)) '.errorLog.txt'],'w');
+        currRegion=double(Regions(Regions(:,1)==chrList(chrIdx),:));
+    end
     largeIdx=find(currRegion(:,3)-currRegion(:,2)>blockSize);
     subCount=ceil((currRegion(largeIdx,3)-currRegion(largeIdx,2))./blockSize);
     newSize=(currRegion(largeIdx,3)-currRegion(largeIdx,2))./subCount;
@@ -76,8 +92,11 @@ parfor chrIdx=1:length(chrList)
     end
     currRegion=[currRegion(currRegion(:,3)-currRegion(:,2)<=blockSize,:); newRegions];
     currRegion=sortrows(currRegion,2);
+    
     startIdx=1;
     endIdx=1;
+    %%% split up regions greater than block size
+    
     %%% analyze by region
     while(endIdx<length(currRegion))
         endIdx=find(cumsum(currRegion(startIdx:end,3)-currRegion(startIdx:end,2))>blockSize,1)+startIdx-1;
