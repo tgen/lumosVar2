@@ -14,7 +14,7 @@ for i=1:size(indelChar,2)
 end
 
 nt=regexprep(cellstr(ntChar),'[\x0]','');
-nt(~pos)={'*LongIndel*'};
-nt(indelInt<=0)={'*'};
+nt(~pos)={'<LongIndel>'};
+nt(indelInt<=0)={'N'};
 
 return;

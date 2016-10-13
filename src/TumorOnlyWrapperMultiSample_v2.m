@@ -207,15 +207,18 @@ while(sum(abs(somPos-somPosOld))>0 && i<inputParam.maxIter)
     end
     save([inputParam.outMat]);
     i=i+1
+    somPosOld=somPos;
     inputParam.numClones=size(f,2);
     if inputParam.NormalSample>0
         n=1;
         NormalSample=inputParam.NormalSample;
         inputParam.NormalSample=1;
+        %inputParam.numClones=1;
         for j=1:length(Tcell)
             if j~=NormalSample
                 idx=[NormalSample j];
                 postComb=jointSNV(Tcell(idx), exonRD(idx), f(n,:), W, inputParam);
+                %postComb=jointSNV(Tcell(idx), exonRD(idx), inputParam.priorF, ones(2,1)*(inputParam.alphaF-1)./inputParam.priorF+2, inputParam);
                 [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[postComb.Chr postComb.Pos],'rows');
                 P.SomaticPair(:,j)=postComb.Somatic(locb);
                 n=n+1;
@@ -223,6 +226,7 @@ while(sum(abs(somPos-somPosOld))>0 && i<inputParam.maxIter)
                 P.SomaticPair(:,j)=zeros(size(P,1),1);
             end
         end
+        %inputParam.numClones=size(f,2);
         inputParam.NormalSample=NormalSample;
     else
         P.SomaticPair=zeros(size(P,1),length(Tcell));
@@ -258,7 +262,6 @@ while(sum(abs(somPos-somPosOld))>0 && i<inputParam.maxIter)
         clear T E;
     end
     filtPos=max(P.trust,[],2)>inputParam.pGoodThresh & max(P.artifact,[],2)<inputParam.pGoodThresh;
-    %somPosOld=somPos;
     hetPos=max(P.Het,[],2)>inputParam.pGermlineThresh & filtPos;
     somPos=max([P.Somatic P.SomaticPair],[],2)>inputParam.pSomaticThresh & filtPos & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq;
     ['Somatic positions: ' num2str(sum(somPos))]
