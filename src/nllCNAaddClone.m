@@ -188,6 +188,6 @@ priorF=betapdf(fMax(somIdx),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.
 
 %%% sum negative log likliehoods
 %nll=sum((-sum(log(somLik))-sum(log(hetlikMax))-sum(log(depthlikMax))-sum(log(priorCNAMax))-sum(log(priorMinAlleleMax))-sum(log(priorF))-nansum(log(priorCNAf)))./(length(somLik)+length(hetlikMax)+length(depthlikMax)+length(priorCNAMax)+length(priorMinAlleleMax)+length(priorF)+sum(~isnan(priorCNAf))));
-nll=sum(-sum(log(somLik)./(inputParam.priorSomaticSNV*sum(E.EndPos-E.StartPos)))-mean(log(hetlikMax))-mean(log(depthlikMax))-mean(log(priorCNAMax))-mean(log(priorMinAlleleMax))-mean(log(priorF))-nanmean(log(priorCNAf)));
+nll=sum(-sum(log(somLik)./(inputParam.priorSomaticSNV*sum(E.EndPos-E.StartPos)))-sum(mean(log(hetlikMax)))-sum(mean(log(depthlikMax)))-mean(log(priorCNAMax))-mean(log(priorMinAlleleMax))-mean(log(priorF))-nanmean(log(priorCNAf)));
 
 return;
