@@ -74,9 +74,11 @@ parfor chrIdx=1:length(chrList)
         [q,w] = system(['tail -n 1 ' outfile '_' num2str(chrList(chrIdx)) '.txt']);
         data=str2double(regexp(w,'\t','split'));
         currRegion=double(Regions(Regions(:,1)==chrList(chrIdx),:));
-        idx=getPosInRegions([chrList(chrIdx) data(2)],currRegion);
-        currRegion=currRegion(idx:end,:);
-        currRegion(1,2)=data(2);
+        if(size(data,2)==6)
+            idx=getPosInRegions([chrList(chrIdx) data(2)],currRegion);
+            currRegion=currRegion(idx:end,:);
+            currRegion(1,2)=data(2);
+        end
     else
         fout=fopen([outfile '_' num2str(chrList(chrIdx)) '.txt'],'w');
         ferror=fopen([outfile '_' num2str(chrList(chrIdx)) '.errorLog.txt'],'w');
