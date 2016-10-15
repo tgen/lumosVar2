@@ -1,4 +1,4 @@
-function [N, M, Fout, log2FC] = callCNAmulti(hetPos,Tcell,exonRD,segsMerged,inputParam,param)
+function [NsegMax, MsegMax, Fout, log2FC] = callCNAmulti(hetPos,Tcell,exonRD,segsMerged,inputParam,param)
 %callCNA - determine most likley copy number state for each segment
 %
 % Syntax: [N, M, F, Wout, log2FC, pCNA] = callCNA(dataHet,exonRD,segs,inputParam,param)
@@ -76,50 +76,113 @@ for i=1:size(f,2)
     for j=1:length(Tcell)
         if(f(j,i)==0)
             NsegSample(:,i,j)=2*ones(size(segsMerged,1),1);
-            MsegSample(:,i,j)=ones(size(segsMerged,1),1);
+            %MsegSample(:,i,j)=ones(size(segsMerged,1),1);
         else
             NsegSample(:,i,j)=max((CNAscale(j)*(meanTumorRDexon(:,j)./(meanNormalRDexon(:,j)))-2*(1-f(j,i)))/f(j,i),0);
-            MsegSample(isfinite(meanMinorRD(:,j)),i,j)=(NsegSample(isfinite(meanMinorRD(:,j)),i,j)/f(j,i)).*((meanMinorRD(isfinite(meanMinorRD(:,j)),j)./(meanTumorRD(isfinite(meanMinorRD(:,j)),j)))-0.5*(1-f(j,i)));
-            MsegSample(~isfinite(meanMinorRD(:,j)),i,j)=min(NsegSample(~isfinite(meanMinorRD(:,j)),i,j)-1,1);
+            %MsegSample(isfinite(meanMinorRD(:,j)),i,j)=(NsegSample(isfinite(meanMinorRD(:,j)),i,j)/f(j,i)).*((meanMinorRD(isfinite(meanMinorRD(:,j)),j)./(meanTumorRD(isfinite(meanMinorRD(:,j)),j)))-0.5*(1-f(j,i)));
+            %MsegSample(~isfinite(meanMinorRD(:,j)),i,j)=min(NsegSample(~isfinite(meanMinorRD(:,j)),i,j)-1,1);
         end
     end
 end
 NsegSample(NsegSample<0)=0;
+%MsegSample(MsegSample<0)=0;
+for i=1:size(f,2)
+    Nseg(:,i,1)=floor(squeeze(NsegSample(:,i,:))*f(:,i)./(ones(size(segsMerged,1),size(f,1))*f(:,i)));
+    Nseg(:,i,2)=Nseg(:,i,1)+1;
+    %Mseg(:,i)=round(squeeze(MsegSample(:,i,:))*f(:,i)./(ones(size(segsMerged,1),size(f,1))*f(:,i)));
+end
+for i=1:size(f,2)
+    for j=1:length(Tcell)
+        if(f(j,i)==0)
+            %NsegSample(:,i,j)=2*ones(size(segsMerged,1),1);
+            MsegSample(:,i,j,1)=ones(size(segsMerged,1),1);
+            MsegSample(:,i,j,2)=ones(size(segsMerged,1),1);
+        else
+            %NsegSample(:,i,j)=max((CNAscale(j)*(meanTumorRDexon(:,j)./(meanNormalRDexon(:,j)))-2*(1-f(j,i)))/f(j,i),0);
+            MsegSample(isfinite(meanMinorRD(:,j)),i,j,1)=(Nseg(isfinite(meanMinorRD(:,j)),i,1)/f(j,i)).*((meanMinorRD(isfinite(meanMinorRD(:,j)),j)./(meanTumorRD(isfinite(meanMinorRD(:,j)),j)))-0.5*(1-f(j,i)));
+            MsegSample(isfinite(meanMinorRD(:,j)),i,j,2)=(Nseg(isfinite(meanMinorRD(:,j)),i,2)/f(j,i)).*((meanMinorRD(isfinite(meanMinorRD(:,j)),j)./(meanTumorRD(isfinite(meanMinorRD(:,j)),j)))-0.5*(1-f(j,i)));
+            MsegSample(~isfinite(meanMinorRD(:,j)),i,j,1)=min(Nseg(~isfinite(meanMinorRD(:,j)),i,1)-1,1);
+            MsegSample(~isfinite(meanMinorRD(:,j)),i,j,2)=min(Nseg(~isfinite(meanMinorRD(:,j)),i,2)-1,1);
+        end
+    end
+end
 MsegSample(MsegSample<0)=0;
 for i=1:size(f,2)
-    Nseg(:,i)=round(squeeze(NsegSample(:,i,:))*f(:,i)./(ones(size(segsMerged,1),size(f,1))*f(:,i)));
-    Mseg(:,i)=round(squeeze(MsegSample(:,i,:))*f(:,i)./(ones(size(segsMerged,1),size(f,1))*f(:,i)));
+    %Nseg(:,i,1)=floor(squeeze(NsegSample(:,i,:))*f(:,i)./(ones(size(segsMerged,1),size(f,1))*f(:,i)));
+    %Nseg(:,i,2)=Nseg(:,i,1)+1;
+    Mseg(:,i,1)=round(squeeze(MsegSample(:,i,:,1))*f(:,i)./(ones(size(segsMerged,1),size(f,1))*f(:,i)));
+    Mseg(:,i,2)=round(squeeze(MsegSample(:,i,:,2))*f(:,i)./(ones(size(segsMerged,1),size(f,1))*f(:,i)));
 end
 
 
-%%% lookup copy number per position or exon
+%%% lookup copy number for positions and exons
 idx=getPosInRegions([D.Chr D.Pos], segsMerged);
-Nmat=Nseg(idx,:);
-Mmat=Mseg(idx,:);
+Nmat=Nseg(idx,:,:);
+Mmat=Mseg(idx,:,:);
 idxExon=getPosInRegions([E.Chr E.StartPos],segsMerged);
-NmatExon=Nseg(idxExon,:);
+NmatExon=Nseg(idxExon,:,:);
 
-%%% find liklihoods of read counts and depth
+%%% find prior of copy number
+priorCNA=nan(size(NmatExon));
+for i=1:length(inputParam.cnaPrior)-1
+    priorCNA(NmatExon==i-1)=inputParam.cnaPrior(i);
+end
+priorCNA(NmatExon>=length(inputParam.cnaPrior)-1)=inputParam.cnaPrior(end);
+priorMinAllele=nan(size(Mmat));
+for i=1:length(inputParam.minAllelePrior)-1
+    priorMinAllele(Mmat==i-1)=inputParam.minAllelePrior(i);
+end
+priorMinAllele(Mmat>=length(inputParam.minAllelePrior)-1)=inputParam.minAllelePrior(end);
+
+%%% find likelihoods of read counts and depth
 for i=1:size(f,2)
     for j=1:length(Tcell)
-        corr(:,i,j)=f(j,i).*Mmat(:,i)./Nmat(:,i)+(1-f(j,i))*0.5;
-        corr(Nmat(:,i)==0,i,j)=0.5;
-        hetlik(:,i,j)=bbinopdf_ln(D.MinorReadCount(:,j),D.TotalReadCount(:,j),W(j,:)*corr(:,i,j),W(j,:)*(1-corr(:,i,j)))+inputParam.minLik;
-        expReadCount(:,i,j)=f(j,i)*E.NormalRD(:,j).*NmatExon(:,i)./CNAscale(j)+(1-f(j,i))*E.NormalRD(:,j)*2./CNAscale(j);
-        depthlik(:,i,j)=poisspdf(round(E.TumorRD(:,j)),round(expReadCount(:,i,j)))+inputParam.minLik;
-        segLik(:,i,j)=getMeanInRegions([D.Chr D.Pos],log(hetlik(:,i,j)),segsMerged)+getMeanInRegions([E.Chr E.StartPos],log(depthlik(:,i,j)),segsMerged);
+        for k=1:2
+            corr(:,i,j,k)=f(j,i).*Mmat(:,i,k)./Nmat(:,i,k)+(1-f(j,i))*0.5;
+            corr(Nmat(:,i)==0,i,j,k)=0.5;
+            corr(corr(:,i,j,k)<0,i,j,k)=0;
+            corr(corr(:,i,j,k)>1,i,j,k)=1;
+%             if min(corr(:,i,j,k))<0 || max(corr(:,i,j,k))>1
+%                 idx=corr(:,i,j)<0 | corr(:,i,j)>1;
+%                 size(idx)
+%                 [min(corr(:,i,j)) max(corr(:,i,j))]
+%                 f(j,i)
+%                 %             %corr(idx,i,j)
+%                 %             %Nmat(idx,i)
+%                 %             %Mmat(idx,i)
+%             end
+            hetlik(:,i,j,k)=bbinopdf_ln(D.MinorReadCount(:,j),D.TotalReadCount(:,j),W(j)*corr(:,i,j,k),W(j)*(1-corr(:,i,j,k)))+bbinopdf_ln(D.MinorReadCount(:,j),D.TotalReadCount(:,j),W(j)*(1-corr(:,i,j,k)),W(j)*corr(:,i,j,k))+inputParam.minLik;
+            hetlik(corr(:,i,j,k)==0,i,j,k)=inputParam.minLik;
+            expReadCount(:,i,j,k)=f(j,i)*E.NormalRD(:,j).*NmatExon(:,i,k)./CNAscale(j)+(1-f(j,i))*E.NormalRD(:,j)*2./CNAscale(j);
+            depthlik(:,i,j,k)=poisspdf(round(E.TumorRD(:,j)),round(expReadCount(:,i,j,k)))+inputParam.minLik;
+            %depthlik(:,i,j)=normpdf(log(E.TumorRD(:,j)+1),log(expReadCount(:,i,j)+1),0.6);
+            segLik(:,i,j,k)=getMeanInRegions([D.Chr D.Pos],log(hetlik(:,i,j,k)),segsMerged)+getMeanInRegions([E.Chr E.StartPos],log(depthlik(:,i,j,k)),segsMerged);
+        end
     end
 end
 
-
 %%% find which clone contains most likely CNV per segment
-[~,cnaIdx]=max(sum(segLik,3),[],2);
+[segLikMax,maxIdx]=max(sum(segLik,3),[],4);
+[m,cnaIdx]=max(segLikMax,[],2);
 for i=1:size(f,2)
-    %for j=1:length(Tcell)
-        N(cnaIdx==i,:)=Nseg(cnaIdx==i,i);
-        M(cnaIdx==i,:)=Mseg(cnaIdx==i,i);
-    %end
+    cnIdx(cnaIdx==i,:)=maxIdx(cnaIdx==i,i);
 end
+
+for i=1:size(f,2)
+    for k=1:2
+        NsegMax(cnaIdx==i & cnIdx==k,:)=Nseg(cnaIdx==i & cnIdx==k,i,k);
+        MsegMax(cnaIdx==i & cnIdx==k,:)=Mseg(cnaIdx==i & cnIdx==k,i,k);
+        for j=1:length(Tcell)
+            hetlikMax(cnaIdx(idx)==i & cnIdx(idx)==k,j)=hetlik(cnaIdx(idx)==i & cnIdx(idx)==k,i,j,k);
+            depthlikMax(cnaIdx(idxExon)==i & cnIdx(idxExon)==k,j)=depthlik(cnaIdx(idxExon)==i & cnIdx(idxExon)==k,i,j,k);
+        end
+        priorCNAMax(cnaIdx(idxExon)==i & cnIdx(idxExon)==k,:)=priorCNA(cnaIdx(idxExon)==i & cnIdx(idxExon)==k,i,k);
+        priorMinAlleleMax(cnaIdx(idx)==i & cnIdx(idx)==k,:)=priorMinAllele(cnaIdx(idx)==i & cnIdx(idx)==k,i,k);
+        priorCNAf(cnaIdx(idx)==i & cnIdx(idx)==k,:)=betapdf(max(f(:,i)),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2)+inputParam.minLik;
+    end
+end
+priorCNAf(NsegMax==2 & MsegMax==1)=NaN;
+
 for j=1:length(Tcell)
     Fout(:,j)=f(j,cnaIdx);
     %Wout(:,j)=W(j,cnaIdx);
