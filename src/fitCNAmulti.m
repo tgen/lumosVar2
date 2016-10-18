@@ -63,7 +63,7 @@ Wcurr
 fInit=fInit(tIdx,:)
 fOld=[];
 %chi2p(1)=0;
-opts=optimoptions('fmincon','TolX',1e-1,'TolFun',1e-1);
+opts=optimoptions('fmincon','TolX',1e-1,'TolFun',1e-1,'Display','none');
 opts2=optimoptions('fmincon','Display','iter','UseParallel',true,'TolX',1e-2,'TolFun',1e-2);
 j=1;
 %while max(chi2p)<0.05
@@ -71,9 +71,9 @@ while 1
     inputParam.numClones=j;
   %ms=MultiStart('Display','iter','UseParallel',true);
     if j==1
-        pts=[fInit makeFstart(fInit)];
+        pts=[fInit makeFstart(fInit,inputParam)];
     else
-        pts=makeFstart(fOld);
+        pts=makeFstart(fOld,inputParam);
     end
     %problem=createOptimProblem('fmincon','objective',@(fNew)nllCNAaddClone(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,cInit,Wcurr,fOld,fNew),'x0',pts(:,1),'lb',zeros(size(fInit)),'ub',100*ones(size(fInit)),'options',opts);
     %startPoints=CustomStartPointSet(pts');
@@ -82,7 +82,7 @@ while 1
     parfor i=1:size(pts,2)
         [paramPTS{i}, nllPTS(i)]=fmincon(@(fNew)nllCNAaddClone(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,cInit,Wcurr,fOld,fNew),pts(:,i),[],[],[],[],zeros(size(fInit)),100*ones(size(fInit)),[],opts);
     end
-    [~,idx]=min(nllPTS);
+    [minNLL,idx]=min(nllPTS)
     t(j,1)=toc
     fOld=[fOld paramPTS{idx}]
     tic
@@ -99,16 +99,22 @@ while 1
     end
     j=j+1;
 end
-
+inputParam.numClones=j-1;
+for i=1:size(fOld,2)
+    idx=setdiff(1:j,i);
+    fRemove=fOld(:,idx);
+    [paramRemove{i}, nllRemove(i)]=fmincon(@(param)nllCNAmulti_v2(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,param),[100.*cInit(:); Wcurr(:); fRemove(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fRemove(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fRemove(:)));],[],opts2);   
+end
+[minNLL,removeIdx]=min(nllRemove)
 %%%use optimized parameters to call copy number
 %cloneIdx=find(chi2p<0.05,1,'last');
-cloneIdx=j-1;
-CNAscale=param{cloneIdx}(1:length(Tcell))./100;
-W=param{cloneIdx}(length(Tcell)+1:2*length(Tcell));
-fOld=reshape(param{cloneIdx}(2*length(Tcell)+1:end),[],cloneIdx);
-f=fOld(:,1:cloneIdx)./100;
+%cloneIdx=j-1;
+
+CNAscale=paramRemove{removeIdx}(1:length(Tcell))./100;
+W=paramRemove{removeIdx}(length(Tcell)+1:2*length(Tcell));
+f=reshape(paramRemove{removeIdx}(2*length(Tcell)+1:end),[],inputParam.numClones);
 paramOpt=[CNAscale(:); W(:); f(:)];
-inputParam.numClones=cloneIdx;
+%inputParam.numClones=cloneIdx;
 [N, M, Ftable, log2FC]=callCNAmulti(hetPos,Tcell,exonRD,segsMerged,inputParam,paramOpt);
 segsTable=array2table(segsMerged(:,1:3),'VariableNames',{'Chr','StartPos','EndPos'});
 segsTable.N=N;
