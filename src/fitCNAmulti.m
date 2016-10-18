@@ -110,9 +110,9 @@ end
 %cloneIdx=find(chi2p<0.05,1,'last');
 %cloneIdx=j-1;
 
-CNAscale=paramRemove{removeIdx}(1:length(Tcell))./100;
-W=paramRemove{removeIdx}(length(Tcell)+1:2*length(Tcell));
-f=reshape(paramRemove{removeIdx}(2*length(Tcell)+1:end),[],inputParam.numClones);
+CNAscale=paramRemove{removeIdx}(1:length(Tcell))./100
+W=paramRemove{removeIdx}(length(Tcell)+1:2*length(Tcell))
+f=reshape(paramRemove{removeIdx}(2*length(Tcell)+1:end),[],inputParam.numClones)./100
 paramOpt=[CNAscale(:); W(:); f(:)];
 %inputParam.numClones=cloneIdx;
 [N, M, Ftable, log2FC]=callCNAmulti(hetPos,Tcell,exonRD,segsMerged,inputParam,paramOpt);
