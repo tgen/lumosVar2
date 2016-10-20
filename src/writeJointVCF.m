@@ -73,12 +73,9 @@ fprintf(fout,['##INFO=<ID=JPA,Number=1,Type=Float,Description="Phred Scaled Join
 fprintf(fout,['##INFO=<ID=JPS,Number=1,Type=Float,Description="Joint Posterior Probability of Somatic Mutation">\n']);
 fprintf(fout,['##INFO=<ID=JPGAB,Number=1,Type=Float,Description="Joint Posterior Probability of No Somatic Mutation and Position is Germline AB">\n']);
 fprintf(fout,['##INFO=<ID=JPGAA,Number=1,Type=Float,Description="Joint Posterior Probability of No Somatic Mutation and Position is Germline AA">\n']);
-%fprintf(fout,['##INFO=<ID=ACountF,Number=1,Type=Float,Description="Number of Reads Supporting the A Allele on the Forward Strand">\n']);
-%fprintf(fout,['##INFO=<ID=ACountR,Number=1,Type=Float,Description="Number of Reads Supporting the A Allele on the Reverse Strand">\n']);
-%fprintf(fout,['##INFO=<ID=BCountF,Number=1,Type=Float,Description="Number of Reads Supporting the B Allele on the Forward Strand">\n']);
-%fprintf(fout,['##INFO=<ID=BCountR,Number=1,Type=Float,Description="Number of Reads Supporting the B Allele on the Forward Strand">\n']);
-%fprintf(fout,['##INFO=<ID=ApopAF,Number=1,Type=Float,Description="population frequency of A allele">\n']);
-%fprintf(fout,['##INFO=<ID=BpopAF,Number=1,Type=Float,Description="population frequency of B allele">\n']);
+fprintf(fout,['##INFO=<ID=JPGND,Number=1,Type=Float,Description="Joint Posterior Probability of Variant Present in Germline Not Following Diploid Model">\n']);
+fprintf(fout,['##INFO=<ID=ApopAF,Number=1,Type=Float,Description="population frequency of A allele">\n']);
+fprintf(fout,['##INFO=<ID=BpopAF,Number=1,Type=Float,Description="population frequency of B allele">\n']);
 fprintf(fout,['##INFO=<ID=CosmicCount,Number=1,Type=Float,Description="Count of mutations at position in COSMIC>\n']);
 fprintf(fout,['##INFO=<ID=CloneId,Number=1,Type=Integer,Description="CloneId">\n']);
 fprintf(fout,['##INFO=<ID=CN,Number=1,Type=Integer,Description="Copy Number">\n']);
@@ -88,18 +85,25 @@ fprintf(fout,['##INFO=<ID=MACN,Number=1,Type=Integer,Description="Min Allele Cop
 %for i=1:size(F{1},2)
 %    fprintf(fout,'%s\n',char(strcat('##INFO=<ID=',F{1}.Properties.VariableNames(i),',Number=1,Type=Float,Description="',F{1}.Properties.VariableDescriptions(i))));
 %end
-fprintf(fout,['##FILTER=<ID=SomaticPASS,Description="PS>pSomaticThresh and pass filters">\n']);
-fprintf(fout,['##FILTER=<ID=SomaticLowQC,Description="PS>0.5 and pass filters">\n']);
-fprintf(fout,['##FILTER=<ID=GermlinePASS,Description="PG>pGermlineThresh and pass filters">\n']);
-fprintf(fout,['##FILTER=<ID=GermlineLowQC,Description="PG>0.5 and pass filters">\n']);
+fprintf(fout,['##FILTER=<ID=SomaticPASS,Description="JPS>pSomaticThresh and pass filters">\n']);
+fprintf(fout,['##FILTER=<ID=SomaticLowQC,Description="JPS>0.5 and artifact filters">\n']);
+fprintf(fout,['##FILTER=<ID=SomaticPairPASS,Description="PPS>pSomaticThresh and JPS<0.5 pass filters">\n']);
+fprintf(fout,['##FILTER=<ID=SomaticPairLowQC,Description="PPS>0.5 and JPS<0.5 and artifact filters">\n']);
+fprintf(fout,['##FILTER=<ID=GermlineHetPASS,Description="JPGAB>pGermlineThresh and pass filters">\n']);
+fprintf(fout,['##FILTER=<ID=GermlineHetLowQC,Description="JPGAB>0.5 and artifact filters">\n']);
+fprintf(fout,['##FILTER=<ID=GermlineHomPASS,Description="JPGAA>pGermlineThresh and pass filters">\n']);
+fprintf(fout,['##FILTER=<ID=GermlineHomLowQC,Description="JPGAA>0.5 and artifact filters">\n']);
+fprintf(fout,['##FILTER=<ID=GermlineShiftPASS,Description="JPND>pGermlineThresh and pass filters">\n']);
+fprintf(fout,['##FILTER=<ID=GermlineShiftLowQC,Description="JPND>0.5 and artifact filters">\n']);
 fprintf(fout,['##FILTER=<ID=NoCall,Description="PG<0.5 and PS<0.5 and pass filters>\n']);
 fprintf(fout,['##FILTER=<ID=REJECT,Description="Below at least one QC filter">\n']);
 
-%GT:DP:AD:FT:PT:PA:PLS:PL:PLND:VSF:CNF
+%GT:DP:AD:FT:PPS:PT:PA:PLS:PL:PLND:VSF:CNF
 fprintf(fout,['##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n']);
 fprintf(fout,['##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Depth of Reads with MQ and BQ greater than min">\n']);
 fprintf(fout,['##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allele Depths">\n']);
 fprintf(fout,['##FORMAT=<ID=FT,Number=.,Type=String,Description="Filters">\n']);
+fprintf(fout,['##FORMAT=<ID=PPS,Number=1,Type=Float,Description="Phred Scaled Posterior Probability Position is Somatic Based on Paired Analysis with Control">\n']);
 fprintf(fout,['##FORMAT=<ID=PT,Number=1,Type=Float,Description="Phred Scaled Posterior Probability Position is Trusted">\n']);
 fprintf(fout,['##FORMAT=<ID=PA,Number=1,Type=Float,Description="Phred Scaled Posterior Probability Position is Artifact">\n']);
 fprintf(fout,['##FORMAT=<ID=PLS,Number=1,Type=Float,Description="Phred Scaled Likelihood Somatic">\n']);
@@ -142,6 +146,8 @@ Filter(P.Hom(:,1)>inputParam.pGermlineThresh & passPos,:)={'GermlineHomPASS'};
 Filter(P.NonDip(:,1)>0.5,:)={'GermlineShiftLowQC'};
 Filter(P.NonDip(:,1)>inputParam.pGermlineThresh & passPos,:)={'GermlineShiftPASS'};
 Filter(P.Somatic(:,1)<0.5 & P.Het(:,1)<0.5 & P.Hom(:,1)<0.5 & P.NonDip(:,1)<0.5,:)={'NoCall'};
+Filter(max(P.SomaticPair,[],2)>0.5 & P.Somatic(:,1)<=0.5,:)={'SomaticPairLowQC'};
+Filter(max(P.SomaticPair,[],2)>inputParam.pSomaticThresh & P.Somatic(:,1)<=0.5 & passPos,:)={'SomaticPairPASS'};
 Filter(max(P.artifact,[],2)>inputParam.pGoodThresh,:)={'REJECT'};
 
 %%% construct info fields
