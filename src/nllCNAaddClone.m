@@ -62,6 +62,14 @@ f=[zeros(length(Tcell),inputParam.numClones) ones(length(Tcell),1)];
 tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
 f(tIdx,1:end-1)=[fOld fNew(:)]./100;
 
+%%% find means accross segments
+for i=1:length(Tcell)
+    meanTumorRDexon(:,i)=getMeanInRegions([E.Chr E.StartPos],E.TumorRD(:,i),segsMerged);
+    meanNormalRDexon(:,i)=getMeanInRegions([E.Chr E.StartPos],E.NormalRD(:,i),segsMerged);
+    meanTumorRD(:,i)=getMeanInRegions([D.Chr D.Pos],D.TotalReadCount(:,i),segsMerged);
+    meanMinorRD(:,i)=getMeanInRegions([D.Chr D.Pos],D.MinorReadCount(:,i),segsMerged);
+end
+
 for i=1:size(f,2)
     for j=1:length(Tcell)
         if(f(j,i)==0)
@@ -204,7 +212,7 @@ if (inputParam.NormalSample>0)
 end
 [somLik,somIdx]=max(prod(cloneLik,3),[],2);
 %for j=1:length(Tcell)
-fMax=max(f);
+fMax=max(f,[],1);
 priorF=betapdf(fMax(somIdx),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2)+inputParam.minLik;
 %end
 %priorF=1;

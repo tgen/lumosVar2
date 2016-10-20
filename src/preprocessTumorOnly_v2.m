@@ -54,13 +54,16 @@ parfor chrIdx=1:length(chrList)
     if exist(outPosFile,'file') && exist(outExonFile,'file')
         fpos=fopen(outPosFile,'a+');
         fexon=fopen(outExonFile,'a+');
-        [q,w] = system(['tail -n 1 ' outPosFile]);
+        [q,w] = system(['tail -n 1 ' outExonFile]);
         data=str2double(regexp(w,'\t','split'));
         currRegion=double(Regions(Regions(:,1)==chrList(chrIdx),:));
-        if(size(data,2)==27)
-            idx=getPosInRegions([chrList(chrIdx) data(2)],currRegion);
-            currRegion=currRegion(idx:end,:);
-            currRegion(1,2)=data(2);
+        if(size(data,2)==8*sampleCount)
+            idx=find(data(2)==currRegion(:,2));
+            if(idx==size(currRegion,1))
+                continue;
+            else
+                currRegion=currRegion(idx+1:end,:);
+            end
         end
     else
         fpos=fopen(outPosFile,'w');
@@ -145,7 +148,7 @@ parfor chrIdx=1:length(chrList)
             currReadDepth=readDepth(readDepth(:,1)==ids(i),2:end);
             tempExonRD(:,:,i)=[currRegion(startIdx:endIdx,1:3) getMeanInRegions(currReadDepth(:,1:2),currReadDepth(:,3),currRegion(startIdx:endIdx,:)) getMeanInRegionsExcludeNaN(NormalData(:,1:2),NormalData(:,3),currRegion(startIdx:endIdx,:)) getMeanInRegionsExcludeNaN(NormalData(:,1:2),NormalData(:,4),currRegion(startIdx:endIdx,:)) getMeanInRegionsExcludeNaN(NormalData(:,1:2),NormalData(:,5),currRegion(startIdx:endIdx,:)) getMeanInRegionsExcludeNaN(NormalData(:,1:2),NormalData(:,6),currRegion(startIdx:endIdx,:))];
         end
-        fprintf(fexon,reshape(tempExonRD,[],8*sampleCount),'%d\t%d\t%d\t%f\t%f\t%f\t%f\t%f\n');
+        fprintf(fexon,[strjoin(cellstr(repmat('%d\t%d\t%d\t%f\t%f\t%f\t%f\t%f',sampleCount,1)),'\\t') '\n'],reshape(tempExonRD,[],8*sampleCount)');
         startIdx=endIdx+1;
         %%%% combine tumor and normal data
         if isempty(TumorData)
@@ -153,7 +156,8 @@ parfor chrIdx=1:length(chrList)
         end
         [Lia,Locb]=ismember(TumorData(:,3),NormalData(:,2));
         tempData=[TumorData(Lia,:) NormalData(Locb(Lia),3:end)];
-        fprintf(fpos,tempData,'%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\t%f\t%f\t%d\t%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%f\t%f\t%f\t%f\n');
+        size(tempData);
+        fprintf(fpos,'%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\t%f\t%f\t%d\t%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%f\t%f\t%f\t%f\n',tempData');
         dataIdx=dataIdx+sum(Lia);
         fprintf(fout,'\n%s',[' found ' num2str(sum(Lia)) ' canidate positions']);
         waitbar(endIdx./length(currRegion));       

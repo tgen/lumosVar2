@@ -46,7 +46,7 @@ if(exist([inputParam.outMat],'file'))
     load([inputParam.outMat],'-mat',vars{:});
     inputParam=readInputs(paramFile)
 else
-   [T, E]=preprocessTumorOnly(inputParam,paramFile);
+   [T, E]=preprocessTumorOnly_v2(inputParam,paramFile);
    save([inputParam.outMat]);
 end
 

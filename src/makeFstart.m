@@ -1,9 +1,9 @@
-function fStart=makeFstart(fOld,minStartDiff)
+function fStart=makeFstart(fOld,inputParam)
 
 m=1;
 distMat=ones(size(fOld,1),1000);
 fStart=[];
-while m./max(distMat(:))>minStartDiff
+while m./max(distMat(:))>inputParam.minStartDiff
     %fRand=100*rand(size(fOld,1),1000);
     fRand=100*betarnd(inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2,size(fOld,1),1000);
     distMat=squareform(pdist([fOld fStart fRand]','cityblock'));
