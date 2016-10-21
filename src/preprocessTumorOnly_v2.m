@@ -122,12 +122,12 @@ parfor chrIdx=1:length(chrList)
         %%% get tumor data
         cd(inputParam.workingDirectory);
         output=strsplit(perl('parsePileupData.pl',paramFile,block,num2str(sampleCount)),'\n');
-        %fprintf(fout,'\n%s',output{:});
-        idx=~cellfun('isempty',regexp(output,'^\d'));
-        TumorData=str2num(char(output(idx)'));
+        idx1=~cellfun('isempty',regexp(output,'^\d'));
+        TumorData=str2num(char(output(idx1)'));
         fprintf(fout,'\n%s',['TumorData has length:' num2str(size(TumorData,1))]);
-        idx=~cellfun('isempty',regexp(output,'^\@'));
-        temp=char(output(idx)');
+        idx2=~cellfun('isempty',regexp(output,'^\@'));
+        temp=char(output(idx2)');
+        fprintf(fout,'\n%s',output{~idx1 & ~idx2});
         readDepth=str2num(temp(:,2:end));
         fprintf(fout,'\n%s',['readDepth has length:' num2str(size(readDepth,1))]);
         %%% get normal data
