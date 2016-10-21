@@ -80,33 +80,34 @@ while 1
     %paramMS=run(ms,problem,startPoints);
     tic
     parfor i=1:size(pts,2)
-        [paramPTS{i}, nllPTS(i)]=fmincon(@(fNew)nllCNAaddClone(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,cInit,Wcurr,fOld,fNew),pts(:,i),[],[],[],[],zeros(size(fInit)),100*ones(size(fInit)),[],opts);
+        [paramPTS{i}, nllPTS(i)]=fmincon(@(fNew)nllCNAaddClone(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,cInit,wInit,fOld,fNew),pts(:,i),[],[],[],[],zeros(size(fInit)),100*ones(size(fInit)),[],opts);
     end
     [minNLL,idx]=min(nllPTS)
     t(j,1)=toc
     fOld=[fOld paramPTS{idx}]
     tic
-    [param{j}, nll(j)]=fmincon(@(param)nllCNAmulti_v2(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,param),[100.*cInit(:); Wcurr(:); fOld(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fOld(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fOld(:)));],[],opts2);
+    [param{j}, nll(j)]=fmincon(@(param)nllCNAmulti_v2(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,param),[100.*cInit(:); wInit(:); fOld(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fOld(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fOld(:)));],[],opts2);
     t(j,2)=toc;
     CNAscale=param{j}(1:length(Tcell))./100
     Wcurr=param{j}(length(Tcell)+1:2*length(Tcell))
     fOld=reshape(param{j}(2*length(Tcell)+1:end),[],inputParam.numClones)
     if j>1
         %    chi2p(j)=1-chi2cdf(2*(nll(j-1)-nll(j)),length(Tcell)-1)
-        if 2*(nll(j-1)-nll(j))<length(tIdx)
+        if inputParam.addCloneWeight*(nll(j-1)-nll(j))<length(tIdx)
             inputParam.numClones=j-1;
             for i=1:size(fOld,2)
                 idx=setdiff(1:j,i);
                 fRemove=fOld(:,idx);
-                [paramRemove{i}, nllRemove(i)]=fmincon(@(param)nllCNAmulti_v2(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,param),[100.*cInit(:); Wcurr(:); fRemove(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fRemove(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fRemove(:)));],[],opts2);
+                [paramRemove{i}, nllRemove(i)]=fmincon(@(param)nllCNAmulti_v2(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,param),[100.*cInit(:); wInit(:); fRemove(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fRemove(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fRemove(:)));],[],opts2);
             end
-            [nll(j-1),removeIdx]=min(nllRemove)
+            [removeNLL,removeIdx]=min(nllRemove)
             CNAscale=paramRemove{removeIdx}(1:length(Tcell))./100
             Wcurr=paramRemove{removeIdx}(length(Tcell)+1:2*length(Tcell))
             fOld=reshape(paramRemove{removeIdx}(2*length(Tcell)+1:end),[],inputParam.numClones)
-            if removeIdx==j
+            if nll(j-1)<=removeNLL
                 break;
             else
+                nll(j-1)=removeNLL;
                 continue;
             end
         end
