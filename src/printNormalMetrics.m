@@ -110,7 +110,8 @@ parfor chrIdx=1:length(chrList)
         output=strsplit(perl('parsePileupData.packed.pl',configFile,block,'0'),'\n');
         idx=~cellfun('isempty',regexp(output,'^\d'));
         NormalData=str2num(char(output(idx)'));
-        if(isempty(NormalData))
+        fprintf(ferror,'%s\n',output{~idx});
+	if(isempty(NormalData))
             fprintf(ferror,'%s\n',['Normal Data not found in ' block]);
             for i=1:length(output)
                 fprintf(ferror,'%s\n',output{i});
