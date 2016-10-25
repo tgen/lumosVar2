@@ -63,150 +63,100 @@ BpopAF(min(Bmat,[],2)-max(Bmat,[],2)==0,:)=BpopAForig(min(Bmat,[],2)-max(Bmat,[]
 
 pos=find(isnan(sum([A B Amat Bmat],2)));
 for i=1:size(pos)
+    %posList(pos(i),:)
     alleles=unique([Amat(pos(i),:) Bmat(pos(i),:)]);
     counts=zeros(size(alleles));
     for j=1:size(alleles,2)
         counts(j)=sum(AcountsOrig(pos(i),alleles(j)==Amat(pos(i),:)))+sum(BcountsOrig(pos(i),alleles(j)==Bmat(pos(i),:)));
     end
     [countSort,idx]=sort(counts,'descend');
-    if(max(alleles(idx<=2))>4)
-        AinsIdx=Amat(pos(i),:)~=RefOrig(pos(i),:) & Amat(pos(i),:)>4;
-        BinsIdx=Bmat(pos(i),:)~=RefOrig(pos(i),:) & Bmat(pos(i),:)>4;
-        BdelIdx=Amat(pos(i),:)==RefOrig(pos(i),:) & Amat(pos(i),:)>4;
-        AdelIdx=(Bmat(pos(i),:)==RefOrig(pos(i),:) & Bmat(pos(i),:)>4) | (RefOrig(pos(i),:)>4 & BcountsOrig(pos(i),:)==0);
-        ArefIdx=Amat(pos(i),:)==RefOrig(pos(i),:);
-        BrefIdx=Bmat(pos(i),:)==RefOrig(pos(i),:);
-        AaltIdx=Amat(pos(i),:)~=RefOrig(pos(i),:) & Amat(pos(i),:)<=4 & ~AdelIdx;
-        BaltIdx=Bmat(pos(i),:)~=RefOrig(pos(i),:) & Bmat(pos(i),:)<=4 & ~BdelIdx;
-        insCount=sum([AcountsOrig(pos(i),AinsIdx) BcountsOrig(pos(i),BinsIdx)]);
-        delCount=sum([AcountsOrig(pos(i),AdelIdx) BcountsOrig(pos(i),BdelIdx)]);
-        refCount=sum([AcountsOrig(pos(i),ArefIdx) BcountsOrig(pos(i),BrefIdx)]);
-        altCount=sum([AcountsOrig(pos(i),AaltIdx) BcountsOrig(pos(i),BaltIdx)]);
-        [~,tIdx]=sort([refCount altCount insCount delCount],'descend');
-        if(tIdx(1)==4)
-            if length(unique([Amat(pos(i),AdelIdx) Bmat(pos(i),BdelIdx)]))>1
-                A(pos(i),:)=-1;
-            else
-                A(pos(i),:)=unique([Amat(pos(i),AdelIdx) Bmat(pos(i),BdelIdx)]);
-            end
-            Acounts(pos(i),:)=AcountsOrig(pos(i),:).*AdelIdx+BcountsOrig(pos(i),:).*BdelIdx;
-            ApopAF(pos(i),:)=ApopAForig(pos(i),:).*AdelIdx+BpopAForig(pos(i),:).*BdelIdx;
-        elseif(tIdx(1)==3)
-            if length(unique([Amat(pos(i),AinsIdx) Bmat(pos(i),BinsIdx)]))>1
-                A(pos(i),:)=-1;
-            else
-                A(pos(i),:)=unique([Amat(pos(i),AinsIdx) Bmat(pos(i),BinsIdx)]);
-            end
-            Acounts(pos(i),:)=AcountsOrig(pos(i),:).*AinsIdx+BcountsOrig(pos(i),:).*BinsIdx;
-            ApopAF(pos(i),:)=ApopAForig(pos(i),:).*AinsIdx+BpopAForig(pos(i),:).*BinsIdx;
-        elseif(tIdx(1)==1)
-            if length(unique([Amat(pos(i),ArefIdx) Bmat(pos(i),BrefIdx)]))>1
-                A(pos(i),:)=-1;
-            else
-                A(pos(i),:)=unique([Amat(pos(i),ArefIdx) Bmat(pos(i),BrefIdx)]);
-            end
-            Acounts(pos(i),:)=AcountsOrig(pos(i),:).*ArefIdx+BcountsOrig(pos(i),:).*BrefIdx;
-            ApopAF(pos(i),:)=ApopAForig(pos(i),:).*ArefIdx+BpopAForig(pos(i),:).*BrefIdx;
+    AinsIdx=RefOrig(pos(i),:)<=4 & Amat(pos(i),:)>4;
+    BinsIdx=RefOrig(pos(i),:)<=4 & Bmat(pos(i),:)>4;
+    BdelIdx=RefOrig(pos(i),:)>4 & Bmat(pos(i),:)<=4;
+    AdelIdx=RefOrig(pos(i),:)>4 & Amat(pos(i),:)<=4;
+    ArefIdx=Amat(pos(i),:)==RefOrig(pos(i),:);
+    BrefIdx=Bmat(pos(i),:)==RefOrig(pos(i),:);
+    AaltIdx=Amat(pos(i),:)~=RefOrig(pos(i),:) & Amat(pos(i),:)<=4 & ~AdelIdx;
+    BaltIdx=Bmat(pos(i),:)~=RefOrig(pos(i),:) & Bmat(pos(i),:)<=4 & ~BdelIdx;
+    insCount=sum([AcountsOrig(pos(i),AinsIdx) BcountsOrig(pos(i),BinsIdx)]);
+    delCount=sum([AcountsOrig(pos(i),AdelIdx) BcountsOrig(pos(i),BdelIdx)]);
+    refCount=sum([AcountsOrig(pos(i),ArefIdx) BcountsOrig(pos(i),BrefIdx)]);
+    altCount=sum([AcountsOrig(pos(i),AaltIdx) BcountsOrig(pos(i),BaltIdx)]);
+    [countsSort,tIdx]=sort([refCount altCount insCount delCount],'descend');
+    if(tIdx(1)==1)
+        refAlleles=unique([Amat(pos(i),ArefIdx) Bmat(pos(i),BrefIdx)]);
+        if length(refAlleles)==1;
+            A(pos(i),:)=refAlleles;
+        elseif tIdx(2)==4 && length(refAlleles(refAlleles>4))==1
+            A(pos(i),:)=refAlleles(refAlleles>4);
+        elseif tIdx(2)~=4 &&  length(refAlleles(refAlleles<=4))==1
+            A(pos(i),:)=refAlleles(refAlleles<=4);
         else
-            if length(unique([Amat(pos(i),AaltIdx) Bmat(pos(i),BaltIdx)]))>1
-                A(pos(i),:)=-1;
-            else
-                A(pos(i),:)=unique([Amat(pos(i),AaltIdx) Bmat(pos(i),BaltIdx)]);
-            end
-            Acounts(pos(i),:)=AcountsOrig(pos(i),:).*AaltIdx+BcountsOrig(pos(i),:).*BaltIdx;
-            ApopAF(pos(i),:)=ApopAForig(pos(i),:).*AaltIdx+BpopAForig(pos(i),:).*BaltIdx;
+            A(pos(i),:)=-1;
         end
-        if(tIdx(2)==4)
-            if length(unique([Amat(pos(i),AdelIdx) Bmat(pos(i),BdelIdx)]))>1
-                B(pos(i),:)=-1;
-            else
-                B(pos(i),:)=unique([Amat(pos(i),AdelIdx) Bmat(pos(i),BdelIdx)]);
-            end
-            Bcounts(pos(i),:)=AcountsOrig(pos(i),:).*AdelIdx+BcountsOrig(pos(i),:).*BdelIdx;
-            BpopAF(pos(i),:)=ApopAForig(pos(i),:).*AdelIdx+BpopAForig(pos(i),:).*BdelIdx;
-        elseif(tIdx(2)==3)
-            if length(unique([Amat(pos(i),AinsIdx) Bmat(pos(i),BinsIdx)]))>1
-                B(pos(i),:)=-1;
-            else
-                B(pos(i),:)=unique([Amat(pos(i),AinsIdx) Bmat(pos(i),BinsIdx)]);
-            end
-            Bcounts(pos(i),:)=AcountsOrig(pos(i),:).*AinsIdx+BcountsOrig(pos(i),:).*BinsIdx;
-            BpopAF(pos(i),:)=ApopAForig(pos(i),:).*AinsIdx+BpopAForig(pos(i),:).*BinsIdx;
-        elseif(tIdx(2)==1)
-            if length(unique([Amat(pos(i),ArefIdx) Bmat(pos(i),BrefIdx)]))~=1
-                B(pos(i),:)=-1;
-            else
-                B(pos(i),:)=unique([Amat(pos(i),ArefIdx) Bmat(pos(i),BrefIdx)]);
-            end
-            Bcounts(pos(i),:)=AcountsOrig(pos(i),:).*ArefIdx+BcountsOrig(pos(i),:).*BrefIdx;
-            BpopAF(pos(i),:)=ApopAForig(pos(i),:).*ArefIdx+BpopAForig(pos(i),:).*BrefIdx;
-        else
-            if length(unique([Amat(pos(i),AaltIdx) Bmat(pos(i),BaltIdx)]))>1
-                B(pos(i),:)=-1;
-            else
-                B(pos(i),:)=unique([Amat(pos(i),AaltIdx) Bmat(pos(i),BaltIdx)]);
-            end
-            Bcounts(pos(i),:)=AcountsOrig(pos(i),:).*AaltIdx+BcountsOrig(pos(i),:).*BaltIdx;
-            BpopAF(pos(i),:)=ApopAForig(pos(i),:).*AaltIdx+BpopAForig(pos(i),:).*BaltIdx;
-        end
-        if max(tIdx(1:2))==4
-            if length(unique(RefOrig(pos(i),AdelIdx | BdelIdx)))>1
-                Ref(pos(i),:)=-1;
-            else
-                Ref(pos(i),:)=unique(RefOrig(pos(i),AdelIdx | BdelIdx));
-                if tIdx(1)==1 && tIdx(2)==3
-                    B(pos(i),:)=unique(RefOrig(pos(i),AdelIdx | BdelIdx));
-                elseif tIdx(2)==1 && tIdx(1)==3
-                    A(pos(i),:)=unique(RefOrig(pos(i),AdelIdx | BdelIdx));
-                end
-            end
-        end
+        Acounts(pos(i),:)=AcountsOrig(pos(i),:).*ArefIdx+BcountsOrig(pos(i),:).*BrefIdx;
+        ApopAF(pos(i),:)=ApopAForig(pos(i),:).*ArefIdx+BpopAForig(pos(i),:).*BrefIdx;
     else
-        A(pos(i))=alleles(idx(1));
-        B(pos(i))=alleles(idx(2));
-        for j=1:size(Amat,2)
-            if A(pos(i))==Amat(pos(i),j)
-                Acounts(pos(i),j)=AcountsOrig(pos(i),j);
-                ApopAF(pos(i),j)=ApopAForig(pos(i),j);
-            elseif A(pos(i))==Bmat(pos(i),j)
-                Acounts(pos(i),j)=BcountsOrig(pos(i),j);
-                ApopAF(pos(i),j)=BpopAForig(pos(i),j);
-            elseif A(pos(i))==RefOrig(pos(i),j)
-                Acounts(pos(i),j)=RDmat(pos(i),j);
-                ApopAF(pos(i),j)=max(ApopAF(:,j));
-            else
-                Acounts(pos(i),j)=0;
-                if A(pos(i))>4 | B(pos(i))>4 | RefOrig(pos(i),j)
-                    ApopAF(pos(i),j)=inputParam.pvFreqIndel;
-                else
-                    ApopAF(pos(i),j)=inputParam.pvFreq;
-                end
-            end
-            if A(pos(i))==Amat(pos(i),j) && B(pos(i))==Bmat(pos(i),j)
-                Ref(pos(i),j)=RefOrig(pos(i),j);
-            end
+        if(tIdx(1)==2)
+            Aallele=unique([Amat(pos(i),AaltIdx) Bmat(pos(i),BaltIdx)]);
+        elseif(tIdx(1)==3)
+            Aallele=unique([Amat(pos(i),AinsIdx) Bmat(pos(i),BinsIdx)]);
+        else
+            Aallele=unique([Amat(pos(i),AdelIdx) Bmat(pos(i),BdelIdx)]);
         end
-        for j=1:size(Bmat,2)
-            if B(pos(i))==Amat(pos(i),j)
-                Bcounts(pos(i),j)=AcountsOrig(pos(i),j);
-                BpopAF(pos(i),j)=ApopAForig(pos(i),j);
-            elseif B(pos(i))==Bmat(pos(i),j)
-                Bcounts(pos(i),j)=BcountsOrig(pos(i),j);
-                BpopAF(pos(i),j)=BpopAForig(pos(i),j);
-            elseif B(pos(i))==RefOrig(pos(i),j)
-                Bcounts(pos(i),j)=RDmat(pos(i),j);
-                BpopAF(pos(i),j)=max(BpopAForig(:,j));
-            else
-                Bcounts(pos(i),j)=0;
-                if A(pos(i))>4 | B(pos(i))>4 | RefOrig(pos(i),j)
-                    BpopAF(pos(i),j)=inputParam.pvFreqIndel;
-                else
-                    BpopAF(pos(i),j)=inputParam.pvFreq;
-                end
-            end
+        if length(Aallele)==1;
+            A(pos(i),:)=Aallele;
+        else
+            lia=ismember(alleles(idx),Aallele);
+            A(pos(i),:)=alleles(idx(find(lia,1)));
         end
+        aIdx=Amat(pos(i),:)==A(pos(i),:) & ~ArefIdx;
+        bIdx=Bmat(pos(i),:)==A(pos(i),:) & ~BrefIdx;
+        Acounts(pos(i),:)=AcountsOrig(pos(i),:).*aIdx+BcountsOrig(pos(i),:).*bIdx;
+        ApopAF(pos(i),:)=ApopAForig(pos(i),:).*aIdx+BpopAForig(pos(i),:).*bIdx;
     end
-    i;
+    if(tIdx(2)==1)
+        refAlleles=unique([Amat(pos(i),ArefIdx) Bmat(pos(i),BrefIdx)]);
+        if length(refAlleles)==1;
+            B(pos(i),:)=refAlleles;
+        elseif tIdx(1)==4 && length(refAlleles(refAlleles>4))==1
+            B(pos(i),:)=refAlleles(refAlleles>4);
+        elseif tIdx(1)~=4 &&  length(refAlleles(refAlleles<=4))==1
+            B(pos(i),:)=refAlleles(refAlleles<=4);
+        else
+            B(pos(i),:)=-1;
+        end
+        Bcounts(pos(i),:)=AcountsOrig(pos(i),:).*ArefIdx+BcountsOrig(pos(i),:).*BrefIdx;
+        BpopAF(pos(i),:)=ApopAForig(pos(i),:).*ArefIdx+BpopAForig(pos(i),:).*BrefIdx;
+    else
+        if(tIdx(2)==2)
+            Ballele=unique([Amat(pos(i),AaltIdx) Bmat(pos(i),BaltIdx)]);
+        elseif(tIdx(2)==3)
+            Ballele=unique([Amat(pos(i),AinsIdx) Bmat(pos(i),BinsIdx)]);
+        else
+            Ballele=unique([Amat(pos(i),AdelIdx) Bmat(pos(i),BdelIdx)]);
+        end
+        if length(Ballele)==1;
+            B(pos(i),:)=Ballele;
+        else
+            lia=ismember(alleles(idx),Ballele);
+            B(pos(i),:)=alleles(idx(find(lia,1)));
+        end
+        aIdx=Amat(pos(i),:)==B(pos(i),:) & ~ArefIdx;
+        bIdx=Bmat(pos(i),:)==B(pos(i),:) & ~BrefIdx;
+        Bcounts(pos(i),:)=AcountsOrig(pos(i),:).*aIdx+BcountsOrig(pos(i),:).*bIdx;
+        BpopAF(pos(i),:)=ApopAForig(pos(i),:).*aIdx+BpopAForig(pos(i),:).*bIdx;
+    end
+    if(tIdx(1)==1 && A(pos(i),:)>0)
+        Ref(pos(i),:)=A(pos(i),:);
+    elseif(tIdx(2)==1 && B(pos(i),:)>0)
+        Ref(pos(i),:)=B(pos(i),:);
+    elseif(max(tIdx(1:2))==4)
+        Ref(pos(i),:)=RefOrig(pos(i),:).*(AdelIdx | BdelIdx);
+    else
+        Ref(pos(i),:)=RefOrig(pos(i),:).*~(AdelIdx | BdelIdx);
+    end
+    %i
 end
 
 Ref=max(Ref,[],2);
@@ -316,7 +266,7 @@ pOther=prod(pDataOther,2).*priorOther./pData;
 pNonDip=prod(pDataNonDip,2).*priorNonDip./pData;
 
 postComb=array2table([posList pSomatic pGermline pHom pOther pNonDip],'VariableNames',{'Chr', 'Pos', 'Somatic','Het','Hom','Other','NonDip'});
-countsAll=array2table([posList Ref A B],'VariableNames',{'Chr','Pos','Ref','A','B'});
+countsAll=array2table([posList Ref A B ApopAF BpopAF],'VariableNames',{'Chr','Pos','Ref','A','B','ApopAF','BpopAF'});
 for i=1:size(Acounts,2)
     pDataComb{i}=array2table([posList pDataSomaticComb(:,i) pDataHet(:,i) pDataHom(:,i) pDataOther(:,i) pDataNonDip(:,i)],'VariableNames',{'Chr', 'Pos', 'Somatic','Het','Hom','Other','NonDip'});
     countsAll.Acounts(:,i)=Acounts(:,i);
