@@ -124,10 +124,12 @@ W=Wcurr
 f=fOld./100
 paramOpt=[CNAscale(:); W(:); f(:)];
 %inputParam.numClones=cloneIdx;
-[N, M, Ftable, log2FC]=callCNAmulti(hetPos,Tcell,exonRD,segsMerged,inputParam,paramOpt);
+[N, M, Ftable, log2FC, cnaIdx]=callCNAmulti(hetPos,Tcell,exonRD,segsMerged,inputParam,paramOpt);
 segsTable=array2table(segsMerged(:,1:3),'VariableNames',{'Chr','StartPos','EndPos'});
 segsTable.N=N;
 segsTable.M=M;
+segsTable.F=Ftable;
+segsTable.cnaIdx=cnaIdx;
 
 for i=1:length(Tcell)
     segsTable.F(:,i)=Ftable(:,i);

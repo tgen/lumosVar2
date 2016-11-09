@@ -138,6 +138,7 @@ priorMinAllele(Mmat>=length(inputParam.minAllelePrior)-1)=inputParam.minAllelePr
 %%% find likelihoods of read counts and depth
 pHet=inputParam.pvFreq*sum(E.EndPos-E.StartPos)./sum(segsMerged(:,3)-segsMerged(:,2));
 for i=1:size(f,2)
+    priorCNAf(:,i)=betapdf(max(f(:,i)),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2)+inputParam.minLik;
     for j=1:length(Tcell)
         for k=1:2
             corr(:,i,j,k)=f(j,i).*Mmat(:,i,k)./Nmat(:,i,k)+(1-f(j,i))*0.5;
@@ -155,7 +156,7 @@ for i=1:size(f,2)
             %depthlik(:,i,j)=normpdf(log(E.TumorRD(:,j)+1),log(expReadCount(:,i,j)+1),0.6);
             pHetDetect(:,i,j,k)=binocdf(inputParam.minBCount,round(meanTumorRDexon(:,j)),corrSeg(:,i,j,k),'upper');
             hetCountLik(:,i,j,k)=binocdf(hist(idx,1:size(segsMerged,1))',round(segsMerged(:,3)-segsMerged(:,2)),pHetDetect(:,i,j,k)*pHet);
-            segLik(:,i,j,k)=nansum([getMeanInRegions([D.Chr D.Pos],log(hetlik(:,i,j,k)),segsMerged) getMeanInRegions([E.Chr E.StartPos],log(depthlik(:,i,j,k)),segsMerged) log(hetCountLik(:,i,j,k))],2);
+            segLik(:,i,j,k)=nansum([getMeanInRegions([D.Chr D.Pos],log(hetlik(:,i,j,k))+log(priorCNAf(:,i))+log(priorMinAllele(:,i,k)),segsMerged) getMeanInRegions([E.Chr E.StartPos],log(depthlik(:,i,j,k))+log(priorCNA(:,i,k)),segsMerged) log(hetCountLik(:,i,j,k))],2);
         end
     end
 end
@@ -178,10 +179,13 @@ for i=1:size(f,2)
         end
         priorCNAMax(cnaIdx(idxExon)==i & cnIdx(idxExon)==k,:)=priorCNA(cnaIdx(idxExon)==i & cnIdx(idxExon)==k,i,k);
         priorMinAlleleMax(cnaIdx(idx)==i & cnIdx(idx)==k,:)=priorMinAllele(cnaIdx(idx)==i & cnIdx(idx)==k,i,k);
-        priorCNAf(cnaIdx(idx)==i & cnIdx(idx)==k,:)=betapdf(max(f(:,i)),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2)+inputParam.minLik;
+        priorCNAfmax(cnaIdx(idx)==i & cnIdx(idx)==k,:)=betapdf(max(f(:,i)),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2)+inputParam.minLik;
     end
 end
-priorCNAf(NsegMax==2 & MsegMax==1)=NaN;
+if inputParam.NormalSample>0
+    priorCNAfmax(cnaIdx(idx)==size(f,2),:)=inputParam.priorGermCNV;
+end
+priorCNAfmax(NsegMax==2 & MsegMax==1)=NaN;
 
 %%% find expected allele frequency for somatic variants
 for i=1:size(f,2)
@@ -221,6 +225,6 @@ priorF=betapdf(fMax(somIdx),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.
 
 %%% sum negative log likliehoods
 %nll=sum((-sum(log(somLik))-sum(log(hetlikMax))-sum(log(depthlikMax))-sum(log(priorCNAMax))-sum(log(priorMinAlleleMax))-sum(log(priorF))-nansum(log(priorCNAf)))./(length(somLik)+length(hetlikMax)+length(depthlikMax)+length(priorCNAMax)+length(priorMinAlleleMax)+length(priorF)+sum(~isnan(priorCNAf))));
-nll=sum(-sum(log(somLik)./(inputParam.priorSomaticSNV*sum(E.EndPos-E.StartPos)))-sum(mean(log(hetlikMax)))-sum(mean(log(depthlikMax)))-sum((segsMerged(:,3)-segsMerged(:,2))'*log(hetCountLikMax)/sum(segsMerged(:,3)-segsMerged(:,2)))-mean(log(priorCNAMax))-mean(log(priorMinAlleleMax))-mean(log(priorF))-nanmean(log(priorCNAf)));
+nll=sum(-sum(log(somLik)./(inputParam.priorSomaticSNV*sum(E.EndPos-E.StartPos)))-sum(mean(log(hetlikMax)))-sum(mean(log(depthlikMax)))-sum((segsMerged(:,3)-segsMerged(:,2))'*log(hetCountLikMax)/sum(segsMerged(:,3)-segsMerged(:,2)))-mean(log(priorCNAMax))-mean(log(priorMinAlleleMax))-mean(log(priorF))-nanmean(log(priorCNAfmax)));
 
 return;

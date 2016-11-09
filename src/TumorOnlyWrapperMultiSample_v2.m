@@ -196,7 +196,7 @@ somPos=max(P.Somatic,[],2)>inputParam.pSomaticThresh & filtPos & min([Tcell{1}.A
 ['Het positions: ' num2str(sum(hetPos))]
 save([inputParam.outMat]);
 tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
-while(sum(abs(somPos-somPosOld))>0 && i<inputParam.maxIter)
+while(sum(abs(somPos-somPosOld))/sum(somPos)>0.05 && i<inputParam.maxIter)
      [segsTable, W, f, CNAscale, nll, t{i}]=fitCNAmulti(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam);
     %['clonal fractions: ' num2str(f)]
     for j=1:length(Tcell)
@@ -210,11 +210,12 @@ while(sum(abs(somPos-somPosOld))>0 && i<inputParam.maxIter)
     save([inputParam.outMat]);
     i=i+1
     somPosOld=somPos;
+    inputParam.numClones=size(f,2);
     if inputParam.NormalSample>0
         n=1;
         NormalSample=inputParam.NormalSample;
         inputParam.NormalSample=1;
-        inputParam.numClones=1;
+        %inputParam.numClones=1;
         for j=1:length(Tcell)
             if j~=NormalSample
                 idx=[NormalSample j];
@@ -232,7 +233,6 @@ while(sum(abs(somPos-somPosOld))>0 && i<inputParam.maxIter)
     else
         P.SomaticPair=zeros(size(P,1),length(Tcell));
     end
-    inputParam.numClones=size(f,2);
     [postComb, pDataSum(i+1),pDataComb,clones,prior,countsAll]=jointSNV_v2(Tcell, exonRD, f, W, inputParam);
     for j=1:length(Tcell)
         [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[postComb.Chr postComb.Pos],'rows');
@@ -265,9 +265,11 @@ while(sum(abs(somPos-somPosOld))>0 && i<inputParam.maxIter)
     end
     filtPos=max(P.trust,[],2)>inputParam.pGoodThresh & max(P.artifact,[],2)<inputParam.pGoodThresh;
     hetPos=max(P.Het,[],2)>inputParam.pGermlineThresh & filtPos;
-    somPos=max([P.Somatic P.SomaticPair],[],2)>inputParam.pSomaticThresh & filtPos & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq;
-    for j=1:tIdx
-        somPos(max(P.SomaticPair(:,tIdx(j)),[],2)>inputParam.pSomaticThresh & min(P.trust(:,[tIdx(j) inputParam.NormalSample]),[],2)>inputParam.pGoodThresh,:)=1;
+    somPos=max([P.Somatic P.SomaticPair],[],2)>inputParam.pSomaticThresh & filtPos & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)<inputParam.maxSomPopFreq;
+    if inputParam.NormalSample>0
+        for j=1:tIdx
+            somPos(max(P.SomaticPair(:,tIdx(j)),[],2)>inputParam.pSomaticThresh & min(P.trust(:,[tIdx(j) inputParam.NormalSample]),[],2)>inputParam.pGoodThresh & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq,:)=1;
+        end
     end
     ['Somatic positions: ' num2str(sum(somPos))]
     ['Het positions: ' num2str(sum(hetPos))] 
@@ -276,15 +278,25 @@ end
 ['converged at iteration' num2str(i)]
 
 %%%write output files
+
+
 fAll=zeros(length(Tcell),inputParam.numClones);
 
 fAll(tIdx,1:end)=reshape(f,[],inputParam.numClones);
 
+
+cloneCounts=hist(cloneId(somPos,1),1:size(f,2));
+[~,ord]=sort(cloneCounts,'descend');
+fSort=f(:,ord);
+[~,cloneIdSort]=ismember(cloneId,ord);
+ord=[ord size(f,2)+1];
+[~,segsTable.cnaIdx]=ismember(segsTable.cnaIdx,ord);
+
 save([inputParam.outMat]);
-writeJointVCF(Tcell,P,f,cloneId,F,inputParam)
+[Filter,somaticDetected]=writeJointVCF(Tcell,P,fSort,cloneIdSort,F,inputParam);
 writeSegVCF(segsTable,inputParam)
-writeCloneSummary(segsTable,Ecell,Tcell,P,f,cloneId,inputParam)
-plotTumorOnly(exonRD,segsTable,CNAscale,f,Tcell,somPos,hetPos,cloneId,inputParam)
+writeCloneSummary(segsTable,Ecell,Tcell,P,fSort,cloneIdSort,inputParam,Filter,somaticDetected);
+plotTumorOnly(exonRD,segsTable,CNAscale,fSort,Tcell,somPos,hetPos,cloneIdSort,inputParam)
 
 %for i=1:length(Tcell)
 %writeVCF(Tcell{i},P,fAll(i,:),cloneId{i},F{i},inputParam,i);
