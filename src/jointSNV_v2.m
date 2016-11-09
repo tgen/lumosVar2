@@ -42,10 +42,10 @@ end
 %%% find priors
 indelPos=A>4 | B>4 | Ref >4 | A<0 | B<0 | Ref <0;
 priorNonDip=max(mapQC,[],2)-inputParam.minLik;
-priorSomatic(indelPos,:)=((cosmic(indelPos)+1).*inputParam.priorSomaticIndel).*(1-priorNonDip(indelPos));
-priorSomatic(~indelPos,:)=((cosmic(~indelPos)+1).*inputParam.priorSomaticSNV).*(1-priorNonDip(~indelPos));
+priorHom=(ApopAF.^2).*(1-priorNonDip);
+priorSomatic(indelPos,:)=(priorHom(indelPos).*(cosmic(indelPos)+1).*inputParam.priorSomaticIndel).*(1-priorNonDip(indelPos));
+priorSomatic(~indelPos,:)=(priorHom(~indelPos).*(cosmic(~indelPos)+1).*inputParam.priorSomaticSNV).*(1-priorNonDip(~indelPos));
 priorHet=2*ApopAF.*BpopAF.*(1-priorSomatic-priorNonDip);
-priorHom=(ApopAF.^2).*(1-priorSomatic-priorNonDip);
 priorOther=1-priorHet-priorHom-priorSomatic-priorNonDip;
 
 prior=array2table([priorSomatic priorHet priorHom priorOther priorNonDip],'VariableNames',{'Somatic','Het','Hom','Other','nonDiploid'});
@@ -54,14 +54,16 @@ prior=array2table([priorSomatic priorHet priorHom priorOther priorNonDip],'Varia
 cnCorr=cnaF.*M./N+(1-cnaF)*0.5;
 cnCorr(N==0)=0.5;
 cnCorr=max(cnCorr,10.^(inputParam.defaultBQ./-10));
+% 
+% for i=1:size(Acounts,2)
+%     pos=find(RDmat(:,i)==0);
+%     idx=getPosInRegions(posList(pos,:),exonRD{i}(:,1:3));
+%     RDmat(pos(~isnan(idx)),i)=exonRD{i}(idx(~isnan(idx)),4);
+% end
+idx=Acounts+Bcounts>RDmat;
+RDmat(idx)=Acounts(idx)+Bcounts(idx);
 
-for i=1:size(Acounts,2)
-    pos=find(RDmat(:,i)==0);
-    idx=getPosInRegions(posList(pos,:),exonRD{i}(:,1:3));
-    RDmat(pos(~isnan(idx)),i)=exonRD{i}(idx(~isnan(idx)),4);
-end
-
-Acounts(Acounts+Bcounts==0 & (A==Ref)*ones(1,size(Acounts,2)))=RDmat(Acounts+Bcounts==0 & (A==Ref)*ones(1,size(Acounts,2)));
+%Acounts(Acounts+Bcounts==0 & (A==Ref)*ones(1,size(Acounts,2)))=RDmat(Acounts+Bcounts==0 & (A==Ref)*ones(1,size(Acounts,2)));
 %%% calculate likliehoods of germline genotypes
 for i=1:size(Acounts,2)
     pDataHom(:,i)=bbinopdf_ln(Acounts(:,i),RDmat(:,i),Wmat(:,i).*(1-10.^(-AmeanBQ(:,i)./10)),Wmat(:,i).*10.^(-AmeanBQ(:,i)./10));
@@ -85,10 +87,16 @@ for j=1:size(Acounts,2)
 end
 
 %%% find likelihood of somatic mutations
-tumorIdx=setdiff([1:size(Acounts,2)],inputParam.NormalSample);
-bIdx=ApopAF>=BpopAF;
-aIdx=ApopAF<BpopAF;
-meanAF=mean(Bcounts(:,tumorIdx)./RDmat(:,tumorIdx),2);
+%tumorIdx=setdiff([1:size(Acounts,2)],inputParam.NormalSample);
+if inputParam.NormalSample>0
+    bIdx=Acounts(:,inputParam.NormalSample)>=Bcounts(:,inputParam.NormalSample);
+    aIdx=Acounts(:,inputParam.NormalSample)<Bcounts(:,inputParam.NormalSample);
+    germAF(bIdx,:)=Bcounts(bIdx,inputParam.NormalSample)./RDmat(bIdx,inputParam.NormalSample);
+    germAF(aIdx,:)=Acounts(aIdx,inputParam.NormalSample)./RDmat(aIdx,inputParam.NormalSample);
+else
+    bIdx=ApopAF>=BpopAF;
+    aIdx=ApopAF<BpopAF;
+end
 for j=1:size(Acounts,2)
     if j==inputParam.NormalSample
         cloneLik(:,:,j)=pDataHom(:,j)*ones(1,length(f(j,:)));
@@ -101,7 +109,11 @@ for j=1:size(Acounts,2)
         end
     end
     if inputParam.NormalSample>0
-        pDataNonDip(:,j)=bbinopdf_ln(Bcounts(:,j),RDmat(:,j),meanAF.*W(j),(1-meanAF).*W(j));
+        shiftAF(:,j,1)=(cnaF(:,inputParam.NormalSample).*N(:,inputParam.NormalSample)./M(:,inputParam.NormalSample)+2*(1-cnaF(:,inputParam.NormalSample))).*cnaF(:,j).*(M(:,j)./N(:,j)).*germAF+(1-cnaF(:,j)).*germAF;
+        shiftAF(:,j,2)=(cnaF(:,inputParam.NormalSample).*N(:,inputParam.NormalSample)./(N(:,inputParam.NormalSample)-M(:,inputParam.NormalSample))+2*(1-cnaF(:,inputParam.NormalSample))).*cnaF(:,j).*((N(:,j)-M(:,j))./N(:,j)).*germAF+(1-cnaF(:,j)).*germAF;
+        pDataNonDip1(:,j)=bbinopdf_ln(Bcounts(:,j),RDmat(:,j),min(shiftAF(:,j,1),1-shiftAF(:,j,1)).*W(j),max(shiftAF(:,j,1),1-shiftAF(:,j,1)).*W(j));
+        pDataNonDip2(:,j)=bbinopdf_ln(Bcounts(:,j),RDmat(:,j),min(shiftAF(:,j,2),1-shiftAF(:,j,2)).*W(j),max(shiftAF(:,j,2),1-shiftAF(:,j,2)).*W(j));
+        pDataNonDip(:,j)=max(pDataNonDip1(:,j),pDataNonDip2(:,j));
     else
         pDataNonDip(:,j)=zeros(size(Bcounts(:,j)));
     end
