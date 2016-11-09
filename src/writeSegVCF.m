@@ -25,7 +25,7 @@ function writeSegVCF(segsTable,inputParam)
 % Last revision: 3-June-2016
 %------------- BEGIN CODE --------------
 
-fout=fopen([inputParam.outName '.cna.seg.vcf'],'w');
+fout=fopen([inputParam.outName '.lumosVarSeg.vcf'],'w');
 
 %%% print VCF header
 fprintf(fout,'%s','##fileformat=VCFv4.2\n');
@@ -46,33 +46,46 @@ fprintf(fout,['##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of Struc
 fprintf(fout,['##INFO=<ID=END,Number=1,Type=String,Description="End of Variant">\n']);
 fprintf(fout,['##INFO=<ID=CNF,Number=1,Type=Float,Description="Fraction containg Copy Number Alteration">\n']);
 
+segsTableCond=segsTable(1,:);
+r=1;
+for i=2:size(segsTable,1)
+    if(segsTable.N(i)==2 && segsTable.M(i)==1 && sum(segsTableCond{r,[1 4 5]}==segsTable{i,[1 4 5]})==3)
+        segsTableCond.EndPos(r)=segsTable.EndPos(i);   
+    elseif(sum(segsTableCond{r,[1 4 5 7]}==segsTable{i,[1 4 5 7]})==4)
+        segsTableCond.EndPos(r)=segsTable.EndPos(i);
+    else
+        r=r+1;
+        segsTableCond(r,:)=segsTable(i,:);
+    end
+end
+
 %%% determine alteration type
-type(segsTable.N>2 & segsTable.M>0,:)={'DUP'};
-type(segsTable.N>2 & segsTable.M==0,:)={'DUPLOH'};
-type(segsTable.N==2 & segsTable.M==1,:)={'NONE'};
-type(segsTable.N==2 & segsTable.M==0,:)={'LOH'};
-type(segsTable.N<2,:)={'DEL'};
+type(segsTableCond.N>2 & segsTableCond.M>0,:)={'DUP'};
+type(segsTableCond.N>2 & segsTableCond.M==0,:)={'DUPLOH'};
+type(segsTableCond.N==2 & segsTableCond.M==1,:)={'NONE'};
+type(segsTableCond.N==2 & segsTableCond.M==0,:)={'LOH'};
+type(segsTableCond.N<2,:)={'DEL'};
 
 %%% construct info field
-Info=cellstr(strcat('CN=',num2str(segsTable.N,'%-.0f'),';MACN=',num2str(segsTable.M,'%-.0f')));
-Info=strcat(Info,';SVLEN=',num2str(segsTable.EndPos-segsTable.StartPos,'%-.0f'));
-Info=strcat(Info,';SVTYPE=',type,';END=',num2str(segsTable.EndPos,'%-.0f'));
+Info=cellstr(strcat('CN=',num2str(segsTableCond.N,'%-.0f'),';MACN=',num2str(segsTableCond.M,'%-.0f')));
+Info=strcat(Info,';SVLEN=',num2str(segsTableCond.EndPos-segsTableCond.StartPos,'%-.0f'));
+Info=strcat(Info,';SVTYPE=',type,';END=',num2str(segsTableCond.EndPos,'%-.0f'));
 
-for i=1:size(segsTable.F,2)
-    formatStr(segsTable.N~=2 | segsTable.M~=1,i)=cellstr(strcat(num2str(segsTable.F(segsTable.N~=2 | segsTable.M~=1,i),'%-.3f'),':',num2str(segsTable.log2FC(segsTable.N~=2 | segsTable.M~=1,i),'%-.2f')));
-    formatStr(segsTable.N==2 & segsTable.M==1,i)=cellstr(strcat('NA:',num2str(segsTable.log2FC(segsTable.N==2 & segsTable.M==1,i),'%-.2f')));
+for i=1:size(segsTableCond.F,2)
+    formatStr(segsTableCond.N~=2 | segsTableCond.M~=1,i)=cellstr(strcat(num2str(segsTableCond.F(segsTableCond.N~=2 | segsTableCond.M~=1,i),'%-.3f'),':',num2str(segsTableCond.log2FC(segsTableCond.N~=2 | segsTableCond.M~=1,i),'%-.2f')));
+    formatStr(segsTableCond.N==2 & segsTableCond.M==1,i)=cellstr(strcat('NA:',num2str(segsTableCond.log2FC(segsTableCond.N==2 & segsTableCond.M==1,i),'%-.2f')));
 end
     
-formatFields=repmat({'CNF:LOG2FC'},size(segsTable,1),1);
+formatFields=repmat({'CNF:LOG2FC'},size(segsTableCond,1),1);
 
 %%% write output
-outData=[num2cell(segsTable.Chr) num2cell(segsTable.StartPos) num2cell(segsTable.EndPos) cellstr(char(ones(size(segsTable,1),1)*78)) strcat('<',type,'>') num2cell(abs(mean(segsTable.log2FC,2))) cellstr(char(ones(size(segsTable,1),1)*46)) Info formatFields formatStr];
+outData=[num2cell(segsTableCond.Chr) num2cell(segsTableCond.StartPos) num2cell(segsTableCond.EndPos) cellstr(char(ones(size(segsTableCond,1),1)*78)) strcat('<',type,'>') num2cell(abs(mean(segsTableCond.log2FC,2))) cellstr(char(ones(size(segsTableCond,1),1)*46)) Info formatFields formatStr];
 headers={'#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILT', 'INFO', 'FORMAT'};
 headers=[headers regexp(inputParam.sampleNames,',','split')];
 for i=1:length(headers)
     fprintf(fout,'%s\t',headers{i});
 end
 for i=1:size(outData,1)
-    fprintf(fout,strcat('\n%d\t%d\t%d\t%s\t%s\t%f\t%s\t%s\t%s',repmat('\t%s',1,size(segsTable.F,2))),outData{i,:});
+    fprintf(fout,strcat('\n%d\t%d\t%d\t%s\t%s\t%f\t%s\t%s\t%s',repmat('\t%s',1,size(segsTableCond.F,2))),outData{i,:});
 end
 
