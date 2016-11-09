@@ -43,7 +43,7 @@ chrList=[1:22];
 chrIdx=find(str2double(chr)==chrList);
 
 %%% read in bedfile
-regTable=readtable(regionsFile,'FileType','text','Delimiter','\t');
+regTable=readtable(regionsFile,'FileType','text','Delimiter','\t','ReadVariableNames',false);
 size(regTable)
 if ~isnumeric(regTable{:,1})
     chr=cellfun(@str2num,regTable{:,1},'UniformOutput',0);
@@ -64,10 +64,12 @@ if(~exist([outfile '_' num2str(chrList(chrIdx)) '.txt.gz'],'file'))
         fout=fopen([outfile '_' num2str(chrList(chrIdx)) '.txt'],'a+');
         ferror=fopen([outfile '_' num2str(chrList(chrIdx)) '.errorLog.txt'],'a+');
         [q,w] = system(['tail -n 1 ' outfile '_' num2str(chrList(chrIdx)) '.txt']);
-        data=str2double(regexp(w,'\t','split'));
+        data=str2double(regexp(w,'\t','split'))
         currRegion=double(Regions(Regions(:,1)==chrList(chrIdx),:));
+        size(currRegion)
         if(size(data,2)==6)
             idx=getPosInRegions([chrList(chrIdx) data(2)],currRegion);
+            currRegion(idx,:)
             currRegion=currRegion(idx:end,:);
             currRegion(1,2)=data(2);
         end

@@ -64,11 +64,11 @@ if exist(outPosFile,'file') && exist(outExonFile,'file')
     [q,w] = system(['tail -n 1 ' outExonFile]);
     data=str2double(regexp(w,'\t','split'));
     currRegion=double(Regions(Regions(:,1)==chrList(chrIdx),:));
-    if(size(data,2)==8*sampleCount)
-        idx=find(data(3)<currRegion(:,3),1);
-        if(idx==size(currRegion,1))
+    if(size(data,2)==8*sampleCount)       
+        if(data(3)==currRegion(end,3))
             exit(0);
         else
+            idx=find(data(3)<currRegion(:,3),1);
             currRegion=currRegion(idx:end,:);
             if data(3)>=currRegion(1,2)
                 currRegion(1,2)=data(3)+1;
