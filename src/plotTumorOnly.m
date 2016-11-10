@@ -119,7 +119,7 @@ for j=1:length(Tcell)
     %set(gca,'YTick',tickpos,'YTickLabel',ticks,'tickDir','out');
     set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',[1:22],'FontSize',6);
     axis([0 max(segCoord(:,2)) min(Nlog2R(:))-1 max(Nlog2R(:))+1])
-    title(samples{j},'FontSize',10,'Intepreter','none');
+    title(samples{j},'FontSize',10,'Interpreter','none');
 end
 subplot(length(Tcell)+1,5,[5*(length(Tcell)+1)-4 5*(length(Tcell)+1)-1])
 hold on;
@@ -229,7 +229,7 @@ for j=1:length(Tcell)
     %set(gca,'YTick',tickpos,'YTickLabel',ticks,'tickDir','out');
     set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',[1:22],'FontSize',6);
     axis([0 max(segCoord(:,2)) 0 1])
-    title(samples{j},'FontSize',10,'Intepreter','none');
+    title(samples{j},'FontSize',10,'Interpreter','none');
 end
 subplot(length(Tcell)+1,5,[5*(length(Tcell)+1)-4 5*(length(Tcell)+1)-1])
 hold on;

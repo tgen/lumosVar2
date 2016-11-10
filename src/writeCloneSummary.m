@@ -60,7 +60,7 @@ for i=1:size(f,2)
     db(i,:)=sum(cloneId(:,1)==i & strcmp(Filter,'SomaticDBsnp'));
 end
 cloneTable.somaticPass=[pass; sum(strcmp(Filter,'SomaticPairPASS'))];
-cloneTable.somaticDetected=[detect; sum(somaticDetected(strcmp(Filter,'SomaticPairPASS'),:))];
+cloneTable.somaticDetected=[detect; sum(somaticDetected(strcmp(Filter,'SomaticPairPASS'),:),1)];
 cloneTable.somaticLowQC=[lowqc; sum(strcmp(Filter,'SomaticPairLowQC'))];
 cloneTable.somaticDB=[db; NaN];
 
@@ -127,7 +127,7 @@ end
 
 subplot(2,1,2);
 for i=1:size(f,2)
-    plot(sampleFrac(strcmp(Filter,'SomaticPASS') & cloneId(:,i)==i,:)','Color',colors(i,:));
+    plot(sampleFrac(strcmp(Filter,'SomaticPASS') & cloneId(:,1)==i,:)','Color',colors(i,:));
     hold on;
 end
 plot(sampleFrac(strcmp(Filter,'SomaticPairPASS'),:)','Color','k');
