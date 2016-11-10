@@ -15,9 +15,12 @@ elseif(segsMerged(sortIdx(1)-1,1)==segsMerged(sortIdx(1),1))
        mat2(:,i)=Ecell{i}.TumorRD(idx==sortIdx(1))./Ecell{i}.NormalRD(idx==sortIdx(1));
    end
    if(size(mat1,1)>1)
-       h1=ttest2(mat1,mat2,inputParam.cnaAlpha);
+       [h1,p1]=ttest2(mat1,mat2,inputParam.cnaAlpha);
+   elseif(size(mat1,1)==1)
+       [h1,p1]=ttest2(mat2,mat1,inputParam.cnaAlpha);
    else
-       h1=ttest2(mat2,mat1,inputParam.cnaAlpha);
+       h1=0;
+       p1=1;
    end
 else
    h1=1;
@@ -33,16 +36,25 @@ elseif(segsMerged(sortIdx(1)+1,1)==segsMerged(sortIdx(1),1))
        mat2(:,i)=Ecell{i}.TumorRD(idx==sortIdx(1))./Ecell{i}.NormalRD(idx==sortIdx(1));
    end
    if(size(mat1,1)>1)
-       h2=ttest2(mat1,mat2,inputParam.cnaAlpha);
+       [h2,p2]=ttest2(mat1,mat2,inputParam.cnaAlpha);
+   elseif(size(mat1,1)==1)
+       %size(mat1)
+       %size(mat2)
+       [h2,p2]=ttest2(mat2,mat1,inputParam.cnaAlpha);
    else
-       h2=ttest2(mat2,mat1,inputParam.cnaAlpha);
+       h2=0;
+       p2=1;
    end
 else
     h2=1;
 end
 
 if(sum(h1)==0 && sum(h2)==0)
-    newBound=mean(segsMerged(sortIdx(1),2:3));
+    if(min(p1)>min(p2))
+        newBound=segsMerged(sortIdx(1),3);
+    else
+        newBound=segsMerged(sortIdx(1),2);
+    end
 elseif(sum(h1)==0)
     newBound=segsMerged(sortIdx(1),3);
 elseif(sum(h2)==0)
