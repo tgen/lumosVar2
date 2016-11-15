@@ -37,7 +37,7 @@ chrList=[1:22];
 chrIdx=find(str2double(chr)==chrList);
 
 %%%import bed file
-regTable=readtable(inputParam.regionsFile,'FileType','text','Delimiter','\t');
+regTable=readtable(inputParam.regionsFile,'FileType','text','Delimiter','\t','ReadVariableNames',false);
 size(regTable)
 if ~isnumeric(regTable{:,1})
     chr=cellfun(@str2num,regTable{:,1},'UniformOutput',0);
