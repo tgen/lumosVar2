@@ -106,6 +106,7 @@ for i=1:size(f,2)
         plot(f(:,i),'-o','MarkerSize',50*(cloneTable.somaticPass(i)+1)./sum(cloneTable.somaticPass),'color',colors(i,:),'MarkerEdgeColor',[1 1 1],'MarkerFaceColor',colors(i,:),'LineWidth',10*(sum(CNcount(i,:))+1)./sum(CNcount(:)));
     end
 end
+ylim([0 1]);
 set(gca,'XTick',1:size(f,1),'XTickLabel',sampleNames,'FontSize',8,'TickLabelInterpreter','none','XTickLabelRotation',5);
 ylabel('Clonal Sample Fraction');
 
@@ -121,21 +122,31 @@ for j=1:length(Tcell)
     AF(bIdx,j)=T.BcountsComb(bIdx)./T.ReadDepthPass(bIdx);
     AF(~bIdx,j)=T.AcountsComb(~bIdx)./T.ReadDepthPass(~bIdx);
     matchIdx=f(j,cloneId(:,j))'==T.cnaF;
-    sampleFrac(matchIdx,j)=(2*AF(matchIdx,j))./(T.NumCopies(matchIdx)-T.MinAlCopies(matchIdx)+2*AF(matchIdx,j)-AF(matchIdx,j).*T.NumCopies(matchIdx));
-    sampleFrac(~matchIdx,j)=AF(~matchIdx,j)./(T.cnaF(~matchIdx).*T.NumCopies(~matchIdx)+2.*(1-T.cnaF(~matchIdx)));
+    sampleFrac(matchIdx,j)=AF(matchIdx,j).*(T.cnaF(matchIdx).*T.NumCopies(matchIdx)+2.*(1-T.cnaF(matchIdx)))./(T.NumCopies(matchIdx)-T.MinAlCopies(matchIdx));
+    sampleFrac(~matchIdx,j)=AF(~matchIdx,j).*(T.cnaF(~matchIdx).*T.NumCopies(~matchIdx)+2.*(1-T.cnaF(~matchIdx)));
 end
 
 subplot(2,1,2);
+hold on;
 for i=1:size(f,2)
     plot(sampleFrac(strcmp(Filter,'SomaticPASS') & cloneId(:,1)==i,:)','Color',colors(i,:));
-    hold on;
+    plot(sampleFrac(strcmp(Filter,'SomaticPairPASS') & cloneId(:,1)==i,:)',':','Color',colors(i,:));
 end
-plot(sampleFrac(strcmp(Filter,'SomaticPairPASS'),:)','Color','k');
+%plot(sampleFrac(strcmp(Filter,'SomaticPairPASS'),:)','Color','k');
+ylim([0 1]);
 set(gca,'XTick',1:size(f,1),'XTickLabel',sampleNames,'FontSize',8,'TickLabelInterpreter','none','XTickLabelRotation',5);
 ylabel('Variant Sample Fraction');
-
-
-
+% 
+% subplot(3,1,3);
+% hold on;
+% for i=1:size(f,2)
+%     plot(AF(strcmp(Filter,'SomaticPASS') & cloneId(:,1)==i,:)','Color',colors(i,:));
+%     plot(AF(strcmp(Filter,'SomaticPairPASS') & cloneId(:,1)==i,:)',':','Color',colors(i,:));
+% end
+% %plot(sampleFrac(strcmp(Filter,'SomaticPairPASS'),:)','Color','k');
+% set(gca,'XTick',1:size(f,1),'XTickLabel',sampleNames,'FontSize',8,'TickLabelInterpreter','none','XTickLabelRotation',5);
+% ylabel('Variant Sample Fraction');
+% 
 
 set(gcf, 'PaperPositionMode', 'manual');
 set(gcf, 'PaperUnits', 'inches');

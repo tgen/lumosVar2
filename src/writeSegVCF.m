@@ -1,4 +1,4 @@
-function writeSegVCF(segsTable,inputParam)
+function writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputParam)
 %writeSegVCF - writes VCF for copy number alterations
 %
 % Syntax: writeSegVCF(segsTable,inputParam)
@@ -59,6 +59,20 @@ for i=2:size(segsTable,1)
     end
 end
 
+for i=1:length(exonRD)
+    meanTumorRDexon(:,i)=getMeanInRegions(exonRD{i}(:,1:2),exonRD{i}(:,4),segsTableCond{:,1:3});
+    meanNormalRDexon(:,i)=getMeanInRegions(exonRD{i}(:,1:2),exonRD{i}(:,5),segsTableCond{:,1:3});
+    meanBAF(:,i)=getMeanInRegions([Tcell{i}.Chr(hetPos) Tcell{i}.Pos(hetPos)],Tcell{i}.BcountsComb(hetPos)./Tcell{i}.ReadDepthPass(hetPos),segsTableCond{:,1:3});
+end
+
+%%% calculate log2FC
+for i=1:length(exonRD)
+    log2FC(:,i)=log2((CNAscale(i)./2).*meanTumorRDexon(:,i)./(meanNormalRDexon(:,i)));
+end
+
+segsTableCond.log2FC=log2FC;
+segsTableCond.meanBAF=meanBAF;
+
 %%% determine alteration type
 type(segsTableCond.N>2 & segsTableCond.M>0,:)={'DUP'};
 type(segsTableCond.N>2 & segsTableCond.M==0,:)={'DUPLOH'};
@@ -72,11 +86,11 @@ Info=strcat(Info,';SVLEN=',num2str(segsTableCond.EndPos-segsTableCond.StartPos,'
 Info=strcat(Info,';SVTYPE=',type,';END=',num2str(segsTableCond.EndPos,'%-.0f'));
 
 for i=1:size(segsTableCond.F,2)
-    formatStr(segsTableCond.N~=2 | segsTableCond.M~=1,i)=cellstr(strcat(num2str(segsTableCond.F(segsTableCond.N~=2 | segsTableCond.M~=1,i),'%-.3f'),':',num2str(segsTableCond.log2FC(segsTableCond.N~=2 | segsTableCond.M~=1,i),'%-.2f')));
-    formatStr(segsTableCond.N==2 & segsTableCond.M==1,i)=cellstr(strcat('NA:',num2str(segsTableCond.log2FC(segsTableCond.N==2 & segsTableCond.M==1,i),'%-.2f')));
+    formatStr(segsTableCond.N~=2 | segsTableCond.M~=1,i)=cellstr(strcat(num2str(segsTableCond.F(segsTableCond.N~=2 | segsTableCond.M~=1,i),'%-.3f'),':',num2str(segsTableCond.log2FC(segsTableCond.N~=2 | segsTableCond.M~=1,i),'%-.2f'),':',num2str(segsTableCond.meanBAF(segsTableCond.N~=2 | segsTableCond.M~=1,i),'%-.2f')));
+    formatStr(segsTableCond.N==2 & segsTableCond.M==1,i)=cellstr(strcat('NA:',num2str(segsTableCond.log2FC(segsTableCond.N==2 & segsTableCond.M==1,i),'%-.2f'),':',num2str(segsTableCond.meanBAF(segsTableCond.N==2 & segsTableCond.M==1,i),'%-.2f')));
 end
     
-formatFields=repmat({'CNF:LOG2FC'},size(segsTableCond,1),1);
+formatFields=repmat({'CNF:LOG2FC:MEANBAF'},size(segsTableCond,1),1);
 
 %%% write output
 outData=[num2cell(segsTableCond.Chr) num2cell(segsTableCond.StartPos) num2cell(segsTableCond.EndPos) cellstr(char(ones(size(segsTableCond,1),1)*78)) strcat('<',type,'>') num2cell(abs(mean(segsTableCond.log2FC,2))) cellstr(char(ones(size(segsTableCond,1),1)*46)) Info formatFields formatStr];
@@ -89,3 +103,4 @@ for i=1:size(outData,1)
     fprintf(fout,strcat('\n%d\t%d\t%d\t%s\t%s\t%f\t%s\t%s\t%s',repmat('\t%s',1,size(segsTableCond.F,2))),outData{i,:});
 end
 
+fclose(fout);

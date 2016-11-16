@@ -192,16 +192,21 @@ germGT(cellfun('isempty',germGT))={'.'};
 
 
 
+if inputParam.NormalSample>0
+    bIdx=Tcell{inputParam.NormalSample}.AcountsComb>=Tcell{inputParam.NormalSample}.BcountsComb;
+else
+    bIdx=T.ApopAFcomb>=T.BpopAFcomb;
+end
+
 for j=1:length(Tcell)
     T=Tcell{j};
-    bIdx=T.ApopAFcomb>=T.BpopAFcomb;
     AF(bIdx,j)=T.BcountsComb(bIdx)./T.ReadDepthPass(bIdx);
     AF(~bIdx,j)=T.AcountsComb(~bIdx)./T.ReadDepthPass(~bIdx);
     matchIdx=f(j,cloneId(:,j))'==T.cnaF;
-    sampleFrac(matchIdx,j)=(2*AF(matchIdx,j))./(T.NumCopies(matchIdx)-T.MinAlCopies(matchIdx)+2*AF(matchIdx,j)-AF(matchIdx,j).*T.NumCopies(matchIdx));
-    sampleFrac(~matchIdx,j)=AF(~matchIdx,j)./(T.cnaF(~matchIdx).*T.NumCopies(~matchIdx)+2.*(1-T.cnaF(~matchIdx)));
+    sampleFrac(matchIdx,j)=AF(matchIdx,j).*(T.cnaF(matchIdx).*T.NumCopies(matchIdx)+2.*(1-T.cnaF(matchIdx)))./(T.NumCopies(matchIdx)-T.MinAlCopies(matchIdx));
+    sampleFrac(~matchIdx,j)=AF(~matchIdx,j).*(T.cnaF(~matchIdx).*T.NumCopies(~matchIdx)+2.*(1-T.cnaF(~matchIdx)));
 end
-    
+
 
 somaticDetected=zeros(size(AF));
 if inputParam.NormalSample<1

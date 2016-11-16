@@ -74,7 +74,15 @@ for i=1:size(Ecell,2)
     segs{i}=segmentData(exonRD{i},inputParam.cnaAlpha);
     clear E;
 end
-segsMerged=mergeSegments(segs,Ecell,inputParam);
+segsMerged=mergeSegments_v2(segs,exonRD,inputParam);
+
+%%%Make sure segments extend to ends of chromosome
+for i=1:22
+    idx1=find(segsMerged(:,1)==i,1,'first');
+    idx2=find(segsMerged(:,1)==i,1,'last');
+    segsMerged(idx1,2)=min([Tcell{1}.Pos(Tcell{1}.Chr==i); exonRD{1}(exonRD{1}(:,1)==i,2)]);
+    segsMerged(idx2,3)=max([Tcell{1}.Pos(Tcell{1}.Chr==i); exonRD{1}(exonRD{1}(:,1)==i,3)]);
+end
 
 
 save([inputParam.outMat]);
@@ -108,13 +116,6 @@ else
 end    
 somPos=Tcell{1}.CosmicCount>1 & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq & filtPos;
 
-%%%Make sure segments extend to ends of chromosome
-for i=1:22
-    idx1=find(segsMerged(:,1)==i,1,'first');
-    idx2=find(segsMerged(:,1)==i,1,'last');
-    segsMerged(idx1,2)=min([Tcell{1}.Pos(Tcell{1}.Chr==i); exonRD{1}(exonRD{1}(:,1)==i,2)]);
-    segsMerged(idx2,3)=max([Tcell{1}.Pos(Tcell{1}.Chr==i); exonRD{1}(exonRD{1}(:,1)==i,3)]);
-end
 
 
 %%%Fit Copy Number Model
@@ -279,10 +280,10 @@ end
 
 %%%write output files
 
-
-fAll=zeros(length(Tcell),inputParam.numClones);
-
-fAll(tIdx,1:end)=reshape(f,[],inputParam.numClones);
+% 
+% fAll=zeros(length(Tcell),inputParam.numClones);
+% 
+% fAll(tIdx,1:end)=reshape(f,[],inputParam.numClones);
 
 
 cloneCounts=hist(cloneId(somPos,1),1:size(f,2));
@@ -294,8 +295,8 @@ ord=[ord size(f,2)+1];
 
 save([inputParam.outMat]);
 [Filter,somaticDetected]=writeJointVCF(Tcell,P,fSort,cloneIdSort,F,inputParam);
-writeSegVCF(segsTable,inputParam)
-writeCloneSummary(segsTable,Ecell,Tcell,P,fSort,cloneIdSort,inputParam,Filter,somaticDetected);
+writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputParam)
+writeCloneSummary(segsTable,Ecell,Tcell,fSort,cloneIdSort,inputParam,Filter,somaticDetected);
 plotTumorOnly(exonRD,segsTable,CNAscale,fSort,Tcell,somPos,hetPos,cloneIdSort,inputParam)
 
 %for i=1:length(Tcell)
