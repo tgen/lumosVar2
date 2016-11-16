@@ -40,11 +40,15 @@ for i=1:length(inputFields)
 end
 fprintf(fout,['##INFO=<ID=CN,Number=1,Type=Integer,Description="Copy Number">\n']);
 fprintf(fout,['##INFO=<ID=MACN,Number=1,Type=Integer,Description="Min Allele Copy Number">\n']);
-fprintf(fout,['##INFO=<ID=LOG2FC,Number=1,Type=Float,Description="log2 fold change">\n']);
 fprintf(fout,['##INFO=<ID=SVLEN,Number=1,Type=Float,Description="Length of Segment">\n']);
 fprintf(fout,['##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of Structural Variant">\n']);
 fprintf(fout,['##INFO=<ID=END,Number=1,Type=String,Description="End of Variant">\n']);
-fprintf(fout,['##INFO=<ID=CNF,Number=1,Type=Float,Description="Fraction containg Copy Number Alteration">\n']);
+fprintf(fout,['##INFO=<ID=EXONCOUNT,Number=1,Type=Float,Description="Number of Exons in Segment">\n']);
+fprintf(fout,['##INFO=<ID=HETCOUNT,Number=1,Type=Float,Description="Number of Heterozygous Variants in Segment">\n']);
+
+fprintf(fout,['##FORMAT=<ID=CNF,Number=1,Type=Float,Description="Fraction containg Copy Number Alteration">\n']);
+fprintf(fout,['##FORMAT=<ID=LOG2FC,Number=1,Type=Float,Description="log2 fold change">\n']);
+fprintf(fout,['##FORMAT=<ID=MEANBAF,Number=1,Type=Float,Description="mean B-allele frequency in segment">\n']);
 
 segsTableCond=segsTable(1,:);
 r=1;
@@ -73,6 +77,13 @@ end
 segsTableCond.log2FC=log2FC;
 segsTableCond.meanBAF=meanBAF;
 
+idx=getPosInRegions(exonRD{1}(:,1:2),segsTableCond{:,1:3});
+exonCounts=hist(idx,1:size(segsTableCond,1));
+idxHet=getPosInRegions([Tcell{1}.Chr(hetPos) Tcell{1}.Pos(hetPos)],segsTableCond{:,1:3});
+hetCounts=hist(idxHet,1:size(segsTableCond,1));
+segsTableCond.exonCounts=exonCounts';
+segsTableCond.hetCounts=hetCounts';
+
 %%% determine alteration type
 type(segsTableCond.N>2 & segsTableCond.M>0,:)={'DUP'};
 type(segsTableCond.N>2 & segsTableCond.M==0,:)={'DUPLOH'};
@@ -84,6 +95,7 @@ type(segsTableCond.N<2,:)={'DEL'};
 Info=cellstr(strcat('CN=',num2str(segsTableCond.N,'%-.0f'),';MACN=',num2str(segsTableCond.M,'%-.0f')));
 Info=strcat(Info,';SVLEN=',num2str(segsTableCond.EndPos-segsTableCond.StartPos,'%-.0f'));
 Info=strcat(Info,';SVTYPE=',type,';END=',num2str(segsTableCond.EndPos,'%-.0f'));
+Info=strcat(Info,';EXONCOUNT=',num2str(segsTableCond.exonCounts,'%-.0f'),';HETCOUNT=',num2str(segsTableCond.hetCounts,'%-.0f'));
 
 for i=1:size(segsTableCond.F,2)
     formatStr(segsTableCond.N~=2 | segsTableCond.M~=1,i)=cellstr(strcat(num2str(segsTableCond.F(segsTableCond.N~=2 | segsTableCond.M~=1,i),'%-.3f'),':',num2str(segsTableCond.log2FC(segsTableCond.N~=2 | segsTableCond.M~=1,i),'%-.2f'),':',num2str(segsTableCond.meanBAF(segsTableCond.N~=2 | segsTableCond.M~=1,i),'%-.2f')));
