@@ -137,6 +137,7 @@ priorMinAllele(Mmat>=length(inputParam.minAllelePrior)-1)=inputParam.minAllelePr
 
 %%% find likelihoods of read counts and depth
 pHet=inputParam.pvFreq*sum(E.EndPos-E.StartPos)./sum(segsMerged(:,3)-segsMerged(:,2));
+priorCNAf=NaN(size(Nmat));
 for i=1:size(f,2)
     for k=1:2
         if inputParam.NormalSample>0 && i==size(f,2)
