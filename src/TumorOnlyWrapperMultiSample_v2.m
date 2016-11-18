@@ -216,20 +216,20 @@ while(sum(abs(somPos-somPosOld))/sum(somPos)>0.05 && i<inputParam.maxIter)
         n=1;
         NormalSample=inputParam.NormalSample;
         inputParam.NormalSample=1;
-        %inputParam.numClones=1;
+        inputParam.numClones=1;
         for j=1:length(Tcell)
             if j~=NormalSample
                 idx=[NormalSample j];
-                postComb=jointSNV_v2(Tcell(idx), exonRD(idx), f(n,:), W(idx,:), inputParam);
-                %postComb=jointSNV_v2(Tcell(idx), exonRD(idx), inputParam.priorF, inputParam.minW*ones(2,1), inputParam);
-                [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[postComb.Chr postComb.Pos],'rows');
-                P.SomaticPair(:,j)=postComb.Somatic(locb);
+                %postComb=jointSNV_v2(Tcell(idx), exonRD(idx), f(n,:), W(idx,:), inputParam);
+                [postCombPair{n},~,pDataCombPair{n}]=jointSNV_v2(Tcell(idx), exonRD(idx), inputParam.priorF, 3*ones(2,1), inputParam);
+                [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[postCombPair{n}.Chr postCombPair{n}.Pos],'rows');
+                P.SomaticPair(:,j)=postCombPair{n}.Somatic(locb);
                 n=n+1;
             else
                 P.SomaticPair(:,j)=zeros(size(P,1),1);
             end
         end
-        %inputParam.numClones=size(f,2);
+        inputParam.numClones=size(f,2);
         inputParam.NormalSample=NormalSample;
     else
         P.SomaticPair=zeros(size(P,1),length(Tcell));
@@ -257,7 +257,7 @@ while(sum(abs(somPos-somPosOld))/sum(somPos)>0.05 && i<inputParam.maxIter)
         cloneId(:,j)=clones(locb);    
         T=Tcell{j};
         E=Ecell{j};
-        homPos=P.Hom(:,j)>0.5  & P.SomaticPair(:,j)<0.5 | (max([P.Somatic P.SomaticPair],[],2)>0.5 & (max(P.DataSomatic(:,j),P.DataNonDip(:,j))<=P.DataHom(:,j) | (T.BcountsComb==0 & T.A==T.RefComb)));
+        homPos=P.Hom(:,j)>0.5  & P.SomaticPair(:,j)<0.5 | (max([P.Somatic P.SomaticPair],[],2)>0.5 & (max(P.DataSomatic(:,j),P.DataNonDip(:,j))<=P.DataHom(:,j) | (T.BcountsComb==0 & T.A==T.RefComb))) | (P.Somatic(:,j)>0.5 & inputParam.NormalSample==j);
         P.homPos(:,j)=homPos;
         [F{j},postTrust,postArtifact]=qualDiscrimCalls(T,E,homPos,inputParam);
         P.trust(:,j)=postTrust(:,2);

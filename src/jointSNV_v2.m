@@ -75,16 +75,18 @@ end
 for j=1:size(Acounts,2)
     for i=1:length(f(j,:))
         matchIdx=round(100.*cnaF(:,j))==round(100.*f(j,i));
-        subIdx=cnaF(:,j)+f(j,i)>1 & f(j,i)<cnaF(:,j);
+        %subIdx=cnaF(:,j)+f(j,i)>1 & f(j,i)<cnaF(:,j);
         expAF(matchIdx,i,j)=f(j,i)*(N(matchIdx,j)-M(matchIdx,j))./(f(j,i)*N(matchIdx,j)+(1-f(j,i))*2);
         if sum(~matchIdx)>0
             expAF(~matchIdx,i,j)=f(j,i)./(cnaF(~matchIdx,j).*N(~matchIdx,j)+(1-cnaF(~matchIdx,j))*2);
-            expAF(N(:,j)==0 & ~matchIdx,i,j)=f(j,i)./2;
-            expAF(subIdx,i,j)=f(j,i)*M(subIdx,j)./(cnaF(subIdx,j).*N(subIdx,j)+(1-cnaF(subIdx,j))*2);
+            %expAF(N(:,j)==0 & ~matchIdx,i,j)=f(j,i)./2;
+            %expAF(subIdx,i,j)=f(j,i)*M(subIdx,j)./(cnaF(subIdx,j).*N(subIdx,j)+(1-cnaF(subIdx,j))*2);
             %expAF(N(:,j)==0 & ~matchIdx,i,j)=min((1-cnaF(N(:,j)==0 & ~matchIdx,j)),f(j,i))./2;
         end
     end
 end
+expAF(expAF>1)=1;
+expAF(expAF<0)=0;
 
 %%% find likelihood of somatic mutations
 %tumorIdx=setdiff([1:size(Acounts,2)],inputParam.NormalSample);

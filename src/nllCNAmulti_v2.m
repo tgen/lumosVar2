@@ -204,16 +204,18 @@ priorCNAfmax(NsegMax==2 & MsegMax==1)=1;
 for i=1:size(f,2)
     for j=1:length(Tcell)
         expAF(cnaIdx==i,i,j)=f(j,i)*(NsegMax(cnaIdx==i,:)-MsegMax(cnaIdx==i,:))./(f(j,i)*NsegMax(cnaIdx==i,:)+(1-f(j,i))*2);
-        subIdx=f(j,cnaIdx)+f(j,i)>1 & f(j,i)<f(j,cnaIdx);
+        %subIdx=f(j,cnaIdx)+f(j,i)>1 & f(j,i)<f(j,cnaIdx);
         if sum(cnaIdx~=i)>0
             expAF(cnaIdx~=i,i,j)=f(j,i)./(f(j,cnaIdx(cnaIdx~=i))'.*NsegMax(cnaIdx~=i,:)+(1-f(j,cnaIdx(cnaIdx~=i))')*2);
-            expAF(NsegMax==0 & cnaIdx~=i,i,j)=f(j,i)./2;
-            expAF(subIdx,i,j)=f(j,i)*MsegMax(subIdx,:)./(f(j,cnaIdx(subIdx))'.*NsegMax(subIdx,:)+(1-f(j,cnaIdx(subIdx))')*2);
+         %   expAF(NsegMax==0 & cnaIdx~=i,i,j)=f(j,i)./2;
+          %  expAF(subIdx,i,j)=f(j,i)*MsegMax(subIdx,:)./(f(j,cnaIdx(subIdx))'.*NsegMax(subIdx,:)+(1-f(j,cnaIdx(subIdx))')*2);
          end
         %[ones(sum(expAF(:,i,j)>1),1)*[i j f(j,i)] NsegMax(expAF(:,i,j)>1,j) MsegMax(expAF(:,i,j)>1,j) expAF(expAF(:,i,j)>1,i,j) cnaIdx(expAF(:,i,j)>1)]
         %[ones(sum(expAF(:,i,j)<0),1)*[i j f(j,i)] NsegMax(expAF(:,i,j)<0,j) MsegMax(expAF(:,i,j)<0,j) expAF(expAF(:,i,j)<0,i,j) cnaIdx(expAF(:,i,j)<0)]
     end
 end
+expAF(expAF>1)=1;
+expAF(expAF<0)=0;
 
 %%% find likelihood of somatic variant
 idxSom=getPosInRegions([S.Chr S.Pos], segsMerged);
