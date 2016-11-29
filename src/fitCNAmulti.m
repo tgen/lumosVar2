@@ -41,6 +41,13 @@ function [segsTable, W, f, CNAscale, nll, t]=fitCNAmulti(hetPos,somPos,Tcell,exo
 
 %%%optimize parameters
 %maxClones=inputParam.numClones;
+%pool=gcp('nocreate');
+%if isempty(pool)
+    %delete(gcp('nocreate'));
+ %   distcomp.feature( 'LocalUseMpiexec', true);
+  %  parpool(inputParam.numCPU);
+%end
+
 parfor i=1:length(Tcell)
     diploidPos=(Tcell{i}.BCountF+Tcell{i}.BCountR)./Tcell{i}.ReadDepthPass>inputParam.minHetAF;
     cInit(i,:)=median(2*Tcell{i}.ControlRD(diploidPos & hetPos)./Tcell{i}.ReadDepthPass(diploidPos & hetPos));
@@ -80,7 +87,12 @@ while 1
     %paramMS=run(ms,problem,startPoints);
     tic
     parfor i=1:size(pts,2)
-        [paramPTS{i}, nllPTS(i)]=fmincon(@(fNew)nllCNAaddClone(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,cInit,wInit,fOld,fNew),pts(:,i),[],[],[],[],zeros(size(fInit)),100*ones(size(fInit)),[],opts);
+        if isfinite(nllCNAaddClone(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,cInit,wInit,fOld,pts(:,i)))
+            [paramPTS{i}, nllPTS(i)]=fmincon(@(fNew)nllCNAaddClone(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,cInit,wInit,fOld,fNew),pts(:,i),[],[],[],[],zeros(size(fInit)),100*ones(size(fInit)),[],opts);
+        else
+            message=['not defined at ' num2str(pts(:,i))]
+            nllPTS(i)=INF;
+        end
     end
     [minNLL,idx]=min(nllPTS)
     t(j,1)=toc

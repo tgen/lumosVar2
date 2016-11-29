@@ -34,9 +34,13 @@ cd(inputParam.workingDirectory);
 addpath(genpath(inputParam.workingDirectory));
 
 %%% start parallel pool
-delete(gcp('nocreate'));
-distcomp.feature( 'LocalUseMpiexec', true);
-parpool(inputParam.numCPU);
+%delete(gcp('nocreate'));
+%distcomp.feature( 'LocalUseMpiexec', true);
+%parpool(inputParam.numCPU);
+pc=parcluster();
+pc.NumWorkers=inputParam.numCPU;
+saveAsProfile(pc,'pc');
+parallel.defaultClusterProfile('pc');
 
 Tcell=cell('');
 Ecell=cell('');
