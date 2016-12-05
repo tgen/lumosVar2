@@ -57,6 +57,7 @@ pHom=priorHom.*pDataHom./pData;
 
 %%% calculate other quality metrics
 perReadPass=N.ReadDepthPass./N.ReadDepth;
+perReadPass(N.ReadDepth==0)=NaN;
 abFrac=(N.ACountF+N.ACountR+N.BCountF+N.BCountR)./N.ReadDepthPass;
 
 normalMetrics=[N.Chr N.Pos N.ReadDepthPass pMapError perReadPass abFrac];

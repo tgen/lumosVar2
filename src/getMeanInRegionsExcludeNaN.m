@@ -36,8 +36,8 @@ for i=min(pos(:,1)):max(pos(:,1))
     afterStart=ones(size(currRegions,1),1)*currPos(:,2)'>=currRegions(:,2)*ones(1,size(currPos,1));
     beforeEnd=ones(size(currRegions,1),1)*currPos(:,2)'<=currRegions(:,3)*ones(1,size(currPos,1));
     regionBool=logical(afterStart+beforeEnd==2);
-    regionBool(:,isnan(currValues))=0;
-    currValues(isnan(currValues))=0;
+    regionBool(:,~isfinite(currValues))=0;
+    currValues(~isfinite(currValues))=0;
     regionMean(regions(:,1)==i,:)=(regionBool*currValues)./sum(regionBool,2);
 end
 
