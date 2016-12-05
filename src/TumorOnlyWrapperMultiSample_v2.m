@@ -37,10 +37,10 @@ addpath(genpath(inputParam.workingDirectory));
 %delete(gcp('nocreate'));
 %distcomp.feature( 'LocalUseMpiexec', true);
 %parpool(inputParam.numCPU);
-pc=parcluster();
-pc.NumWorkers=inputParam.numCPU;
-saveAsProfile(pc,'pc');
-parallel.defaultClusterProfile('pc');
+% pc=parcluster();
+% pc.NumWorkers=inputParam.numCPU;
+% saveAsProfile(pc,'pc');
+% parallel.defaultClusterProfile('pc');
 
 Tcell=cell('');
 Ecell=cell('');
@@ -70,6 +70,15 @@ for i=1:size(Ecell,2)
     abFrac(:,i)=E.abFrac;
     TumorRD(:,i)=E.TumorRD;
     NormalRD(:,i)=E.NormalRD;
+end
+
+pool=gcp('nocreate');
+if isempty(pool)
+    delete(gcp('nocreate'));
+    %distcomp.feature( 'LocalUseMpiexec', true);
+    pc = parcluster('local');
+    pc.NumWorkers = inputParam.numCPU;
+    parpool(pc, pc.NumWorkers);
 end
 
 for i=1:size(Ecell,2)
@@ -123,6 +132,14 @@ somPos=Tcell{1}.CosmicCount>1 & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inpu
 
 
 %%%Fit Copy Number Model
+pool=gcp('nocreate');
+if isempty(pool)
+    delete(gcp('nocreate'));
+    %distcomp.feature( 'LocalUseMpiexec', true);
+    pc = parcluster('local');
+    pc.NumWorkers = inputParam.numCPU;
+    parpool(pc, pc.NumWorkers);
+end
 inputParam.numClones=1;
 parfor i=1:size(Tcell,2)
     dataHet=[Tcell{i}.Chr(hetPos) Tcell{i}.Pos(hetPos) Tcell{i}.ControlRD(hetPos) Tcell{i}.ReadDepthPass(hetPos) Tcell{i}.BCountF(hetPos)+Tcell{i}.BCountR(hetPos)];
@@ -141,7 +158,7 @@ end
 for i=1:size(Tcell,2)
     T=Tcell{i};
     %idxExon=getPosInRegionSplit([T.Chr T.Pos],exonRD(:,1:3),inputParam.blockSize);
-    idx=getPosInRegions([T.Chr T.Pos],segsTable{i}(:,1:3));
+    idx=getPosInRegionSplit([T.Chr T.Pos],segsTable{i}(:,1:3),inputParam.blockSize);
     T.NumCopies=segsTable{i}(idx,5);
     T.MinAlCopies=segsTable{i}(idx,6);
     T.cnaF=segsTable{i}(idx,7);
@@ -206,7 +223,7 @@ while(sum(abs(somPos-somPosOld))/sum(somPos)>0.05 && i<inputParam.maxIter)
     %['clonal fractions: ' num2str(f)]
     for j=1:length(Tcell)
         T=Tcell{j};
-        idx=getPosInRegions([T.Chr T.Pos],segsTable{:,1:3});
+        idx=getPosInRegionSplit([T.Chr T.Pos],segsTable{:,1:3},inputParam.blockSize);
         T.NumCopies=segsTable.N(idx);
         T.MinAlCopies=segsTable.M(idx);
         T.cnaF=segsTable.F(idx,j);
@@ -273,7 +290,7 @@ while(sum(abs(somPos-somPosOld))/sum(somPos)>0.05 && i<inputParam.maxIter)
     somPos=max([P.Somatic P.SomaticPair],[],2)>inputParam.pSomaticThresh & filtPos & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)<inputParam.maxSomPopFreq;
     if inputParam.NormalSample>0
         for j=1:tIdx
-            somPos(max(P.SomaticPair(:,tIdx(j)),[],2)>inputParam.pSomaticThresh & min(P.trust(:,[tIdx(j) inputParam.NormalSample]),[],2)>inputParam.pGoodThresh & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq,:)=1;
+            somPos(max(P.SomaticPair(:,tIdx(j)),[],2)>inputParam.pSomaticThresh & min(P.trust(:,[tIdx(j) inputParam.NormalSample]),[],2)>inputParam.pGoodThresh & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq  &  max(P.artifact(:,[tIdx(j) inputParam.NormalSample]),[],2)<inputParam.pGoodThresh,:)=1;
         end
     end
     ['Somatic positions: ' num2str(sum(somPos))]

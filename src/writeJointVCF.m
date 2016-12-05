@@ -149,13 +149,17 @@ Filter(P.NonDip(:,1)>inputParam.pGermlineThresh & passPos,:)={'GermlineShiftPASS
 Filter(P.Somatic(:,1)<0.5 & P.Het(:,1)<0.5 & P.Hom(:,1)<0.5 & P.NonDip(:,1)<0.5,:)={'NoCall'};
 Filter(min(P.artifact,[],2)>inputParam.pGoodThresh,:)={'REJECT'};
 %tIdx=setdiff(1:length(Tcell),inputParam.NormalSample)
-idxSom=strncmp(Filter,'Somatic',7);
-idxSomPass=strncmp(Filter,'SomaticPASS',7);
-for i=1:tIdx
-    Filter(P.SomaticPair(:,tIdx(i))>0.5 & ~idxSom & min(P.artifact(:,[tIdx(i) inputParam.NormalSample]),[],2)<inputParam.pGoodThresh,:)={'SomaticPairLowQC'};
-    Filter(max(P.SomaticPair(:,tIdx(i)),[],2)>inputParam.pSomaticThresh & ~idxSomPass & max(P.trust(:,[tIdx(i) inputParam.NormalSample]),[],2)>inputParam.pGoodThresh &  max(P.artifact(:,[tIdx(i) inputParam.NormalSample]),[],2)<inputParam.pGoodThresh,:)={'SomaticPairPASS'};
+if inputParam.NormalSample>0
+    idxSom=strncmp(Filter,'Somatic',7);
+    idxSomPass=strncmp(Filter,'SomaticPASS',11);
+    for i=1:tIdx
+        Filter(P.SomaticPair(:,tIdx(i))>0.5 & ~idxSom & min(P.artifact(:,[tIdx(i) inputParam.NormalSample]),[],2)<inputParam.pGoodThresh,:)={'SomaticPairLowQC'};
+        Filter(max(P.SomaticPair(:,tIdx(i)),[],2)>inputParam.pSomaticThresh & ~idxSomPass & max(P.trust(:,[tIdx(i) inputParam.NormalSample]),[],2)>inputParam.pGoodThresh &  max(P.artifact(:,[tIdx(i) inputParam.NormalSample]),[],2)<inputParam.pGoodThresh,:)={'SomaticPairPASS'};
+    end
 end
 
+AltNT(strncmp('SomaticPair',Filter,10) & T.RefComb==T.Acomb,:)=int2ntIndels(T.Bcomb(strncmp('SomaticPair',Filter,10) & T.RefComb==T.Acomb,:));
+AltNT(strncmp('SomaticPair',Filter,10) & T.RefComb~=T.Acomb,:)=int2ntIndels(T.Acomb(strncmp('SomaticPair',Filter,10) & T.RefComb~=T.Acomb,:));
 
 %%% construct info fields
 %Info=cellstr(strcat('DP=',num2str(T.ReadDepth,'%-.0f'),';DPQC=',num2str(T.ReadDepthPass,'%-.0f')));

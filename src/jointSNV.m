@@ -176,6 +176,7 @@ prior=array2table([priorSomatic priorHet priorHom priorOther priorNonDip],'Varia
 %%% calculate expected heterozygous allele frequencies
 cnCorr=cnaF.*M./N+(1-cnaF)*0.5;
 cnCorr(N==0)=0.5;
+cnCorr=max(cnCorr,10.^(inputParam.defaultBQ./-10));
 
 for i=1:size(Amat,2)
     pos=find(RDmat(:,i)==0);

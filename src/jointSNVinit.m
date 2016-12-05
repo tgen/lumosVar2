@@ -181,7 +181,7 @@ cnCorr(N==0)=0.5;
 
 for i=1:size(Amat,2)
     pos=find(RDmat(:,i)==0);
-    idx=getPosInRegions(posList(pos,:),exonRD{i}(:,1:3));
+    idx=getPosInRegionSplit(posList(pos,:),exonRD{i}(:,1:3),inputParam.blockSize);
     RDmat(pos(~isnan(idx)),i)=exonRD{i}(idx(~isnan(idx)),4);
 end
 

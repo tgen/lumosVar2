@@ -40,9 +40,11 @@ function nll = nllCNAaddClone(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,C
 D=table();
 D.Chr=Tcell{1}.Chr(hetPos);
 D.Pos=Tcell{1}.Pos(hetPos);
-S=table();
-S.Chr=Tcell{1}.Chr(somPos);
-S.Pos=Tcell{1}.Pos(somPos);
+if(sum(somPos)>0)
+    S=table();
+    S.Chr=Tcell{1}.Chr(somPos);
+    S.Pos=Tcell{1}.Pos(somPos);
+end
 E=table();
 E.Chr=exonRD{1}(:,1);
 E.StartPos=exonRD{1}(:,2);
@@ -51,9 +53,11 @@ for i=1:length(Tcell)
     D.ExpReadCount(:,i)=Tcell{i}.ControlRD(hetPos);
     D.TotalReadCount(:,i)=Tcell{i}.ReadDepthPass(hetPos);
     D.MinorReadCount(:,i)=Tcell{i}.BCountF(hetPos)+Tcell{i}.BCountR(hetPos);
-    S.ExpReadCount(:,i)=Tcell{i}.ControlRD(somPos);
-    S.TotalReadCount(:,i)=Tcell{i}.ReadDepthPass(somPos);
-    S.MinorReadCount(:,i)=Tcell{i}.BCountF(somPos)+Tcell{i}.BCountR(somPos);
+    if(sum(somPos)>0)
+        S.ExpReadCount(:,i)=Tcell{i}.ControlRD(somPos);
+        S.TotalReadCount(:,i)=Tcell{i}.ReadDepthPass(somPos);
+        S.MinorReadCount(:,i)=Tcell{i}.BCountF(somPos)+Tcell{i}.BCountR(somPos);
+    end
     E.TumorRD(:,i)=exonRD{i}(:,4);
     E.NormalRD(:,i)=exonRD{i}(:,5);
 end
@@ -209,26 +213,31 @@ for i=1:size(f,2)
         %[ones(sum(expAF(:,i,j)<0),1)*[i j f(j,i)] NsegMax(expAF(:,i,j)<0,:) MsegMax(expAF(:,i,j)<0,:) expAF(expAF(:,i,j)<0,i,j) cnaIdx(expAF(:,i,j)<0)]
     end
 end
-expAF(expAF>1)=1;
-expAF(expAF<0)=0;
-%%% find likelihood of somatic variant
-idxSom=getPosInRegions([S.Chr S.Pos], segsMerged);
-for i=1:size(f,2)
-    for j=1:length(Tcell)
-        alpha(:,i,j)=max(expAF(idxSom,i,j),inputParam.minLik)*W(j);
-        beta(:,i,j)=(1-max(expAF(idxSom,i,j),inputParam.minLik))*W(j);
-        cloneLik(:,i,j)=bbinopdf_ln(S.MinorReadCount(:,j),S.TotalReadCount(:,j),alpha(:,i,j),beta(:,i,j))+inputParam.minLik;       
+if(sum(somPos)>0)
+    expAF(expAF>1)=1;
+    expAF(expAF<0)=0;
+    %%% find likelihood of somatic variant
+    idxSom=getPosInRegions([S.Chr S.Pos], segsMerged);
+    for i=1:size(f,2)
+        for j=1:length(Tcell)
+            alpha(:,i,j)=max(expAF(idxSom,i,j),inputParam.minLik)*W(j);
+            beta(:,i,j)=(1-max(expAF(idxSom,i,j),inputParam.minLik))*W(j);
+            cloneLik(:,i,j)=bbinopdf_ln(S.MinorReadCount(:,j),S.TotalReadCount(:,j),alpha(:,i,j),beta(:,i,j))+inputParam.minLik;
+        end
     end
+    cloneLik(isnan(cloneLik))=1;
+    if (inputParam.NormalSample>0)
+        cloneLik(:,end,:)=0;
+        cloneLik(:,:,inputParam.NormalSample)=1;
+    end
+    [somLik,somIdx]=max(prod(cloneLik,3),[],2);
+    %for j=1:length(Tcell)
+    fMax=max(f,[],1);
+    priorF=betapdf(fMax(somIdx),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2)+inputParam.minLik;
+else
+    somLik=1;
+    priorF=1;
 end
-cloneLik(isnan(cloneLik))=1;
-if (inputParam.NormalSample>0)
-    cloneLik(:,end,:)=0;
-    cloneLik(:,:,inputParam.NormalSample)=1;
-end
-[somLik,somIdx]=max(prod(cloneLik,3),[],2);
-%for j=1:length(Tcell)
-fMax=max(f,[],1);
-priorF=betapdf(fMax(somIdx),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2)+inputParam.minLik;
 %end
 %priorF=1;
 

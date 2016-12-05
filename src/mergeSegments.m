@@ -9,10 +9,14 @@ segPosList=sortrows(segPosList,[1 2]);
 segPosList=unique(segPosList,'rows');
 
 chrList=unique(segPosList(:,1));
-segsMerged=[];
-for i=1:length(chrList)
+parfor i=1:length(chrList)
     idx=find(segPosList(:,1)==chrList(i));
-    segsMerged=[segsMerged; [ones(length(idx)-1,1)*chrList(i) segPosList(idx(1:end-1),2) segPosList(idx(2:end),2) ones(length(idx)-1,1)]];
+    %segsMerged=[segsMerged; [ones(length(idx)-1,1)*chrList(i) segPosList(idx(1:end-1),2) segPosList(idx(2:end),2) ones(length(idx)-1,1)]];
+    segsMergedChr{i}=removeSegs([ones(length(idx)-1,1)*chrList(i) segPosList(idx(1:end-1),2) segPosList(idx(2:end),2) ones(length(idx)-1,1)],Ecell,inputParam,0);
 end
 
-mergeSeg=removeSegs(segsMerged,Ecell,inputParam,0);
+mergeSeg=[];
+for i=1:length(chrList)
+    mergeSeg=[mergeSeg; segsMergedChr{i}];
+end
+%mergeSeg=removeSegs(segsMerged,Ecell,inputParam,0);

@@ -41,12 +41,14 @@ function [segsTable, W, f, CNAscale, nll, t]=fitCNAmulti(hetPos,somPos,Tcell,exo
 
 %%%optimize parameters
 %maxClones=inputParam.numClones;
-%pool=gcp('nocreate');
-%if isempty(pool)
-    %delete(gcp('nocreate'));
- %   distcomp.feature( 'LocalUseMpiexec', true);
-  %  parpool(inputParam.numCPU);
-%end
+pool=gcp('nocreate');
+if isempty(pool)
+    delete(gcp('nocreate'));
+    %distcomp.feature( 'LocalUseMpiexec', true);
+    pc = parcluster('local');
+    pc.NumWorkers = inputParam.numCPU;
+    parpool(pc, pc.NumWorkers);
+end
 
 parfor i=1:length(Tcell)
     diploidPos=(Tcell{i}.BCountF+Tcell{i}.BCountR)./Tcell{i}.ReadDepthPass>inputParam.minHetAF;
@@ -91,7 +93,7 @@ while 1
             [paramPTS{i}, nllPTS(i)]=fmincon(@(fNew)nllCNAaddClone(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,cInit,wInit,fOld,fNew),pts(:,i),[],[],[],[],zeros(size(fInit)),100*ones(size(fInit)),[],opts);
         else
             message=['not defined at ' num2str(pts(:,i))]
-            nllPTS(i)=INF;
+            nllPTS(i)=inf;
         end
     end
     [minNLL,idx]=min(nllPTS)

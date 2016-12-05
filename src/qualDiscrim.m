@@ -64,7 +64,7 @@ F.MQdiff=max(abs(T.AmeanMQ-T.BmeanMQ),0);
 F.PMMdiff=max(abs(T.AmeanPMM-T.BmeanPMM),0);
 F.ReadPosDiff=max(abs((T.AmeanReadPos-T.BmeanReadPos)),0);
 F.posMapQC=-10*log10(T.PosMapQC+1E-6);
-idx=getPosInRegions([T.Chr T.Pos],[E.Chr E.StartPos E.EndPos]);
+idx=getPosInRegionSplit([T.Chr T.Pos],[E.Chr E.StartPos E.EndPos],inputParam.blockSize);
 F.exonMapQC=-10*log10(E.MapQC(idx)+1E-6);
 F.Properties.VariableDescriptions={'Percent of Reads in Tumor Passing Quality Thresh', ...
     'Percent of Reads in Normals Passing Quality Thresh', ...
