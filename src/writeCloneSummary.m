@@ -101,9 +101,9 @@ subplot(2,1,1);
 hold on;
 for i=1:size(f,2)
     if rem(i,2)==0
-        plot(f(:,i),'-o','MarkerSize',50*(cloneTable.somaticPass(i)+1)./sum(cloneTable.somaticPass),'color',colors(i,:),'MarkerEdgeColor',[0 0 0],'MarkerFaceColor',colors(i,:),'LineWidth',10*(sum(CNcount(i,:))+1)./sum(CNcount(:)));
+        plot(f(:,i),'-o','MarkerSize',50*(cloneTable.somaticPass(i)+1)./sum(cloneTable.somaticPass+1),'color',colors(i,:),'MarkerEdgeColor',[0 0 0],'MarkerFaceColor',colors(i,:),'LineWidth',10*(sum(CNcount(i,:))+1)./sum(CNcount(:)));
     else
-        plot(f(:,i),'-o','MarkerSize',50*(cloneTable.somaticPass(i)+1)./sum(cloneTable.somaticPass),'color',colors(i,:),'MarkerEdgeColor',[1 1 1],'MarkerFaceColor',colors(i,:),'LineWidth',10*(sum(CNcount(i,:))+1)./sum(CNcount(:)));
+        plot(f(:,i),'-o','MarkerSize',50*(cloneTable.somaticPass(i)+1)./sum(cloneTable.somaticPass+1),'color',colors(i,:),'MarkerEdgeColor',[1 1 1],'MarkerFaceColor',colors(i,:),'LineWidth',10*(sum(CNcount(i,:))+1)./sum(CNcount(:)));
     end
 end
 ylim([0 1]);
