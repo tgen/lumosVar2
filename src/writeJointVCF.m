@@ -246,9 +246,9 @@ for i=1:length(Tcell)
         filtStr(P.Somatic(:,i)>0.5 & (P.DataSomatic(:,i)<=P.DataHom(:,i) | (T.BcountsComb==0 & T.A==T.RefComb)))=strcat(filtStr(P.Somatic(:,i)>0.5 & (P.DataSomatic(:,i)<=P.DataHom(:,i) | (T.BcountsComb==0 & T.A==T.RefComb))),';SomaticNotDetected');
         formatStr(:,n)=strcat(formatStr(:,n),':',filtStr',':NA');
     else
-        filtStr(P.SomaticPair(:,i)>0.5)=strcat(filtStr(P.SomaticPair(:,i)>0.5),';SomaticDetected');
-        somaticDetected(P.SomaticPair(:,i)>0.5,i)=1;
-        filtStr(P.Somatic(:,i)>0.5 & P.SomaticPair(:,i)<=0.5)=strcat(filtStr(P.Somatic(:,i)>0.5 & P.SomaticPair(:,i)<=0.5),';SomaticNotDetected');
+        somaticDetected(P.SomaticPair(:,i)>0.5 | (P.Somatic(:,i)>0.5 & P.DataSomatic(:,i)>P.DataHom(:,i) & (T.BcountsComb>0 | T.A~=T.RefComb)),i)=1;
+        filtStr(somaticDetected(:,i)==1)=strcat(filtStr(somaticDetected(:,i)==1),';SomaticDetected');
+        filtStr(P.Somatic(:,i)>0.5 & ~somaticDetected(:,i))=strcat(filtStr(P.Somatic(:,i)>0.5 & ~somaticDetected(:,i)),';SomaticNotDetected');
         formatStr(:,n)=strcat(formatStr(:,n),':',filtStr',':',num2str(P.SomaticPair(:,i),'%-.3f'));
     end
     formatStr(:,n)=strcat(formatStr(:,n),':',num2str(-10*log10(1-P.trust(:,i)),'%-.0f'),':',num2str(-10*log10(1-P.artifact(:,i)),'%-.0f'),':',num2str(P.DataSomatic(:,i),'%-.0f'));

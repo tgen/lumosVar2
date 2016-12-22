@@ -54,6 +54,7 @@ F.TumorPerPassReads=T.ReadDepthPass./T.ReadDepth;
 F.normalPerReadPass=T.perReadPass;
 F.normalPerReadPass(~isfinite(T.perReadPass))=inputParam.minPerReadPASS;
 F.ABfrac=(T.AcountsComb+T.BcountsComb)./T.ReadDepthPass;
+F.ABfrac(T.ReadDepthPass==0)=0;
 F.normalABfrac=max(T.abFrac,0);
 F.minPerStrand=NaN(size(F,1),1);
 F.minPerStrand(~homPos)=min([T.ACountF(~homPos)./(T.ACountF(~homPos)+T.ACountR(~homPos)) T.ACountR(~homPos)./(T.ACountF(~homPos)+T.ACountR(~homPos)) T.BCountF(~homPos)./(T.BCountF(~homPos)+T.BCountR(~homPos)) T.BCountR(~homPos)./(T.BCountF(~homPos)+T.BCountR(~homPos))],[],2);

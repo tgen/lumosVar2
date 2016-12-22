@@ -49,7 +49,7 @@ fclose(fid);
 %%% process by chromosome
 chrList=[1:22];
 parfor chrIdx=1:length(chrList)
-    if exist([inputParam.outName '_' num2str(chrList(chrIdx)) '_pos.txt'],'file') & exist([inputParam.outName '_' num2str(chrList(chrIdx)) '_exon.txt'],'file')
+    if exist([inputParam.outName '_' num2str(chrList(chrIdx)) '_pos.txt'],'file') && exist([inputParam.outName '_' num2str(chrList(chrIdx)) '_exon.txt'],'file')
         %fid=fopen([inputParam.outName '_' num2str(chrList(chrIdx)) '_pos.txt']);
         %tempData=textscan(fid,'%u64');
         %fclose(fid);

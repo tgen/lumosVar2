@@ -112,6 +112,7 @@ for j=1:size(Acounts,2)
     end
     if inputParam.NormalSample>0
         shiftAF(:,j,1)=(cnaF(:,inputParam.NormalSample).*N(:,inputParam.NormalSample)./M(:,inputParam.NormalSample)+2*(1-cnaF(:,inputParam.NormalSample))).*cnaF(:,j).*(M(:,j)./N(:,j)).*germAF+(1-cnaF(:,j)).*germAF;
+        shiftAF(M(:,inputParam.NormalSample)==0,j,1)=0;
         shiftAF(:,j,2)=(cnaF(:,inputParam.NormalSample).*N(:,inputParam.NormalSample)./(N(:,inputParam.NormalSample)-M(:,inputParam.NormalSample))+2*(1-cnaF(:,inputParam.NormalSample))).*cnaF(:,j).*((N(:,j)-M(:,j))./N(:,j)).*germAF+(1-cnaF(:,j)).*germAF;
         pDataNonDip1(:,j)=bbinopdf_ln(Bcounts(:,j),RDmat(:,j),min(shiftAF(:,j,1),1-shiftAF(:,j,1)).*W(j),max(shiftAF(:,j,1),1-shiftAF(:,j,1)).*W(j));
         pDataNonDip2(:,j)=bbinopdf_ln(Bcounts(:,j),RDmat(:,j),min(shiftAF(:,j,2),1-shiftAF(:,j,2)).*W(j),max(shiftAF(:,j,2),1-shiftAF(:,j,2)).*W(j));

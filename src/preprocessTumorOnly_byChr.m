@@ -131,7 +131,7 @@ while(startIdx<=size(currRegion,1))
     fprintf(fout,'\n%s',['Analyzing ' block]);
     %%% get tumor data
     cd(inputParam.workingDirectory);
-    output=strsplit(perl('parsePileupData.pl',paramFile,block,num2str(sampleCount)),'\n');
+    output=strsplit(perl('parsePileupData.v2.pl',paramFile,block,num2str(sampleCount)),'\n');
     idx1=~cellfun('isempty',regexp(output,'^\d'));
     TumorData=str2num(char(output(idx1)'));
     fprintf(fout,'\n%s',['TumorData has length:' num2str(size(TumorData,1))]);
