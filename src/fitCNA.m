@@ -44,8 +44,9 @@ diploidPos=dataHet(:,5)./dataHet(:,4)>inputParam.minHetAF;
 cr=median(2*dataHet(diploidPos,3)./dataHet(diploidPos,4));
 
 %%%optimize parameters
+opts=optimoptions('fmincon','Display','iter','UseParallel',true,'TolX',1e-2,'TolFun',1e-2);
 %[param, nll] = fminsearchbnd(@(param)nllCNA_lnorm(dataHet,dataSom,exonRD,segs,inputParam,param),[cr nanmedian(exonRD(:,4)*ones(1,inputParam.numClones)) 1/(inputParam.numClones+1):1/(inputParam.numClones+1):1-1/(inputParam.numClones+1) ones(1,inputParam.numClones)*nanstd(log(exonRD(:,4)))],[0.5*cr inputParam.minW*ones(1,inputParam.numClones) zeros(1,inputParam.numClones) zeros(1,inputParam.numClones)],[2*cr inputParam.maxW*ones(1,inputParam.numClones) ones(1,inputParam.numClones) 10*ones(1,inputParam.numClones)]);
-[param, nll] = fminsearchbnd(@(param)nllCNA(dataHet,dataSom,exonRD,segs,inputParam,param),[cr nanmedian(exonRD(:,4)*ones(1,inputParam.numClones)) 1/(inputParam.numClones+1):1/(inputParam.numClones+1):1-1/(inputParam.numClones+1)],[0.5*cr inputParam.minW*ones(1,inputParam.numClones) zeros(1,inputParam.numClones)],[2*cr inputParam.maxW*ones(1,inputParam.numClones) ones(1,inputParam.numClones)]);
+[param, nll] = fmincon(@(param)nllCNA(dataHet,dataSom,exonRD,segs,inputParam,param),[cr nanmedian(exonRD(:,4)*ones(1,inputParam.numClones)) 1/(inputParam.numClones+1):1/(inputParam.numClones+1):1-1/(inputParam.numClones+1)],[],[],[],[],[0.5*cr inputParam.minW*ones(1,inputParam.numClones) zeros(1,inputParam.numClones)],[2*cr inputParam.maxW*ones(1,inputParam.numClones) ones(1,inputParam.numClones)],[],opts);
 c=param(1);
 W=param(2:(length(param)-1)./2+1);
 f=param((length(param)-1)./2+2:end);

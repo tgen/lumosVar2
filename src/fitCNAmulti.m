@@ -54,22 +54,22 @@ parfor i=1:length(Tcell)
     diploidPos=(Tcell{i}.BCountF+Tcell{i}.BCountR)./Tcell{i}.ReadDepthPass>inputParam.minHetAF;
     cInit(i,:)=median(2*Tcell{i}.ControlRD(diploidPos & hetPos)./Tcell{i}.ReadDepthPass(diploidPos & hetPos));
     wInit(i,:)=nanmedian(exonRD{i}(:,4));
-    dataHet=[Tcell{i}.Chr(hetPos) Tcell{i}.Pos(hetPos) Tcell{i}.ControlRD(hetPos) Tcell{i}.ReadDepthPass(hetPos) Tcell{i}.BCountF(hetPos)+Tcell{i}.BCountR(hetPos)];
-    if i==inputParam.NormalSample
-        dataSom=[];
-    else
-        dataSom=[Tcell{i}.Chr(somPos) Tcell{i}.Pos(somPos) Tcell{i}.ControlRD(somPos) Tcell{i}.ReadDepthPass(somPos) Tcell{i}.BCountF(somPos)+Tcell{i}.BCountR(somPos)];
-    end
-    paramInit=fminsearchbnd(@(param)nllCNA(dataHet,dataSom,exonRD{i},segsMerged,inputParam,param),[cInit(i,:) wInit(i,:) 0.5],[cInit(i,:)*0.5 inputParam.minW 0],[cInit(i,:)*2 inputParam.maxW 1]);
-    CNAscale(i,:)=paramInit(1)
-    Wcurr(i,:)=paramInit(2)
-    fInit(i,:)=100.*paramInit(3)
+    %dataHet=[Tcell{i}.Chr(hetPos) Tcell{i}.Pos(hetPos) Tcell{i}.ControlRD(hetPos) Tcell{i}.ReadDepthPass(hetPos) Tcell{i}.BCountF(hetPos)+Tcell{i}.BCountR(hetPos)];
+    %if i==inputParam.NormalSample
+    %    dataSom=[];
+    %else
+    %    dataSom=[Tcell{i}.Chr(somPos) Tcell{i}.Pos(somPos) Tcell{i}.ControlRD(somPos) Tcell{i}.ReadDepthPass(somPos) Tcell{i}.BCountF(somPos)+Tcell{i}.BCountR(somPos)];
+    %end
+    %paramInit=fminsearchbnd(@(param)nllCNA(dataHet,dataSom,exonRD{i},segsMerged,inputParam,param),[cInit(i,:) wInit(i,:) 0.5],[cInit(i,:)*0.5 inputParam.minW 0],[cInit(i,:)*2 inputParam.maxW 1]);
+    %CNAscale(i,:)=paramInit(1)
+    %Wcurr(i,:)=paramInit(2)
+    %fInit(i,:)=100.*paramInit(3)
 end
 
 tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
-CNAscale
-Wcurr
-fInit=fInit(tIdx,:)
+%CNAscale
+%Wcurr
+fInit=100*ones(size(tIdx))*inputParam.priorF;
 fOld=[];
 %chi2p(1)=0;
 opts=optimoptions('fmincon','TolX',1e-1,'TolFun',1e-1,'Display','none');

@@ -51,7 +51,7 @@ if(exist([inputParam.outMat],'file'))
     inputParam=readInputs(paramFile)
 else
    [T, E]=preprocessTumorOnly_v2(inputParam,paramFile);
-   save([inputParam.outMat]);
+   save([inputParam.outMat],'-v7.3');
 end
 
 if isempty(Tcell)
@@ -61,7 +61,7 @@ if isempty(Ecell)
     Ecell=E;
 end
 
-
+message=['imported data at: ' char(datetime('now'))]
 %%% Filters Exon Data and Segments
 for i=1:size(Ecell,2)
     E=Ecell{i};
@@ -73,7 +73,7 @@ for i=1:size(Ecell,2)
 end
 
 pool=gcp('nocreate');
-if isempty(pool)
+if isempty(pool) || pool.NumWorkers<inputParam.numCPU
     delete(gcp('nocreate'));
     %distcomp.feature( 'LocalUseMpiexec', true);
     pc = parcluster('local');
@@ -87,6 +87,7 @@ for i=1:size(Ecell,2)
     segs{i}=segmentData(exonRD{i},inputParam.cnaAlpha);
     clear E;
 end
+
 segsMerged=mergeSegments_v2(segs,exonRD,inputParam);
 
 %%%Make sure segments extend to ends of chromosome
@@ -96,9 +97,10 @@ for i=1:22
     segsMerged(idx1,2)=min([Tcell{1}.Pos(Tcell{1}.Chr==i); exonRD{1}(exonRD{1}(:,1)==i,2)]);
     segsMerged(idx2,3)=max([Tcell{1}.Pos(Tcell{1}.Chr==i); exonRD{1}(exonRD{1}(:,1)==i,3)]);
 end
+message=['segmented data at: ' char(datetime('now'))]
 
-
-save([inputParam.outMat]);
+save([inputParam.outMat],'-v7.3');
+message=['saved data at: ' char(datetime('now'))]
 
 %%%Quality Filtering
 P=table();
@@ -117,6 +119,7 @@ for i=1:size(Tcell,2)
     %['PASS positions: ' num2str(sum(filtPos{i}))]
 end
 filtPos=max(P.trust,[],2)>inputParam.pGoodThresh & max(P.artifact,[],2)<inputParam.pGoodThresh;
+message=['initial quality filtering at: ' char(datetime('now'))]
     
 %%%Preliminary Variant Classification
 if inputParam.NormalSample>0
@@ -128,12 +131,12 @@ else
     hetPos=min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)>inputParam.minHetPopFreq & filtPos & max(Bcounts,[],2)>=inputParam.minBCount;
 end    
 somPos=Tcell{1}.CosmicCount>1 & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq & filtPos;
-
+message=['preliminary variant classificatio at: ' char(datetime('now'))]
 
 
 %%%Fit Copy Number Model
 pool=gcp('nocreate');
-if isempty(pool)
+if isempty(pool) || pool.NumWorkers<inputParam.numCPU
     delete(gcp('nocreate'));
     %distcomp.feature( 'LocalUseMpiexec', true);
     pc = parcluster('local');
@@ -141,7 +144,7 @@ if isempty(pool)
     parpool(pc, pc.NumWorkers);
 end
 inputParam.numClones=1;
-parfor i=1:size(Tcell,2)
+for i=1:size(Tcell,2)
     dataHet=[Tcell{i}.Chr(hetPos) Tcell{i}.Pos(hetPos) Tcell{i}.ControlRD(hetPos) Tcell{i}.ReadDepthPass(hetPos) Tcell{i}.BCountF(hetPos)+Tcell{i}.BCountR(hetPos)];
     if i==inputParam.NormalSample
         dataSom=[];
@@ -152,7 +155,6 @@ parfor i=1:size(Tcell,2)
     ['clonal fractions ' num2str(i) ': ' num2str(f{i})]
 end
 %[segsTable{1}, W{1}, f{1}, c{1}, nll{1}]=fitCNAmulti(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam);
-
 
 %%%Add copy number info to data table
 for i=1:size(Tcell,2)
@@ -167,7 +169,8 @@ for i=1:size(Tcell,2)
     Tcell{i}=T;
     clear T;
 end
-save([inputParam.outMat]);
+message=['initial copy number calls: ' char(datetime('now'))]
+save([inputParam.outMat],'-v7.3');
 
 %%%Initial Bayesian Variant Calling
 pDataSum(1)=0;
@@ -196,7 +199,6 @@ for j=1:length(Tcell)
     cloneId(:,j)=clones(locb);
 end
 
-
 for i=1:length(Tcell)
     T=Tcell{i};
     E=Ecell{i};
@@ -207,6 +209,7 @@ for i=1:length(Tcell)
     clear T E;
 end
 filtPos=max(P.trust,[],2)>inputParam.pGoodThresh & max(P.artifact,[],2)<inputParam.pGoodThresh;
+message=['initial bayesian variant calls: ' char(datetime('now'))]
 
 
 %%%repeat fitting and variant calling until converges
@@ -216,7 +219,7 @@ hetPos=max(P.Het,[],2)>inputParam.pGermlineThresh & filtPos;
 somPos=max(P.Somatic,[],2)>inputParam.pSomaticThresh & filtPos & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq;
 ['Somatic positions: ' num2str(sum(somPos))]
 ['Het positions: ' num2str(sum(hetPos))]
-save([inputParam.outMat]);
+save([inputParam.outMat],'-v7.3');
 tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
 while(sum(abs(somPos-somPosOld))/sum(somPos)>0.05 && i<inputParam.maxIter)
      [segsTable, W, f, CNAscale, nll, t{i}]=fitCNAmulti(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam);
@@ -229,7 +232,8 @@ while(sum(abs(somPos-somPosOld))/sum(somPos)>0.05 && i<inputParam.maxIter)
         T.cnaF=segsTable.F(idx,j);
         Tcell{j}=T;
     end
-    save([inputParam.outMat]);
+    message=['fit cna iteration: ' num2str(i) ' at ' char(datetime('now'))]
+    save([inputParam.outMat],'-v7.3');
     i=i+1
     somPosOld=somPos;
     inputParam.numClones=size(f,2);
@@ -285,6 +289,7 @@ while(sum(abs(somPos-somPosOld))/sum(somPos)>0.05 && i<inputParam.maxIter)
         P.artifact(:,j)=postArtifact(:,1);
         clear T E;
     end
+    message=['called variants iteration: ' num2str(i) ' at ' char(datetime('now'))]
     filtPos=max(P.trust,[],2)>inputParam.pGoodThresh & max(P.artifact,[],2)<inputParam.pGoodThresh;
     hetPos=max(P.Het,[],2)>inputParam.pGermlineThresh & filtPos;
     somPos=max([P.Somatic P.SomaticPair],[],2)>inputParam.pSomaticThresh & filtPos & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)<inputParam.maxSomPopFreq;
@@ -293,6 +298,7 @@ while(sum(abs(somPos-somPosOld))/sum(somPos)>0.05 && i<inputParam.maxIter)
             somPos(max(P.SomaticPair(:,tIdx(j)),[],2)>inputParam.pSomaticThresh & min(P.trust(:,[tIdx(j) inputParam.NormalSample]),[],2)>inputParam.pGoodThresh & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq  &  max(P.artifact(:,[tIdx(j) inputParam.NormalSample]),[],2)<inputParam.pGoodThresh,:)=1;
         end
     end
+    message=['quality filtering iteration: ' num2str(i) ' at ' char(datetime('now'))]
     ['Somatic positions: ' num2str(sum(somPos))]
     ['Het positions: ' num2str(sum(hetPos))] 
 end
@@ -314,7 +320,7 @@ fSort=f(:,ord);
 ord=[ord size(f,2)+1];
 [~,segsTable.cnaIdx]=ismember(segsTable.cnaIdx,ord);
 
-save([inputParam.outMat]);
+save([inputParam.outMat],'-v7.3');
 [Filter,somaticDetected]=writeJointVCF(Tcell,P,fSort,cloneIdSort,F,inputParam);
 writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputParam)
 writeCloneSummary(segsTable,Ecell,Tcell,fSort,cloneIdSort,inputParam,Filter,somaticDetected);
