@@ -61,6 +61,19 @@ if isempty(Ecell)
     Ecell=E;
 end
 
+fid=fopen(inputParam.bamList);
+bamList=textscan(fid,'%s');
+sampleCount=length(bamList{1});
+fclose(fid);
+for i=1:sampleCount
+    folders=regexp(bamList{1}{i},'/','split');
+    names=regexp(folders{end},'\.','split');
+    sampleNames{i}=names{1};
+    message=['sample ' num2str(i) ': ' sampleNames{i} ' from ' bamList{1}{i}]
+end
+inputParam.sampleNames=strjoin(sampleNames,',');
+inputParam.bamPaths=strjoin(bamList{1},',');
+
 message=['imported data at: ' char(datetime('now'))]
 %%% Filters Exon Data and Segments
 for i=1:size(Ecell,2)
