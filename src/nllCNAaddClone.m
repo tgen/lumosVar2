@@ -197,7 +197,7 @@ end
 if inputParam.NormalSample>0
     priorCNAfmax(cnaIdx(idx)==size(f,2),:)=inputParam.priorGermCNV;
 end
-priorCNAfmax(NsegMax==2 & MsegMax==1)=NaN;
+priorCNAfmax(NsegMax(idx)==2 & MsegMax(idx)==1)=NaN;
 
 %%% find expected allele frequency for somatic variants
 for i=1:size(f,2)

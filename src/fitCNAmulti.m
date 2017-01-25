@@ -69,7 +69,7 @@ end
 tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
 %CNAscale
 %Wcurr
-fInit=100*ones(size(tIdx))*inputParam.priorF;
+fInit=100*ones(length(tIdx),1)*inputParam.priorF;
 fOld=[];
 %chi2p(1)=0;
 opts=optimoptions('fmincon','TolX',1e-1,'TolFun',1e-1,'Display','none');
@@ -92,7 +92,8 @@ while 1
         if isfinite(nllCNAaddClone(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,cInit,wInit,fOld,pts(:,i)))
             [paramPTS{i}, nllPTS(i)]=fmincon(@(fNew)nllCNAaddClone(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,cInit,wInit,fOld,fNew),pts(:,i),[],[],[],[],zeros(size(fInit)),100*ones(size(fInit)),[],opts);
         else
-            message=['not defined at ' num2str(pts(:,i))]
+            message=['not defined at ' num2str(i)]
+            pts
             nllPTS(i)=inf;
         end
     end

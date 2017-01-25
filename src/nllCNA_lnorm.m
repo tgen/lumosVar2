@@ -1,4 +1,4 @@
-function nll = nllCNA(dataHet,dataSom,exonRD,segs,inputParam,param)
+function nll = nllCNA_lnorm(dataHet,dataSom,exonRD,segs,inputParam,param)
 %nllCNA - computes negative loglikliehood of copy number parameters
 %
 % Syntax: nll = nllCNA(dataHet,dataSom,exonRD,segs,inputParam,param)
@@ -44,8 +44,11 @@ if ~isempty(dataSom)
 end
 E=array2table(exonRD,'VariableNames',{'Chr','StartPos','EndPos','TumorRD','NormalRD', 'MapQC', 'perReadPass', 'abFrac'});
 CNAscale=param(1);
-W(1,:)=param(2:(length(param)-1)./2+1);
-f(1,:)=param((length(param)-1)./2+2:end);
+W(1,:)=param(2);
+f(1,:)=param(3);
+V(1,:)=param(4);
+%W(1,:)=param(2:(length(param)-1)./2+1);
+%f(1,:)=param((length(param)-1)./2+2:end);
 
 %%% find means accross segments
 meanTumorRDexon=getMeanInRegions([E.Chr E.StartPos],E.TumorRD,segs);
@@ -85,9 +88,12 @@ priorMinAllele(Mmat>=length(inputParam.minAllelePrior)-1)=inputParam.minAllelePr
 for i=1:length(f)
     corr(:,i)=f(i).*Mmat(:,i)./Nmat(:,i)+(1-f(i))*0.5;
     corr(Nmat(:,i)==0,i)=0.5;
-    hetlik(:,i)=bbinopdf_ln(D.MinorReadCount,D.TotalReadCount,W(i)*corr(:,i),W(i)*(1-corr(:,i)))+bbinopdf_ln(D.MinorReadCount,D.TotalReadCount,W(i)*(1-corr(:,i)),W(i)*corr(:,i))+inputParam.minLik;
+    corr(corr(:,i)>1,i)=1;
+    corr(corr(:,i)<0,i)=0;
+    hetlik(:,i)=bbinopdf_ln(D.MinorReadCount,D.TotalReadCount,W(i)*corr(:,i),W(i)*(1-corr(:,i)))+inputParam.minLik;
     expReadCount(:,i)=f(i)*E.NormalRD.*NmatExon(:,i)./CNAscale+(1-f(i))*E.NormalRD*2./CNAscale;
-    depthlik(:,i)=poisspdf(round(E.TumorRD),round(expReadCount(:,i)))+inputParam.minLik;
+    %depthlik(:,i)=poisspdf(round(E.TumorRD),round(expReadCount(:,i)))+inputParam.minLik;
+    depthlik(:,i)=pdf('Lognormal',E.TumorRD,log(expReadCount(:,i)),V(i))+inputParam.minLik;
     segLik(:,i)=getMeanInRegions([D.Chr D.Pos],log(hetlik(:,i)),segs)+getMeanInRegions([E.Chr E.StartPos],log(depthlik(:,i)),segs);
 end
 
@@ -102,17 +108,17 @@ for i=1:length(f)
     priorMinAlleleMax(cnaIdx(idx)==i,:)=priorMinAllele(cnaIdx(idx)==i,i);
     priorCNAf(cnaIdx(idx)==i,:)=betapdf(f(i),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2);
 end
-priorCNAf(NsegMax(idx)==2 & MsegMax(idx)==1)=NaN;
+priorCNAf(NsegMax==2 & MsegMax==1)=NaN;
 
 %%% find expected allele frequency for somatic variants
 for i=1:length(f)
-    expAF(cnaIdx==i,i)=f(i)*(NsegMax(cnaIdx==i,:)-MsegMax(cnaIdx==i,:))./(f(i)*NsegMax(cnaIdx==i,:)+(1-f(i))*2);
-    subIdx=f(cnaIdx)+f(i)>1 & f(i)<f(cnaIdx);
+    expAF(cnaIdx==i,i)=f(i)*(NsegMax(cnaIdx==i)-MsegMax(cnaIdx==i))./(f(i)*NsegMax(cnaIdx==i)+(1-f(i))*2);
     if sum(cnaIdx~=i)>0
-        expAF(cnaIdx~=i,i)=f(i)./(f(cnaIdx(cnaIdx~=i))'.*NsegMax(cnaIdx~=i,:)+(1-f(cnaIdx(cnaIdx~=i))')*2);
-        expAF(subIdx,i)=f(i)*MsegMax(subIdx)./(f(cnaIdx(subIdx)).*NsegMax(subIdx)+(1-f(cnaIdx(subIdx)))*2);
-        %expAF(NsegMax==0 & cnaIdx~=i,i,j)=min([(1-f(j,cnaIdx(cnaIdx~=i))'); f(j,i)])./2;
+        expAF(cnaIdx~=i,i)=f(i)./(f(cnaIdx(cnaIdx~=i))'.*NsegMax(cnaIdx~=i)+(1-f(cnaIdx(cnaIdx~=i))')*2);
+        expAF(NsegMax==0 & cnaIdx~=i,i)=min([(1-f(cnaIdx(cnaIdx~=i))'); f(i)])./2;
     end
+    [ones(sum(expAF(:,i)>1),1)*f(i) NsegMax(expAF(:,i)>1)' MsegMax(expAF(:,i)>1)' expAF(expAF(:,i)>1,i) i cnaIdx(expAF(:,i)>1)];
+    [ones(sum(expAF(:,i)<0),1)*f(i) NsegMax(expAF(:,i)<0)' MsegMax(expAF(:,i)<0)' expAF(expAF(:,i)<0,i) i cnaIdx(expAF(:,i)<0)];
 end
 
 %%% find likelihood of somatic variant
@@ -122,17 +128,16 @@ if isempty(dataSom)
 else
     idxSom=getPosInRegions([S.Chr S.Pos], segs);
     for i=1:length(f)
-        alpha(:,i)=max(expAF(idxSom,i),inputParam.minLik)*W(i);
-        beta(:,i)=(1-max(expAF(idxSom,i),inputParam.minLik))*W(i);
+        alpha(:,i)=expAF(idxSom,i)*W(i);
+        beta(:,i)=(1-expAF(idxSom,i))*W(i);
         cloneLik(:,i)=bbinopdf_ln(S.MinorReadCount,S.TotalReadCount,alpha(:,i),beta(:,i))+inputParam.minLik;
     end
-    %cloneLik(isnan(cloneLik))=1;
+    cloneLik(isnan(cloneLik))=1;
     [somLik,somIdx]=max(cloneLik,[],2);
     priorF=betapdf(f(somIdx),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2);
 end
 
 %%% sum negative log likliehoods
-%nll=(-sum(log(somLik))-sum(log(hetlikMax))-sum(log(depthlikMax))-sum(log(priorCNAMax)))./(length(somLik)+length(hetlikMax)+length(depthlikMax));
 nll=(-sum(log(somLik))-sum(log(hetlikMax))-sum(log(depthlikMax))-sum(log(priorCNAMax))-sum(log(priorMinAlleleMax))-sum(log(priorF))-nansum(log(priorCNAf)))./(length(somLik)+length(hetlikMax)+length(depthlikMax)+length(priorCNAMax)+length(priorMinAlleleMax)+length(priorF)+sum(~isnan(priorCNAf)));
 
 return;

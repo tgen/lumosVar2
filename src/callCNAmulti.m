@@ -196,7 +196,7 @@ end
 if inputParam.NormalSample>0
     priorCNAfmax(cnaIdx(idx)==size(f,2),:)=inputParam.priorGermCNV;
 end
-priorCNAfmax(NsegMax==2 & MsegMax==1)=NaN;
+priorCNAfmax(NsegMax(idx)==2 & MsegMax(idx)==1)=NaN;
 
 for j=1:length(Tcell)
     Fout(:,j)=f(j,cnaIdx);

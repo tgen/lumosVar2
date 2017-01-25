@@ -186,6 +186,9 @@ for i=1:size(Amat,2)
 end
 
 Acounts(Acounts+Bcounts==0 & (A==Ref)*ones(1,size(Amat,2)))=RDmat(Acounts+Bcounts==0 & (A==Ref)*ones(1,size(Amat,2)));
+Acounts(Acounts<0)=0;
+countsSum=Acounts+Bcounts;
+RDmat(countsSum>RDmat)=countsSum(countsSum>RDmat);
 %%% calculate likliehoods of germline genotypes
 for i=1:size(Acounts,2)
     pDataHom(:,i)=bbinopdf_ln(Acounts(:,i),RDmat(:,i),Wmat(:,i).*(1-10.^(-BmeanBQ(:,i)./10)),Wmat(:,i).*10.^(-BmeanBQ(:,i)./10));

@@ -152,7 +152,7 @@ Filter(min(P.artifact,[],2)>inputParam.pGoodThresh,:)={'REJECT'};
 if inputParam.NormalSample>0
     idxSom=strncmp(Filter,'Somatic',7);
     idxSomPass=strncmp(Filter,'SomaticPASS',11);
-    for i=1:tIdx
+    for i=1:length(tIdx)
         Filter(P.SomaticPair(:,tIdx(i))>0.5 & ~idxSom & min(P.artifact(:,[tIdx(i) inputParam.NormalSample]),[],2)<inputParam.pGoodThresh,:)={'SomaticPairLowQC'};
         Filter(max(P.SomaticPair(:,tIdx(i)),[],2)>inputParam.pSomaticThresh & ~idxSomPass & max(P.trust(:,[tIdx(i) inputParam.NormalSample]),[],2)>inputParam.pGoodThresh &  max(P.artifact(:,[tIdx(i) inputParam.NormalSample]),[],2)<inputParam.pGoodThresh,:)={'SomaticPairPASS'};
     end
@@ -184,9 +184,9 @@ for i=1:size(copyList,1)
     tumorGT(P.Hom(:,1)>0.5 & T.Bcomb==T.Ref & idx)={strjoin(cellstr(num2str(ones(copyList(i,1),1))),'/')};
     tumorGT(P.Het(:,1)>0.5 & T.Acomb==T.Ref & idx)={strjoin(cellstr(num2str([zeros(copyList(i,1)-copyList(i,2),1); ones(copyList(i,2),1)])),'/')};
     tumorGT(P.Het(:,1)>0.5 & T.Bcomb==T.Ref & idx)={strjoin(cellstr(num2str([zeros(copyList(i,2),1); ones(copyList(i,1)-copyList(i,2),1)])),'/')};
-    tumorGT(P.Somatic(:,1)>0.5 & T.cnaF==f(1,cloneId(:,1))' & idx)={strjoin(cellstr(num2str([zeros(copyList(i,2),1); ones(copyList(i,1)-copyList(i,2),1)])),'/')};
+    tumorGT(strncmp(Filter,'Somatic',7) & T.cnaF==f(1,cloneId(:,1))' & idx)={strjoin(cellstr(num2str([zeros(copyList(i,2),1); ones(copyList(i,1)-copyList(i,2),1)])),'/')};
 end
-tumorGT(P.Somatic(:,1)>0.5 & T.cnaF~=f(1,cloneId(:,1))')={'0/1'};
+tumorGT(strncmp(Filter,'Somatic',7) & T.cnaF~=f(1,cloneId(:,1))')={'0/1'};
 tumorGT(cellfun('isempty',tumorGT))={'.'};
 
 germGT=cell(1,size(T,1));
@@ -209,8 +209,12 @@ for j=1:length(Tcell)
     AF(bIdx,j)=T.BcountsComb(bIdx)./T.ReadDepthPass(bIdx);
     AF(~bIdx,j)=T.AcountsComb(~bIdx)./T.ReadDepthPass(~bIdx);
     matchIdx=f(j,cloneId(:,j))'==T.cnaF;
-    sampleFrac(matchIdx,j)=AF(matchIdx,j).*(T.cnaF(matchIdx).*T.NumCopies(matchIdx)+2.*(1-T.cnaF(matchIdx)))./(T.NumCopies(matchIdx)-T.MinAlCopies(matchIdx));
-    sampleFrac(~matchIdx,j)=AF(~matchIdx,j).*(T.cnaF(~matchIdx).*T.NumCopies(~matchIdx)+2.*(1-T.cnaF(~matchIdx)));
+    sfMajor=AF(:,j).*(T.cnaF.*T.NumCopies+2.*(1-T.cnaF))./(T.NumCopies-T.MinAlCopies);
+    sfMinor=AF(:,j).*(T.cnaF.*T.NumCopies+2.*(1-T.cnaF));
+    pairIdx=strncmp(Filter,'SomaticPair',10);
+    sampleFrac(matchIdx,j)=sfMajor(matchIdx);
+    sampleFrac(~matchIdx,j)=sfMinor(~matchIdx);
+    sampleFrac(pairIdx,j)=min(sfMajor(pairIdx),sfMinor(pairIdx));
 end
 
 
@@ -260,8 +264,8 @@ for i=1:length(Tcell)
     else
         formatStr(:,n)=strcat(formatStr(:,n),':NA');
     end
-    formatStr(P.Somatic(:,i)>0.5,n)=strcat(formatStr(P.Somatic(:,i)>0.5,n),':',num2str(sampleFrac(P.Somatic(:,i)>0.5,i),'%-.3f'));
-    formatStr(P.Somatic(:,i)<=0.5,n)=strcat(formatStr(P.Somatic(:,i)<0.5,n),':NA');
+    formatStr(strncmp(Filter,'Somatic',7),n)=strcat(formatStr(strncmp(Filter,'Somatic',7),n),':',num2str(sampleFrac(strncmp(Filter,'Somatic',7),i),'%-.3f'));
+    formatStr(~strncmp(Filter,'Somatic',7),n)=strcat(formatStr(~strncmp(Filter,'Somatic',7),n),':NA');
     formatStr(T.NumCopies==2 & T.MinAlCopies==1,n)=strcat(formatStr(T.NumCopies==2 & T.MinAlCopies==1,n),':NA');
     formatStr(T.NumCopies~=2 | T.MinAlCopies~=1,n)=strcat(formatStr(T.NumCopies~=2 | T.MinAlCopies~=1,n),':',num2str(T.cnaF(T.NumCopies~=2 | T.MinAlCopies~=1),'%-.3f'));
     n=n+1;
