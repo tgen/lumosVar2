@@ -313,7 +313,8 @@ while(sum(abs(somPos-somPosOld))/sum(somPos)>0.05 && i<inputParam.maxIter)
     end
     message=['quality filtering iteration: ' num2str(i) ' at ' char(datetime('now'))]
     ['Somatic positions: ' num2str(sum(somPos))]
-    ['Het positions: ' num2str(sum(hetPos))] 
+    ['Het positions: ' num2str(sum(hetPos))]
+    save([inputParam.outMat],'-v7.3');
 end
 
 ['converged at iteration' num2str(i)]
@@ -335,6 +336,7 @@ ord=[ord size(f,2)+1];
 
 save([inputParam.outMat],'-v7.3');
 [Filter,somaticDetected]=writeJointVCF(Tcell,P,fSort,cloneIdSort,F,inputParam);
+save([inputParam.outMat],'-v7.3');
 writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputParam)
 writeCloneSummary(segsTable,Ecell,Tcell,fSort,cloneIdSort,inputParam,Filter,somaticDetected);
 plotTumorOnly(exonRD,segsTable,CNAscale,fSort,Tcell,somPos,hetPos,cloneIdSort,inputParam)
