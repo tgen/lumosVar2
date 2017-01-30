@@ -102,9 +102,9 @@ for i=1:size(Ecell,2)
 end
 
 segsMerged=mergeSegments_v2(segs,exonRD,inputParam);
-
+numChr=max(Ecell{1}.Chr);
 %%%Make sure segments extend to ends of chromosome
-for i=1:22
+for i=1:numChr
     idx1=find(segsMerged(:,1)==i,1,'first');
     idx2=find(segsMerged(:,1)==i,1,'last');
     segsMerged(idx1,2)=min([Tcell{1}.Pos(Tcell{1}.Chr==i); exonRD{1}(exonRD{1}(:,1)==i,2)]);

@@ -273,9 +273,10 @@ end
 
 
 formatFields=repmat({'GT:DP:AD:FT:PPS:PT:PA:PLS:PL:PLND:VSF:CNF'},size(P,1),1);
+chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
 
 %%% print output
-outData=[num2cell(T.Chr) num2cell(T.Pos) cellstr(char(ones(size(T.Pos))*46)) cellstr(RefNT) squeeze(AltNT) num2cell(Qual) Filter Info formatFields formatStr];
+outData=[chrList(T.Chr) num2cell(T.Pos) cellstr(char(ones(size(T.Pos))*46)) cellstr(RefNT) squeeze(AltNT) num2cell(Qual) Filter Info formatFields formatStr];
 headers={'#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILT', 'INFO', 'FORMAT'};
 if inputParam.NormalSample<1
     headers=[headers 'InferredGermline' regexp(inputParam.sampleNames,',','split')];
@@ -287,7 +288,7 @@ for i=1:length(headers)
 end
 
 for i=1:size(outData,1)
-    fprintf(fout,strcat('\n%d\t%d\t%s\t%s\t%s\t%f\t%s\t%s\t%s',repmat('\t%s',1,n)),outData{i,:});
+    fprintf(fout,strcat('\n%s\t%d\t%s\t%s\t%s\t%f\t%s\t%s\t%s',repmat('\t%s',1,n)),outData{i,:});
 end
 
 fclose(fout);

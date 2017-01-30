@@ -105,7 +105,9 @@ end
 formatFields=repmat({'CNF:LOG2FC:MEANBAF'},size(segsTableCond,1),1);
 
 %%% write output
-outData=[num2cell(segsTableCond.Chr) num2cell(segsTableCond.StartPos) num2cell(segsTableCond.EndPos) cellstr(char(ones(size(segsTableCond,1),1)*78)) strcat('<',type,'>') num2cell(abs(mean(segsTableCond.log2FC,2))) cellstr(char(ones(size(segsTableCond,1),1)*46)) Info formatFields formatStr];
+chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
+
+outData=[chrList(segsTableCond.Chr) num2cell(segsTableCond.StartPos) num2cell(segsTableCond.EndPos) cellstr(char(ones(size(segsTableCond,1),1)*78)) strcat('<',type,'>') num2cell(abs(mean(segsTableCond.log2FC,2))) cellstr(char(ones(size(segsTableCond,1),1)*46)) Info formatFields formatStr];
 headers={'#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILT', 'INFO', 'FORMAT'};
 headers=[headers regexp(inputParam.sampleNames,',','split')];
 for i=1:length(headers)

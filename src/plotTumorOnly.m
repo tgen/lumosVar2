@@ -42,12 +42,13 @@ else
     f=[fIn];
 end
 %%% transform chromosome coord to linear coord
+maxChr=max(segsTable.Chr);
 T=Tcell{1};
-for i=1:22
+for i=1:maxChr
     chrLen(i)=max(segsTable{segsTable.Chr==i,3})+1E7;
 end
 chrOffset=[0; cumsum(chrLen(1:21))'];
-for i=1:22
+for i=1:maxChr
     segCoord(segsTable.Chr==i,1)=(segsTable{segsTable.Chr==i,2}+chrOffset(i))/1E6;
     segCoord(segsTable.Chr==i,2)=(segsTable{segsTable.Chr==i,3}+chrOffset(i))/1E6;
     exonCoord(exonRD{1}(:,1)==i,1)=(exonRD{1}(exonRD{1}(:,1)==i,2)+chrOffset(i))/1E6;
@@ -64,12 +65,12 @@ end
 %%% plot exon log2FC
 for j=1:length(Tcell)
     subplot(length(Tcell)+1,5,[j*5-4 j*5-1]);
-    for i=1:2:22
+    for i=1:2:maxChr
         idx=exonRD{j}(:,1)==i;
         scatter(mean(exonCoord(idx,:),2),log2FC(idx,j),1,'.','MarkerFaceColor',[0.5 0.5 0.5],'MarkerEdgeColor',[0.5 0.5 0.5])
         hold on;
     end
-    for i=2:2:22
+    for i=2:2:maxChr
         idx=exonRD{j}(:,1)==i;
         scatter(mean(exonCoord(idx,:),2),log2FC(idx,j),1,'.','MarkerFaceColor',[0.8235    0.7059    0.5490],'MarkerEdgeColor',[0.8235    0.7059    0.5490])
         hold on;
@@ -117,7 +118,7 @@ for j=1:length(Tcell)
     %ticks=[0 2.^[1:7]];
     %tickpos=log2(median(segsTable(:,7)).*ticks/2+(1-median(segsTable(:,7))));
     %set(gca,'YTick',tickpos,'YTickLabel',ticks,'tickDir','out');
-    set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',[1:22],'FontSize',6);
+    set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',chrList,'FontSize',6);
     axis([0 max(segCoord(:,2)) min(Nlog2R(:))-1 max(Nlog2R(:))+1])
     title(samples{j},'FontSize',10,'Interpreter','none');
 end
@@ -141,7 +142,7 @@ end
 ticks=[0 2.^[0:7]];
 tickpos=log2(ticks+1);
 set(gca,'YTick',tickpos,'YTickLabel',ticks,'tickDir','out');
-set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',[1:22],'FontSize',6);
+set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',chrList,'FontSize',6);
 axis([0 max(segCoord(:,2)) log2(1) log2(max(segsTable.N)+1)])
 title('Copy Number','FontSize',10);
 
@@ -160,11 +161,11 @@ for j=1:length(Tcell)
     aIdx=T.ApopAF<T.BpopAF;
     AF(bIdx)=(T.BCountF(bIdx)+T.BCountR(bIdx))./T.ReadDepthPass(bIdx);
     AF(aIdx)=(T.ACountF(aIdx)+T.ACountR(aIdx))./T.ReadDepthPass(aIdx);
-    for i=1:2:22
+    for i=1:2:maxChr
         scatter(Tcoord(hetPos & T.Chr==i),AF(hetPos & T.Chr==i),1,'.','MarkerFaceColor',[0.5 0.5 0.5],'MarkerEdgeColor',[0.5 0.5 0.5])
         hold on;
     end
-    for i=2:2:22
+    for i=2:2:maxChr
         scatter(Tcoord(hetPos & T.Chr==i),AF(hetPos & T.Chr==i),1,'.','MarkerFaceColor',[0.8235    0.7059    0.5490],'MarkerEdgeColor',[0.8235    0.7059    0.5490])
     end
 end
@@ -187,7 +188,7 @@ for j=1:length(Tcell)
         end
     end
     axis([0 max(segCoord(:,2)) 0 1]);
-    set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',[1:22],'tickDir','out','FontSize',8);
+    set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',chrList,'tickDir','out','FontSize',8);
     title('Allele Frequencies','FontSize',10);
 end
 
@@ -227,7 +228,7 @@ for j=1:length(Tcell)
     %ticks=[0 2.^[1:7]];
     %tickpos=log2(median(segsTable(:,7)).*ticks/2+(1-median(segsTable(:,7))));
     %set(gca,'YTick',tickpos,'YTickLabel',ticks,'tickDir','out');
-    set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',[1:22],'FontSize',6);
+    set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',chrList,'FontSize',6);
     axis([0 max(segCoord(:,2)) 0 1])
     title(samples{j},'FontSize',10,'Interpreter','none');
 end
@@ -249,7 +250,7 @@ plot(segCoord(pos,:)',ones(2,1)*(segsTable.M(pos)'./segsTable.N(pos)'),'k','line
 %ticks=[0 2.^[0:7]];
 %tickpos=log2(ticks+1);
 %set(gca,'YTick',tickpos,'YTickLabel',ticks,'tickDir','out');
-set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',[1:22],'FontSize',6);
+set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',chrList,'FontSize',6);
 axis([0 max(segCoord(:,2)) 0 0.5])
 title('M/N','FontSize',10);
 
