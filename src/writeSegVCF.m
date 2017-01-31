@@ -105,6 +105,7 @@ end
 formatFields=repmat({'CNF:LOG2FC:MEANBAF'},size(segsTableCond,1),1);
 
 %%% write output
+sexChr=regexp(inputParam.sexChr,',','split');
 chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
 
 outData=[chrList(segsTableCond.Chr) num2cell(segsTableCond.StartPos) num2cell(segsTableCond.EndPos) cellstr(char(ones(size(segsTableCond,1),1)*78)) strcat('<',type,'>') num2cell(abs(mean(segsTableCond.log2FC,2))) cellstr(char(ones(size(segsTableCond,1),1)*46)) Info formatFields formatStr];

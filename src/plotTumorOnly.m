@@ -56,6 +56,9 @@ for i=1:maxChr
     Tcoord(T.Chr==i,1)=(T.Pos(T.Chr==i)+chrOffset(i))/1E6;
 end
 
+sexChr=regexp(inputParam.sexChr,',','split');
+chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr']
+
 %%% calculate log2FC
 for i=1:length(Tcell)
     log2FC(:,i)=log2((CNAscale(i)./2).*exonRD{i}(:,4)./exonRD{i}(:,5));

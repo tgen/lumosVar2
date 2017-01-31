@@ -273,6 +273,7 @@ end
 
 
 formatFields=repmat({'GT:DP:AD:FT:PPS:PT:PA:PLS:PL:PLND:VSF:CNF'},size(P,1),1);
+sexChr=regexp(inputParam.sexChr,',','split');
 chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
 
 %%% print output
