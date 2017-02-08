@@ -1,4 +1,4 @@
-function [T, E]=preprocessTumorOnly(inputParam,paramFile)
+function [T, E]=preprocessTumorOnly_v2(inputParam,paramFile)
 %preprocessTumorOnly - creates data structures for tumor only calling
 %calls parsePileupData.packed.pl to parse samtools output
 %
@@ -28,18 +28,16 @@ function [T, E]=preprocessTumorOnly(inputParam,paramFile)
 
 %------------- BEGIN CODE --------------
 
-%%%import bed file
-regTable=readtable(inputParam.regionsFile,'FileType','text','Delimiter','\t');
-size(regTable)
-if ~isnumeric(regTable{:,1})
-    chr=cellfun(@str2num,regTable{:,1},'UniformOutput',0);
-    size(chr)
-    pos=~cellfun(@isempty,chr);
-    sum(pos)
-    Regions=[cell2mat(chr(pos)) regTable{pos,2:3}];
-else
-    Regions=regTable{:,1:3};
-end
+sexChr=regexp(inputParam.sexChr,',','split');
+chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr']
+
+regTable=readtable(inputParam.regionsFile,'FileType','text','Delimiter','\t','ReadVariableNames',false);
+[lia,locb]=ismember(regTable{:,1},chrList);
+Regions=[locb(lia) regTable{lia,2:3}];
+
+%%%import bed fileregTable=readtable(regionsFile,'FileType','text','Delimiter','\t','ReadVariableNames',false);
+[lia,locb]=ismember(regTable{:,1},chrList);
+Regions=[locb(lia) regTable{lia,2:3}];
 
 fid=fopen(inputParam.bamList);
 bamList=textscan(fid,'%s');
@@ -47,16 +45,16 @@ sampleCount=length(bamList{1});
 fclose(fid);
 
 %%% process by chromosome
-chrList=[1:22];
+
 parfor chrIdx=1:length(chrList)
-    outPosFile=[inputParam.outName '_' num2str(chrList(chrIdx)) '_pos.txt'];
-    outExonFile=[inputParam.outName '_' num2str(chrList(chrIdx)) '_exon.txt'];
+    outPosFile=[inputParam.outName '_' chrList{chrIdx} '_pos.txt'];
+    outExonFile=[inputParam.outName '_' chrList{chrIdx} '_exon.txt'];
     if exist(outPosFile,'file') && exist(outExonFile,'file')
         fpos=fopen(outPosFile,'a+');
         fexon=fopen(outExonFile,'a+');
         [q,w] = system(['tail -n 1 ' outExonFile]);
         data=str2double(regexp(w,'\t','split'));
-        currRegion=double(Regions(Regions(:,1)==chrList(chrIdx),:));
+        currRegion=double(Regions(Regions(:,1)==chrIdx,:));
         if(size(data,2)==8*sampleCount)
             idx=find(data(2)==currRegion(:,2));
             if(idx==size(currRegion,1))
@@ -68,9 +66,9 @@ parfor chrIdx=1:length(chrList)
     else
         fpos=fopen(outPosFile,'w');
         fexon=fopen(outExonFile,'w');
-        currRegion=double(Regions(Regions(:,1)==chrList(chrIdx),:));
+        currRegion=double(Regions(Regions(:,1)==chrIdx,:));
     end
-    outname=[inputParam.outName '_' num2str(chrList(chrIdx)) '_log.txt'];
+    outname=[inputParam.outName '_' chrList{chrIdx} '_log.txt'];
     fout=fopen(outname,'w');
     largeIdx=find(currRegion(:,3)-currRegion(:,2)>inputParam.blockSize);
     %%%%breakup regions larger than blockSize
@@ -78,15 +76,15 @@ parfor chrIdx=1:length(chrList)
         subCount=ceil((currRegion(largeIdx,3)-currRegion(largeIdx,2))./inputParam.blockSize);
         newSize=(currRegion(largeIdx,3)-currRegion(largeIdx,2))./subCount;
         newRegions=nan(sum(subCount),3);
-        newRegions(1:subCount(1),:)=[double(chrList(chrIdx))*ones(subCount(1),1) round([currRegion(largeIdx(1),2):newSize(1):currRegion(largeIdx(1),3)-newSize(1)]') round([currRegion(largeIdx(1),2)+newSize(1)-1:newSize(1):currRegion(largeIdx(1),3)]')];
+        newRegions(1:subCount(1),:)=[double(chrIdx)*ones(subCount(1),1) round([currRegion(largeIdx(1),2):newSize(1):currRegion(largeIdx(1),3)-newSize(1)]') round([currRegion(largeIdx(1),2)+newSize(1)-1:newSize(1):currRegion(largeIdx(1),3)]')];
         for i=2:length(largeIdx)
-            newRegions(sum(subCount(1:i-1))+1:sum(subCount(1:i)),:)=[double(chrList(chrIdx))*ones(subCount(i),1) round([currRegion(largeIdx(i),2):newSize(i):currRegion(largeIdx(i),3)-newSize(i)]') round([currRegion(largeIdx(i),2)+newSize(i)-1:newSize(i):currRegion(largeIdx(i),3)]')];
+            newRegions(sum(subCount(1:i-1))+1:sum(subCount(1:i)),:)=[double(chrIdx)*ones(subCount(i),1) round([currRegion(largeIdx(i),2):newSize(i):currRegion(largeIdx(i),3)-newSize(i)]') round([currRegion(largeIdx(i),2)+newSize(i)-1:newSize(i):currRegion(largeIdx(i),3)]')];
         end
         currRegion=[currRegion(currRegion(:,3)-currRegion(:,2)<=inputParam.blockSize,:); newRegions];
         currRegion=sortrows(currRegion,2);
     end
     %%%% make sure snpVCF is valid
-    snpVCF=[inputParam.snpVCFpath num2str(chrList(chrIdx)) inputParam.snpVCFname];
+    snpVCF=[inputParam.snpVCFpath chrList{chrIdx} inputParam.snpVCFname];
     if(~exist(snpVCF,'file'))
         fprintf(fout,'%s\n',['snpVCF file not found in: ' snpVCF]);
         continue;
@@ -94,7 +92,7 @@ parfor chrIdx=1:length(chrList)
         fprintf(fout,'%s\n',['snpVCF file found: ' snpVCF]);
     end
     %%% make sure normal data is valid
-    NormalPath=[inputParam.NormalBase num2str(chrList(chrIdx)) '.txt.gz'];
+    NormalPath=[inputParam.NormalBase chrList{chrIdx} '.txt.gz'];
     if(~exist(NormalPath,'file'))
         fprintf(fout,'%s\n',['NormalData file not found in: ' NormalPath]);
         continue;
@@ -117,7 +115,7 @@ parfor chrIdx=1:length(chrList)
         if isempty(endIdx)
             endIdx=size(currRegion,1);
         end
-        block=[num2str(chrList(chrIdx)) ':' num2str(currRegion(startIdx,2)) '-' num2str(currRegion(endIdx,3))]
+        block=[chrList{chrIdx} ':' num2str(currRegion(startIdx,2)) '-' num2str(currRegion(endIdx,3))]
         fprintf(fout,'\n%s',['Analyzing ' block]);
         %%% get tumor data
         cd(inputParam.workingDirectory);
@@ -162,18 +160,18 @@ parfor chrIdx=1:length(chrList)
         fprintf(fout,'\n%s',[' found ' num2str(sum(Lia)) ' canidate positions']);
         waitbar(endIdx./length(currRegion));       
     end   
-    %dlmwrite([inputParam.outName '_' num2str(chrList(chrIdx)) '_pos.txt'],tempData(tempData(:,1)>0,:),'precision',9);
-    %dlmwrite([inputParam.outName '_' num2str(chrList(chrIdx)) '_exon.txt'],reshape(tempExonRD(tempExonRD(:,1)>0,:,:),[],8*sampleCount),'precision',9); 
+    %dlmwrite([inputParam.outName '_' chrList{chrIdx} '_pos.txt'],tempData(tempData(:,1)>0,:),'precision',9);
+    %dlmwrite([inputParam.outName '_' chrList{chrIdx} '_exon.txt'],reshape(tempExonRD(tempExonRD(:,1)>0,:,:),[],8*sampleCount),'precision',9); 
     %AllData{chrIdx}=tempData(tempData(:,1)>0,:);
     %AllExonData{chrIdx}=tempExonRD(tempExonRD(:,1)>0,:,:); 
 end
 message='finished processing chromosomes'
 
 for i=1:length(chrList)
-    outPosFile=[inputParam.outName '_' num2str(chrList(i)) '_pos.txt'];
-    AllData{chrList(i)}=dlmread(outPosFile);
-    outExonFile=[inputParam.outName '_' num2str(chrList(i)) '_exon.txt'];
-    AllExonData{chrList(i)}=reshape(dlmread(outExonFile),[],8,sampleCount);
+    outPosFile=[inputParam.outName '_' chrList{i} '_pos.txt'];
+    AllData{i}=dlmread(outPosFile);
+    outExonFile=[inputParam.outName '_' chrList{i} '_exon.txt'];
+    AllExonData{i}=reshape(dlmread(outExonFile),[],8,sampleCount);
 end
 
 %%%% create position data table

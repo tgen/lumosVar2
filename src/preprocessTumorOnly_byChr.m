@@ -131,13 +131,13 @@ while(startIdx<=size(currRegion,1))
     TumorData=str2num(char(regexprep(output(idx1),chrList{chrIdx},num2str(chrIdx))'));
     fprintf(fout,'\n%s',['TumorData has length:' num2str(size(TumorData,1))]);
     idx2=~cellfun('isempty',regexp(output,'^\@'));
-    temp=char(regexprep(output(idx2),chrList{chrIdx},num2str(chrIdx))')
+    temp=char(regexprep(output(idx2),chrList{chrIdx},num2str(chrIdx))');
     fprintf(fout,'\n%s',output{~idx1 & ~idx2});
     readDepth=str2num(temp(:,2:end));
     fprintf(fout,'\n%s',['readDepth has length:' num2str(size(readDepth,1))]);
     %%% get normal data
     cd(inputParam.tabixPath);
-    [status,output]=system(['./tabix ' NormalPath ' ' block]);
+    [status,output]=system(['./tabix ' NormalPath ' ' num2str(chrIdx) ':' num2str(currRegion(startIdx,2)) '-' num2str(currRegion(endIdx,3))]);
     NormalData=str2num(char(output));
     fprintf(fout,'\n%s',['NormalData has length:' num2str(size(NormalData,1))]);
     cd(inputParam.workingDirectory);

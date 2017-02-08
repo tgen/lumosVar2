@@ -1,4 +1,4 @@
-function [postComb, pDataSum, pDataComb,cloneId,prior,countsAll]=jointSNV_v2(Tcell, exonRD, fIn, W, inputParam)
+function [postComb, pDataSum, pDataComb,cloneId,prior]=jointSNV_v2(Tcell, fIn, W, inputParam)
 
 f=zeros(length(Tcell),inputParam.numClones);
 tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
@@ -40,11 +40,24 @@ for i=1:size(Wmat,2)
 end
 
 %%% find priors
+idx=Acounts+Bcounts>RDmat;
+RDmat(idx)=Acounts(idx)+Bcounts(idx);
+if inputParam.NormalSample>0
+    bIdx=Acounts(:,inputParam.NormalSample)>=Bcounts(:,inputParam.NormalSample);
+    aIdx=Acounts(:,inputParam.NormalSample)<Bcounts(:,inputParam.NormalSample);
+    germAF(bIdx,:)=Bcounts(bIdx,inputParam.NormalSample)./RDmat(bIdx,inputParam.NormalSample);
+    germAF(aIdx,:)=Acounts(aIdx,inputParam.NormalSample)./RDmat(aIdx,inputParam.NormalSample);
+else
+    bIdx=ApopAF>=BpopAF;
+    aIdx=ApopAF<BpopAF;
+end
 indelPos=A>4 | B>4 | Ref >4 | A<0 | B<0 | Ref <0;
 priorNonDip=max(mapQC,[],2)-inputParam.minLik;
 priorHom=(ApopAF.^2).*(1-priorNonDip);
-priorSomatic(indelPos,:)=(priorHom(indelPos).*(cosmic(indelPos)+1).*inputParam.priorSomaticIndel).*(1-priorNonDip(indelPos));
-priorSomatic(~indelPos,:)=(priorHom(~indelPos).*(cosmic(~indelPos)+1).*inputParam.priorSomaticSNV).*(1-priorNonDip(~indelPos));
+priorSomatic(indelPos & aIdx,:)=((BpopAF(indelPos & aIdx).^2).*(cosmic(indelPos & aIdx)+1).*inputParam.priorSomaticIndel).*(1-priorNonDip(indelPos & aIdx));
+priorSomatic(indelPos & bIdx,:)=((ApopAF(indelPos & bIdx).^2).*(cosmic(indelPos & bIdx)+1).*inputParam.priorSomaticIndel).*(1-priorNonDip(indelPos & bIdx));
+priorSomatic(~indelPos & aIdx,:)=((BpopAF(~indelPos & aIdx).^2).*(cosmic(~indelPos & aIdx)+1).*inputParam.priorSomaticSNV).*(1-priorNonDip(~indelPos & aIdx));
+priorSomatic(~indelPos & bIdx,:)=((ApopAF(~indelPos & bIdx).^2).*(cosmic(~indelPos & bIdx)+1).*inputParam.priorSomaticSNV).*(1-priorNonDip(~indelPos & bIdx));
 priorHet=2*ApopAF.*BpopAF.*(1-priorSomatic-priorNonDip);
 priorOther=1-priorHet-priorHom-priorSomatic-priorNonDip;
 
@@ -60,8 +73,7 @@ cnCorr=max(cnCorr,10.^(inputParam.defaultBQ./-10));
 %     idx=getPosInRegions(posList(pos,:),exonRD{i}(:,1:3));
 %     RDmat(pos(~isnan(idx)),i)=exonRD{i}(idx(~isnan(idx)),4);
 % end
-idx=Acounts+Bcounts>RDmat;
-RDmat(idx)=Acounts(idx)+Bcounts(idx);
+
 
 %Acounts(Acounts+Bcounts==0 & (A==Ref)*ones(1,size(Acounts,2)))=RDmat(Acounts+Bcounts==0 & (A==Ref)*ones(1,size(Acounts,2)));
 %%% calculate likliehoods of germline genotypes
@@ -90,18 +102,10 @@ expAF(expAF<0)=0;
 
 %%% find likelihood of somatic mutations
 %tumorIdx=setdiff([1:size(Acounts,2)],inputParam.NormalSample);
-if inputParam.NormalSample>0
-    bIdx=Acounts(:,inputParam.NormalSample)>=Bcounts(:,inputParam.NormalSample);
-    aIdx=Acounts(:,inputParam.NormalSample)<Bcounts(:,inputParam.NormalSample);
-    germAF(bIdx,:)=Bcounts(bIdx,inputParam.NormalSample)./RDmat(bIdx,inputParam.NormalSample);
-    germAF(aIdx,:)=Acounts(aIdx,inputParam.NormalSample)./RDmat(aIdx,inputParam.NormalSample);
-else
-    bIdx=ApopAF>=BpopAF;
-    aIdx=ApopAF<BpopAF;
-end
 for j=1:size(Acounts,2)
     if j==inputParam.NormalSample
-        cloneLik(:,:,j)=pDataHom(:,j)*ones(1,length(f(j,:)));
+        cloneLik(bIdx,:,j)=bbinopdf_ln(Acounts(bIdx,j),RDmat(bIdx,j),Wmat(bIdx,j).*(1-10.^(-AmeanBQ(bIdx,j)./10)),Wmat(bIdx,j).*10.^(-AmeanBQ(bIdx,j)./10))*ones(1,length(f(j,:)));
+        cloneLik(aIdx,:,j)=bbinopdf_ln(Bcounts(aIdx,j),RDmat(aIdx,j),Wmat(aIdx,j).*(1-10.^(-BmeanBQ(aIdx,j)./10)),Wmat(aIdx,j).*10.^(-BmeanBQ(aIdx,j)./10))*ones(1,length(f(j,:)));
     else
         for i=1:length(f(j,:))
             alpha(:,i)=max(expAF(:,i,j),inputParam.minLik)*W(j);
@@ -152,11 +156,11 @@ pOther=prod(pDataOther,2).*priorOther./pData;
 pNonDip=prod(pDataNonDip,2).*priorNonDip./pData;
 
 postComb=array2table([posList pSomatic pGermline pHom pOther pNonDip],'VariableNames',{'Chr', 'Pos', 'Somatic','Het','Hom','Other','NonDip'});
-countsAll=array2table([posList Ref A B],'VariableNames',{'Chr','Pos','Ref','A','B'});
+%countsAll=array2table([posList Ref A B],'VariableNames',{'Chr','Pos','Ref','A','B'});
 for i=1:size(Acounts,2)
     pDataComb{i}=array2table([posList pDataSomatic(:,i) pDataHet(:,i) pDataHom(:,i) pDataOther(:,i) pDataNonDip(:,i)],'VariableNames',{'Chr', 'Pos', 'Somatic','Het','Hom','Other','NonDip'});
-    countsAll.Acounts(:,i)=Acounts(:,i);
-    countsAll.Bcounts(:,i)=Bcounts(:,i);
+ %   countsAll.Acounts(:,i)=Acounts(:,i);
+  %  countsAll.Bcounts(:,i)=Bcounts(:,i);
 end
 
 pDataSum=sum(pData);

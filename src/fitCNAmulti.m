@@ -101,7 +101,7 @@ while 1
     t(j,1)=toc
     fOld=[fOld paramPTS{idx}]
     tic
-    [param{j}, nll(j)]=fmincon(@(param)nllCNAmulti_v2(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,param),[100.*cInit(:); wInit(:); fOld(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fOld(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fOld(:)));],[],opts2);
+    [param{j}, nll(j)]=fmincon(@(param)nllCNAmulti_v3(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,param),[100.*cInit(:); wInit(:); fOld(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fOld(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fOld(:)));],[],opts2);
     t(j,2)=toc;
     CNAscale=param{j}(1:length(Tcell))./100
     Wcurr=param{j}(length(Tcell)+1:2*length(Tcell))

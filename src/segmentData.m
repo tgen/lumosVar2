@@ -27,13 +27,14 @@ function segs=segmentData(exonRD,cnaAlpha)
 % Last revision: 3-June-2016
 
 %------------- BEGIN CODE --------------
+numChr=length(unique(exonRD(:,1)));
 
-parfor i=1:22
+parfor i=1:numChr
     clustsegs{i}=cghcbs([exonRD(exonRD(:,1)==i,1) exonRD(exonRD(:,1)==i,2) log((exonRD(exonRD(:,1)==i,4)+1)./(exonRD(exonRD(:,1)==i,5)+1))],'Alpha',cnaAlpha);
 end
     
 segs=[];
-for i=1:22
+for i=1:numChr
     segs=[segs; [clustsegs{i}.SegmentData(1).Chromosome*ones(size(clustsegs{i}.SegmentData(1).Start)) clustsegs{i}.SegmentData(1).Start clustsegs{i}.SegmentData(1).End clustsegs{i}.SegmentData(1).Mean]];
 end
 

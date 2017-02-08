@@ -46,8 +46,8 @@ T.BmeanMQ(T.BCountF+T.BCountR==0)=NaN;
 T.BmeanPMM(T.BCountF+T.BCountR==0)=NaN;
 T.BmeanReadPos(T.BCountF+T.BCountR==0)=NaN;
 
-aIdx=homPos & T.AcountsComb==T.ACountF+T.ACountR;
-bIdx=homPos & T.AcountsComb==T.BCountF+T.BCountR;
+aIdx=homPos & T.ACountF+T.ACountR >= T.BCountF+T.BCountR;
+bIdx=homPos & T.ACountF+T.ACountR < T.BCountF+T.BCountR;
 %%%Create Quality Metrics Table
 F=table();
 F.TumorPerPassReads=T.ReadDepthPass./T.ReadDepth;

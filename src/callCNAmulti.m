@@ -1,4 +1,4 @@
-function [NsegMax, MsegMax, Fout, log2FC, cnaIdx] = callCNAmulti(hetPos,Tcell,exonRD,segsMerged,inputParam,param)
+function [NsegMax, MsegMax, Fout, log2FC, cnaIdx, nll] = callCNAmulti(hetPos,Tcell,exonRD,segsMerged,inputParam,param)
 %callCNA - determine most likley copy number state for each segment
 %
 % Syntax: [N, M, F, Wout, log2FC, pCNA] = callCNA(dataHet,exonRD,segs,inputParam,param)
@@ -59,7 +59,7 @@ if inputParam.NormalSample>0
     tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
     f(tIdx,1:end-1)=reshape(param(2*length(Tcell)+1:end),[],inputParam.numClones);
 else
-    f=reshape(param(2*length(Tcell)+1:end),[],inputParam.numClones);
+    f=[reshape(param(2*length(Tcell)+1:end),[],inputParam.numClones) ones(length(Tcell),1)];
 end
 
 %%% find means accross segments
@@ -119,12 +119,30 @@ for i=1:size(f,2)
 end
 
 
+germPrior=inputParam.priorGermCNV*ones(size(Nseg,1),2);
+[lia,locb]=ismember(segsMerged(:,1),inputParam.autosomes);
+germPrior(lia & Nseg(:,end,1)==2 & Mseg(:,end,1)==1,1)=1-inputParam.priorGermCNV;
+germPrior(lia & Nseg(:,end,2)==2 & Mseg(:,end,2)==1,2)=1-inputParam.priorGermCNV;
+sexChr=regexp(inputParam.sexChr,',','split');
+chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
+for i=1:length(sexChr)
+    chrIdx=find(strcmp(sexChr(i),chrList));
+    lia=ismember(Nseg(:,end,1),inputParam.(sexChr{i}));
+    germPrior(chrIdx==segsMerged(:,1) & lia & Nseg(:,end,1)-Mseg(:,end,1)<=1,1)=0.5;
+    lia=ismember(Nseg(:,end,2),inputParam.(sexChr{i}));
+    germPrior(chrIdx==segsMerged(:,1) & lia & Nseg(:,end,2)-Mseg(:,end,2)<=1,2)=0.5;
+end
+    
+
 %%% lookup copy number for positions and exons
 idx=getPosInRegions([D.Chr D.Pos], segsMerged);
 Nmat=Nseg(idx,:,:);
 Mmat=Mseg(idx,:,:);
+germPriorMat=germPrior(idx,:);
 idxExon=getPosInRegions([E.Chr E.StartPos],segsMerged);
 NmatExon=Nseg(idxExon,:,:);
+germPriorExon=germPrior(idxExon,:);
+
 
 %%% find prior of copy number
 priorCNA=nan(size(NmatExon));
@@ -132,19 +150,21 @@ for i=1:length(inputParam.cnaPrior)-1
     priorCNA(NmatExon==i-1)=inputParam.cnaPrior(i);
 end
 priorCNA(NmatExon>=length(inputParam.cnaPrior)-1)=inputParam.cnaPrior(end);
+priorCNA(:,end,:)=germPriorExon;
 priorMinAllele=nan(size(Mmat));
 for i=1:length(inputParam.minAllelePrior)-1
     priorMinAllele(Mmat==i-1)=inputParam.minAllelePrior(i);
 end
 priorMinAllele(Mmat>=length(inputParam.minAllelePrior)-1)=inputParam.minAllelePrior(end);
+priorMinAllele(:,end,:)=germPriorMat;
 
 %%% find likelihoods of read counts and depth
 pHet=inputParam.pvFreq*sum(E.EndPos-E.StartPos)./sum(segsMerged(:,3)-segsMerged(:,2));
 priorCNAf=NaN(size(Nmat));
 for i=1:size(f,2)
     for k=1:2
-        if inputParam.NormalSample>0 && i==size(f,2)
-            priorCNAf(:,i,k)=inputParam.priorGermCNV;
+        if i==size(f,2)
+            priorCNAf(:,i,k)=germPriorMat(:,k);
         else
             priorCNAf(:,i,k)=betapdf(max(f(:,i)),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2)+inputParam.minLik;
         end
@@ -190,17 +210,21 @@ for i=1:size(f,2)
         end
         priorCNAMax(cnaIdx(idxExon)==i & cnIdx(idxExon)==k,:)=priorCNA(cnaIdx(idxExon)==i & cnIdx(idxExon)==k,i,k);
         priorMinAlleleMax(cnaIdx(idx)==i & cnIdx(idx)==k,:)=priorMinAllele(cnaIdx(idx)==i & cnIdx(idx)==k,i,k);
-        priorCNAfmax(cnaIdx(idx)==i & cnIdx(idx)==k,:)=betapdf(max(f(:,i)),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2)+inputParam.minLik;
+        priorCNAfmax(cnaIdx(idx)==i & cnIdx(idx)==k,:)=priorCNAf(cnaIdx(idx)==i & cnIdx(idx)==k,i,k);
+        %priorCNAfmax(cnaIdx(idx)==i & cnIdx(idx)==k,:)=betapdf(max(f(:,i)),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2)+inputParam.minLik;
     end
 end
-if inputParam.NormalSample>0
-    priorCNAfmax(cnaIdx(idx)==size(f,2),:)=inputParam.priorGermCNV;
-end
+% if inputParam.NormalSample>0
+%     priorCNAfmax(cnaIdx(idx)==size(f,2),:)=germPriorMat(cnaIdx(idx)==size(f,2);
+% end
 priorCNAfmax(NsegMax(idx)==2 & MsegMax(idx)==1)=NaN;
 
 for j=1:length(Tcell)
     Fout(:,j)=f(j,cnaIdx);
     %Wout(:,j)=W(j,cnaIdx);
 end
+
+nll=sum(-sum(mean(log(hetlikMax)))-sum(mean(log(depthlikMax)))-sum((segsMerged(:,3)-segsMerged(:,2))'*log(hetCountLikMax)/sum(segsMerged(:,3)-segsMerged(:,2)))-mean(log(priorCNAMax))-mean(log(priorMinAlleleMax))-nanmean(log(priorCNAfmax)));
+%%% missing somLik, priorF
 
 return

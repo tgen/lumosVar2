@@ -42,7 +42,7 @@ if inputParam.NormalSample>0
     tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
     f(tIdx,1:end-1)=[fIn];
 else
-    f=[fIn];
+    f=[fIn ones(length(Tcell),1)];
 end
 
 sampleNames=char(regexp(inputParam.sampleNames,',','split')');
@@ -55,7 +55,7 @@ T=Tcell{1};
 %%% count variants by clone
 for i=1:size(f,2)
     pass(i,:)=sum(cloneId(:,1)==i & strcmp(Filter,'SomaticPASS'));
-    detect(i,:)=sum(somaticDetected(cloneId(:,1)==i & strcmp(Filter,'SomaticPASS'),:));
+    detect(i,:)=sum(somaticDetected(cloneId(:,1)==i & strcmp(Filter,'SomaticPASS'),:),1);
     lowqc(i,:)=sum(cloneId(:,1)==i & strcmp(Filter,'SomaticLowQC'));
     db(i,:)=sum(cloneId(:,1)==i & strcmp(Filter,'SomaticDBsnp'));
 end

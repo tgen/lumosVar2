@@ -187,9 +187,9 @@ save([inputParam.outMat],'-v7.3');
 
 %%%Initial Bayesian Variant Calling
 pDataSum(1)=0;
-[postComb, pDataSum(2),somaticFlag,pDataComb,clones,prior,countsAll]=jointSNVinit(Tcell, exonRD, cell2mat(f)', cell2mat(W)', inputParam);
+countsAll=getCounts(Tcell, inputParam);
 for j=1:length(Tcell)
-    [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[postComb.Chr postComb.Pos],'rows');
+    [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[countsAll.Chr countsAll.Pos],'rows');
     Tcell{j}.RefComb=countsAll.Ref(locb);
     Tcell{j}.Acomb=countsAll.A(locb);
     Tcell{j}.Bcomb=countsAll.B(locb);
@@ -197,7 +197,12 @@ for j=1:length(Tcell)
     Tcell{j}.BcountsComb=countsAll.Bcounts(locb,j);
     Tcell{j}.ApopAFcomb=countsAll.ApopAF(locb);
     Tcell{j}.BpopAFcomb=countsAll.BpopAF(locb);
-    P.Somatic(:,j)=postComb.Somatic(locb).*somaticFlag(locb,j);
+end
+tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
+[postComb, pDataSum(2),pDataComb,clones,prior]=jointSNV_v2(Tcell, cell2mat(f(tIdx))', cell2mat(W)', inputParam);
+for j=1:length(Tcell)
+    [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[postComb.Chr postComb.Pos],'rows');
+    P.Somatic(:,j)=postComb.Somatic(locb);
     P.Het(:,j)=postComb.Het(locb);
     P.Hom(:,j)=postComb.Hom(locb);
     P.NonDip(:,j)=postComb.NonDip(locb);
@@ -211,6 +216,7 @@ for j=1:length(Tcell)
     P.priorNonDip(:,j)=prior.nonDiploid(locb);
     cloneId(:,j)=clones(locb);
 end
+
 
 for i=1:length(Tcell)
     T=Tcell{i};
@@ -233,7 +239,6 @@ somPos=max(P.Somatic,[],2)>inputParam.pSomaticThresh & filtPos & min([Tcell{1}.A
 ['Somatic positions: ' num2str(sum(somPos))]
 ['Het positions: ' num2str(sum(hetPos))]
 save([inputParam.outMat],'-v7.3');
-tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
 while(sum(abs(somPos-somPosOld))/sum(somPos)>0.05 && i<inputParam.maxIter)
      [segsTable, W, f, CNAscale, nll, t{i}]=fitCNAmulti(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam);
     %['clonal fractions: ' num2str(f)]
@@ -259,7 +264,7 @@ while(sum(abs(somPos-somPosOld))/sum(somPos)>0.05 && i<inputParam.maxIter)
             if j~=NormalSample
                 idx=[NormalSample j];
                 %postComb=jointSNV_v2(Tcell(idx), exonRD(idx), f(n,:), W(idx,:), inputParam);
-                [postCombPair{n},~,pDataCombPair{n}]=jointSNV_v2(Tcell(idx), exonRD(idx), inputParam.priorF, 3*ones(2,1), inputParam);
+                [postCombPair{n},~,pDataCombPair{n}]=jointSNV_v2(Tcell(idx), inputParam.priorF, 3*ones(2,1), inputParam);
                 [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[postCombPair{n}.Chr postCombPair{n}.Pos],'rows');
                 P.SomaticPair(:,j)=postCombPair{n}.Somatic(locb);
                 n=n+1;
@@ -272,14 +277,9 @@ while(sum(abs(somPos-somPosOld))/sum(somPos)>0.05 && i<inputParam.maxIter)
     else
         P.SomaticPair=zeros(size(P,1),length(Tcell));
     end
-    [postComb, pDataSum(i+1),pDataComb,clones,prior,countsAll]=jointSNV_v2(Tcell, exonRD, f, W, inputParam);
+    [postComb, pDataSum(i+1),pDataComb,clones,prior]=jointSNV_v2(Tcell, f, W, inputParam);
     for j=1:length(Tcell)
         [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[postComb.Chr postComb.Pos],'rows');
-        Tcell{j}.RefComb=countsAll.Ref(locb);
-        Tcell{j}.Acomb=countsAll.A(locb);
-        Tcell{j}.Bcomb=countsAll.B(locb);
-        Tcell{j}.AcountsComb=countsAll.Acounts(locb,j);
-        Tcell{j}.BcountsComb=countsAll.Bcounts(locb,j);
         P.Somatic(:,j)=postComb.Somatic(locb);
         P.Het(:,j)=postComb.Het(locb);
         P.Hom(:,j)=postComb.Hom(locb);

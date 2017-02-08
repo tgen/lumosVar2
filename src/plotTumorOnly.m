@@ -39,7 +39,7 @@ if inputParam.NormalSample>0
     tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
     f(tIdx,1:end-1)=[fIn];
 else
-    f=[fIn];
+   f=[fIn ones(length(Tcell),1)];
 end
 %%% transform chromosome coord to linear coord
 maxChr=max(segsTable.Chr);
@@ -47,7 +47,7 @@ T=Tcell{1};
 for i=1:maxChr
     chrLen(i)=max(segsTable{segsTable.Chr==i,3})+1E7;
 end
-chrOffset=[0; cumsum(chrLen(1:21))'];
+chrOffset=[0; cumsum(chrLen(1:maxChr-1))'];
 for i=1:maxChr
     segCoord(segsTable.Chr==i,1)=(segsTable{segsTable.Chr==i,2}+chrOffset(i))/1E6;
     segCoord(segsTable.Chr==i,2)=(segsTable{segsTable.Chr==i,3}+chrOffset(i))/1E6;
@@ -57,7 +57,7 @@ for i=1:maxChr
 end
 
 sexChr=regexp(inputParam.sexChr,',','split');
-chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr']
+chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
 
 %%% calculate log2FC
 for i=1:length(Tcell)

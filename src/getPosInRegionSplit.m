@@ -28,7 +28,7 @@ function idx=getPosInRegionSplit(pos,regions,split)
 
 %------------- BEGIN CODE --------------
 
-idx=NaN(length(pos),1);
+idx=NaN(size(pos,1),1);
 for i=min(pos(:,1)):max(pos(:,1))
     chrRegions=regions(regions(:,1)==i,:);
     for j=1:split:sum(regions(:,1)==i)

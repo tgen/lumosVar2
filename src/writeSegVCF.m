@@ -115,7 +115,7 @@ for i=1:length(headers)
     fprintf(fout,'%s\t',headers{i});
 end
 for i=1:size(outData,1)
-    fprintf(fout,strcat('\n%d\t%d\t%d\t%s\t%s\t%f\t%s\t%s\t%s',repmat('\t%s',1,size(segsTableCond.F,2))),outData{i,:});
+    fprintf(fout,strcat('\n%s\t%d\t%d\t%s\t%s\t%f\t%s\t%s\t%s',repmat('\t%s',1,size(segsTableCond.F,2))),outData{i,:});
 end
 
 fclose(fout);
