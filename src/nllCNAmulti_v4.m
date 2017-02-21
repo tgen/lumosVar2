@@ -75,10 +75,13 @@ end
 
 
 %%% find likelihood of somatic variant
+tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
+priorF=ones(sum(somPos),length(Tcell));
+%%% find likelihood of somatic variant
 if(sum(somPos)>0)
     %fMax=max(f,[],1);
-    for j=1:length(Tsom)
-        priorF(:,j)=betapdf(f(j,somIdx(:,j)),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF(j)-inputParam.alphaF+2)+inputParam.minLik;
+    for j=1:length(tIdx)
+        priorF(:,tIdx(j))=betapdf(f(j,somIdx(:,tIdx(j))),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF(tIdx(j))-inputParam.alphaF+2)+inputParam.minLik;
     end
 else
     somLik=1;
@@ -92,6 +95,6 @@ end
 %nll=sum((-sum(log(somLik))-sum(log(hetlikMax))-sum(log(depthlikMax))-sum(log(priorCNAMax))-sum(log(priorMinAlleleMax))-sum(log(priorF))-nansum(log(priorCNAf)))./(length(somLik)+length(hetlikMax)+length(depthlikMax)+length(priorCNAMax)+length(priorMinAlleleMax)+length(priorF)+sum(~isnan(priorCNAf))));
 %nll=sum((-sum(log(somLik))-sum(log(hetlikMax))-sum(log(depthlikMax))))./(length(somLik)+length(hetlikMax)+length(depthlikMax));
 
-nll=sum(-sum(log(somLik)./(inputParam.priorSomaticSNV*sum(E.EndPos-E.StartPos)))-mean(log(priorF)))+nllCNA;
+nll=sum(-sum((log(priorF)+log(somLik))./(inputParam.priorSomaticSNV*sum(E.EndPos-E.StartPos))))+nllCNA;
 
 return;

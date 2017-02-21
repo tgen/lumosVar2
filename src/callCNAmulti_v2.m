@@ -1,4 +1,4 @@
-function [NsegMax, MsegMax, Fout, log2FC, cnaIdx, nll] = callCNAmulti(hetPos,Tcell,exonRD,segsMerged,inputParam,param)
+function [NsegMax, MsegMax, Fout, log2FC, cnaIdx, nll] = callCNAmulti_v2(hetPos,Tcell,exonRD,segsMerged,inputParam,param)
 %callCNA - determine most likley copy number state for each segment
 %
 % Syntax: [N, M, F, Wout, log2FC, pCNA] = callCNA(dataHet,exonRD,segs,inputParam,param)
@@ -69,6 +69,8 @@ for i=1:length(Tcell)
     meanTumorRD(:,i)=getMeanInRegions([D.Chr D.Pos],D.TotalReadCount(:,i),segsMerged);
     meanMinorRD(:,i)=getMeanInRegions([D.Chr D.Pos],D.MinorReadCount(:,i),segsMerged);
 end
+
+meanTumorRDexon(isnan(meanTumorRDexon))=0;
 
 %%% calculate log2FC
 for i=1:length(Tcell)
@@ -168,14 +170,22 @@ for i=1:size(f,2)
                 priorCNAf(:,i,k)=germPriorMat(:,k);
             else
                 priorCNAf(:,i,k)=betapdf(f(j,i),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF(j)-inputParam.alphaF+2)+inputParam.minLik;
-            end
-            priorCNAf(Nmat(:,i,k)==2 & Mmat(:,i,k)==1,i,k)=betapdf(inputParam.priorF(j),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF(j)-inputParam.alphaF+2);           
+                priorCNAf(Nmat(:,i,k)==2 & Mmat(:,i,k)==1,i,k)=betapdf(inputParam.priorF(j),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF(j)-inputParam.alphaF+2);
+            end           
             corr(:,i,j,k)=f(j,i).*Mmat(:,i,k)./Nmat(:,i,k)+(1-f(j,i))*0.5;
-            corr(Nmat(:,i,k)==0,i,j,k)=0.5;
+            if f(j,i)==1
+                corr(Nmat(:,i,k)==0,i,j,k)=0;
+            else
+                corr(Nmat(:,i,k)==0,i,j,k)=0.5;
+            end
             corr(corr(:,i,j,k)<0,i,j,k)=0;
             corr(corr(:,i,j,k)>1,i,j,k)=1;
             corrSeg(:,i,j,k)=f(j,i).*Mseg(:,i,k)./Nseg(:,i,k)+(1-f(j,i))*0.5;
-            corrSeg(Nseg(:,i,k)==0,i,j,k)=0.5;
+            if f(j,i)==1
+                corrSeg(Nseg(:,i,k)==0,i,j,k)=0;
+            else
+                corrSeg(Nseg(:,i,k)==0,i,j,k)=0.5;
+            end
             corrSeg(corrSeg(:,i,j,k)<0,i,j,k)=0;
             corrSeg(corrSeg(:,i,j,k)>1,i,j,k)=1;
             hetlik(:,i,j,k)=bbinopdf_ln(D.MinorReadCount(:,j),D.TotalReadCount(:,j),W(j)*corr(:,i,j,k),W(j)*(1-corr(:,i,j,k)))+bbinopdf_ln(D.MinorReadCount(:,j),D.TotalReadCount(:,j),W(j)*(1-corr(:,i,j,k)),W(j)*corr(:,i,j,k))+inputParam.minLik;
