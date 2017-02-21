@@ -33,6 +33,8 @@ for i=1:size(Tcell,2)
     mapQC(locb,i)=T.PosMapQC;
 end
 
+M=min(M,N-M);
+
 for i=1:size(Wmat,2)
     Wmat(Wmat(:,i)==0,i)=mode(Wmat(Wmat(:,i)~=0,i));
     BmeanBQ(BmeanBQ(:,i)==0,i)=inputParam.defaultBQ;
@@ -65,7 +67,8 @@ prior=array2table([priorSomatic priorHet priorHom priorOther priorNonDip],'Varia
 
 %%% calculate expected heterozygous allele frequencies
 cnCorr=cnaF.*M./N+(1-cnaF)*0.5;
-cnCorr(N==0)=0.5;
+cnCorr(N==0 & cnaF<1)=0.5;
+cnCorr(N==0 & cnaF==1)=0;
 cnCorr=max(cnCorr,10.^(inputParam.defaultBQ./-10));
 % 
 % for i=1:size(Acounts,2)
@@ -118,6 +121,8 @@ for j=1:size(Acounts,2)
         shiftAF(:,j,1)=(cnaF(:,inputParam.NormalSample).*N(:,inputParam.NormalSample)./M(:,inputParam.NormalSample)+2*(1-cnaF(:,inputParam.NormalSample))).*cnaF(:,j).*(M(:,j)./N(:,j)).*germAF+(1-cnaF(:,j)).*germAF;
         shiftAF(M(:,inputParam.NormalSample)==0,j,1)=0;
         shiftAF(:,j,2)=(cnaF(:,inputParam.NormalSample).*N(:,inputParam.NormalSample)./(N(:,inputParam.NormalSample)-M(:,inputParam.NormalSample))+2*(1-cnaF(:,inputParam.NormalSample))).*cnaF(:,j).*((N(:,j)-M(:,j))./N(:,j)).*germAF+(1-cnaF(:,j)).*germAF;
+        shiftAF(~isfinite(shiftAF(:,j,1)),j,1)=germAF(~isfinite(shiftAF(:,j,1)));
+        shiftAF(~isfinite(shiftAF(:,j,2)),j,2)=germAF(~isfinite(shiftAF(:,j,2)));
         pDataNonDip1(:,j)=bbinopdf_ln(Bcounts(:,j),RDmat(:,j),min(shiftAF(:,j,1),1-shiftAF(:,j,1)).*W(j),max(shiftAF(:,j,1),1-shiftAF(:,j,1)).*W(j));
         pDataNonDip2(:,j)=bbinopdf_ln(Bcounts(:,j),RDmat(:,j),min(shiftAF(:,j,2),1-shiftAF(:,j,2)).*W(j),max(shiftAF(:,j,2),1-shiftAF(:,j,2)).*W(j));
         pDataNonDip(:,j)=max(pDataNonDip1(:,j),pDataNonDip2(:,j));
