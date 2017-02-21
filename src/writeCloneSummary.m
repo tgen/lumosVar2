@@ -1,4 +1,4 @@
-function writeCloneSummary(segsTable,Ecell,Tcell,fIn,cloneId,inputParam,Filter,somaticDetected)
+function writeCloneSummary(segsTable,exonRD,Tcell,fIn,cloneId,inputParam,Filter,somaticDetected)
 %writeCloneSummary - writes summary of variant counts by clone
 %
 % Syntax: writeCloneSummary(segsTable,E,T,pSomatic,posterior,f,W,cloneId,inputParam)
@@ -68,8 +68,8 @@ cloneTable.somaticDB=[db; NaN];
 message=['made clone table']
 
 %%% find exon cloneId
-E=Ecell{1};
-idx=getPosInRegions([E.Chr mean([E.StartPos E.EndPos],2)],segsTable{:,1:3});
+%E=Ecell{1};
+idx=getPosInRegions([exonRD{1}(:,1) mean(exonRD{1}(:,2:3),2)],segsTable{:,1:3});
 exonCN(~isnan(idx),:)=[segsTable.N(idx(~isnan(idx))) segsTable.M(idx(~isnan(idx))) segsTable.F(idx(~isnan(idx)),1)];
 exonCloneId(~isnan(idx),:)=segsTable.cnaIdx(idx(~isnan(idx)));
 exonCloneId(exonCN(:,1)==2 & exonCN(:,2)==1,:)=0;
@@ -97,17 +97,20 @@ message=['made summary table']
 writetable([cloneTable array2table([CNcount; NaN(1,size(CNcount,2))],'VariableNames',CNname)],[inputParam.outName '.cloneSummary.csv']);
 
 colors=linspecer(size(f,2));
-subplot(2,1,1);
+subplot(2,2,1);
 hold on;
 for i=1:size(f,2)
+    plot(f(:,i),'-','color',colors(i,:),'LineWidth',10*(sum(CNcount(i,:))+1)./sum(CNcount(:)));
     if rem(i,2)==0
-        plot(f(:,i),'-o','MarkerSize',50*(cloneTable.somaticPass(i)+1)./sum(cloneTable.somaticPass+1),'color',colors(i,:),'MarkerEdgeColor',[0 0 0],'MarkerFaceColor',colors(i,:),'LineWidth',10*(sum(CNcount(i,:))+1)./sum(CNcount(:)));
+        %plot(f(:,i),'-o','MarkerSize',50*(cloneTable.somaticDetected(i,:)+1)./sum(cloneTable.somaticPass+1),'color',colors(i,:),'MarkerEdgeColor',[0 0 0],'MarkerFaceColor',colors(i,:),'LineWidth',10*(sum(CNcount(i,:))+1)./sum(CNcount(:)));
+        scatter([1:size(f,1)],f(:,i),400*(cloneTable.somaticDetected(i,:)+1)./sum(cloneTable.somaticPass+1),'MarkerEdgeColor',[0 0 0],'MarkerFaceColor',colors(i,:));
     else
-        plot(f(:,i),'-o','MarkerSize',50*(cloneTable.somaticPass(i)+1)./sum(cloneTable.somaticPass+1),'color',colors(i,:),'MarkerEdgeColor',[1 1 1],'MarkerFaceColor',colors(i,:),'LineWidth',10*(sum(CNcount(i,:))+1)./sum(CNcount(:)));
+        %plot(f(:,i),'-o','MarkerSize',50*(cloneTable.somaticDetected(i,:)+1)./sum(cloneTable.somaticPass+1),'color',colors(i,:),'MarkerEdgeColor',[1 1 1],'MarkerFaceColor',colors(i,:),'LineWidth',10*(sum(CNcount(i,:))+1)./sum(CNcount(:)));
+        scatter([1:size(f,1)],f(:,i),400*(cloneTable.somaticDetected(i,:)+1)./sum(cloneTable.somaticPass+1),'MarkerEdgeColor',[1 1 1],'MarkerFaceColor',colors(i,:));
     end
 end
 ylim([0 1]);
-set(gca,'XTick',1:size(f,1),'XTickLabel',sampleNames,'FontSize',8,'TickLabelInterpreter','none','XTickLabelRotation',5);
+set(gca,'XTick',1:size(f,1),'XTickLabel',sampleNames,'FontSize',8,'TickLabelInterpreter','none','XTickLabelRotation',10);
 ylabel('Clonal Sample Fraction');
 
 
@@ -126,7 +129,7 @@ for j=1:length(Tcell)
     sampleFrac(~matchIdx,j)=AF(~matchIdx,j).*(T.cnaF(~matchIdx).*T.NumCopies(~matchIdx)+2.*(1-T.cnaF(~matchIdx)));
 end
 
-subplot(2,1,2);
+subplot(2,2,3);
 hold on;
 for i=1:size(f,2)
     plot(sampleFrac(strcmp(Filter,'SomaticPASS') & cloneId(:,1)==i,:)','Color',colors(i,:));
@@ -134,8 +137,28 @@ for i=1:size(f,2)
 end
 %plot(sampleFrac(strcmp(Filter,'SomaticPairPASS'),:)','Color','k');
 ylim([0 1]);
-set(gca,'XTick',1:size(f,1),'XTickLabel',sampleNames,'FontSize',8,'TickLabelInterpreter','none','XTickLabelRotation',5);
+set(gca,'XTick',1:size(f,1),'XTickLabel',sampleNames,'FontSize',8,'TickLabelInterpreter','none','XTickLabelRotation',10);
 ylabel('Variant Sample Fraction');
+
+subplot(2,2,2)
+b=bar(CNcount','stacked');
+for i=1:size(CNcount,1);
+    b(i).FaceColor=colors(i,:);
+end
+set(gca,'XTick',1:length(CNname),'XTickLabel',CNname,'FontSize',8,'TickLabelInterpreter','none','XTickLabelRotation',90);
+legend(num2str([1:size(CNcount,1)]'));
+xlabel('Copy Number State');
+ylabel('Number of Exons');
+
+subplot(2,2,4)
+b=bar(cloneTable.somaticDetected','stacked');
+for i=1:size(CNcount,1);
+    b(i).FaceColor=colors(i,:);
+end
+set(gca,'XTick',1:size(sampleNames,1),'XTickLabel',sampleNames,'FontSize',8,'TickLabelInterpreter','none','XTickLabelRotation',10);
+%legend(num2str([1:size(CNcount,1)]'));
+ylabel('Number of Somatic Variants Detected');
+
 % 
 % subplot(3,1,3);
 % hold on;
@@ -150,6 +173,7 @@ ylabel('Variant Sample Fraction');
 
 set(gcf, 'PaperPositionMode', 'manual');
 set(gcf, 'PaperUnits', 'inches');
-set(gcf, 'PaperPosition', [1 1 7 4]);
+%set(gcf, 'PaperPosition', [1 1 7 4]);
+set(gcf, 'PaperPosition', [1 1 10 7.5]);
 print(gcf,'-dpng',[inputParam.outName '.cloneSummary.png'],'-r300');
 close(gcf);
