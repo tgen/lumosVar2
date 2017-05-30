@@ -29,7 +29,7 @@ parfor i=1:length(chrList)
             p(j,:)=1;
         end
     end
-    segsMerged(:,4)=[min(min(p,[],2),1); NaN];
+    segsMerged(:,4)=[min(geomean(p,2),1); NaN];
     segsMergedChr{i}=removeSegs_v2(segsMerged,exonRD,inputParam,0);
 end
 

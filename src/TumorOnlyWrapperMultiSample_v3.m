@@ -1,4 +1,4 @@
-function output=TumorOnlyWrapperMultiSample_v2(paramFile,varargin)
+function output=TumorOnlyWrapperMultiSample_v3(paramFile,varargin)
 %TumorOnlyWrapper - Entry function for tumor only caller
 %uses a bayesian framework to call somatic variants and germline variants
 %from tumor only exome sequencing
@@ -140,6 +140,21 @@ end
 filtPos=max(P.trust,[],2)>inputParam.pGoodThresh & max(P.artifact,[],2)<inputParam.pGoodThresh;
 message=['initial quality filtering at: ' char(datetime('now'))]
 
+countsAll=getCounts(Tcell, inputParam);
+for j=1:length(Tcell)
+    [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[countsAll.Chr countsAll.Pos],'rows');
+    Tcell{j}.RefComb=countsAll.Ref(locb);
+    Tcell{j}.Acomb=countsAll.A(locb);
+    Tcell{j}.Bcomb=countsAll.B(locb);
+    Tcell{j}.AcountsComb=countsAll.Acounts(locb,j);
+    Tcell{j}.BcountsComb=countsAll.Bcounts(locb,j);
+    Tcell{j}.ApopAFcomb=countsAll.ApopAF(locb);
+    Tcell{j}.BpopAFcomb=countsAll.BpopAF(locb);
+    %altCount(bIdx,j)=Tcell{j}.BcountsComb(bIdx);
+    %altCount(~bIdx,j)=Tcell{j}.AcountsComb(~bIdx);
+    %AF(bIdx,j)=Tcell{j}.BcountsComb(bIdx)./Tcell{j}.ReadDepthPass(bIdx);
+    %AF(~bIdx,j)=Tcell{j}.AcountsComb(~bIdx)./Tcell{j}.ReadDepthPass(~bIdx);
+end
 %%%get combined counts
 pDataSum(1)=0;
 % if inputParam.NormalSample>0
@@ -147,6 +162,58 @@ pDataSum(1)=0;
 % else
 %     bIdx=T.ApopAFcomb>=T.BpopAFcomb;
 % end
+
+%%%Preliminary Variant Classification
+tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
+if inputParam.NormalSample>0
+    commonHet=(min([Tcell{inputParam.NormalSample}.ApopAF Tcell{inputParam.NormalSample}.BpopAF],[],2)>inputParam.minHetPopFreq) & Tcell{inputParam.NormalSample}.BCountF+Tcell{inputParam.NormalSample}.BCountR>=inputParam.minBCount;
+   % somPos=min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)<inputParam.maxSomPopFreq & filtPos & altCount(:,inputParam.NormalSample)==0 & max(altCount(:,tIdx),[],2)>inputParam.minBCount;
+else
+    commonHet=min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)>inputParam.minHetPopFreq;
+    %somPos=Tcell{1}.CosmicCount>1 & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)<inputParam.maxSomPopFreq & filtPos;
+end    
+hetPos=commonHet & filtPos;
+filtPer=sum(hetPos)./sum(commonHet);
+message=['preliminary variant classification at: ' char(datetime('now'))]
+
+f=[inputParam.priorF(tIdx) diag(inputParam.priorF(tIdx)-0.05)+0.05 (diag(inputParam.priorF(tIdx)-0.05)+0.05)*0.5];
+inputParam.numClones=size(f,2);
+
+%%%Call Copy Number
+for i=1:length(Tcell)
+    diploidPos=(Tcell{i}.BCountF+Tcell{i}.BCountR)./Tcell{i}.ReadDepthPass>inputParam.minHetAF;
+    cInit(i,:)=median(2*Tcell{i}.ControlRD(diploidPos & hetPos)./Tcell{i}.ReadDepthPass(diploidPos & hetPos));
+    wInit(i,:)=nanmedian(exonRD{i}(:,4));
+end
+%inputParam.numClones=1;
+[N, M, Ftable, log2FC, cnaIdx]=callCNAmulti_v2(hetPos,Tcell,exonRD,segsMerged,inputParam,[cInit(:);wInit(:);f(:)],filtPer);
+segsTable=array2table(segsMerged(:,1:3),'VariableNames',{'Chr','StartPos','EndPos'});
+segsTable.N=N;
+segsTable.M=M;
+segsTable.F=Ftable;
+segsTable.cnaIdx=cnaIdx;
+for i=1:length(Tcell)
+    segsTable.F(:,i)=Ftable(:,i);
+    segsTable.W(:,i)=wInit(i);
+    segsTable.log2FC(:,i)=log2FC(:,i);
+end
+
+%%%Add copy number info to data table
+for i=1:size(Tcell,2)
+    T=Tcell{i};
+    %idxExon=getPosInRegionSplit([T.Chr T.Pos],exonRD(:,1:3),inputParam.blockSize);
+    idx=getPosInRegionSplit([T.Chr T.Pos],segsTable{:,1:3},inputParam.blockSize);
+    T.NumCopies=segsTable.N(idx);
+    T.MinAlCopies=segsTable.M(idx);
+    T.cnaF=segsTable.F(idx,i);
+    T.W=segsTable.W(idx);
+    T.BmeanBQ(T.BCountF+T.BCountR==0)=inputParam.defaultBQ;
+    Tcell{i}=T;
+    clear T;
+end
+message=['initial copy number calls: ' char(datetime('now'))]
+save([inputParam.outMat],'-v7.3');
+
 countsAll=getCounts(Tcell, inputParam);
 for j=1:length(Tcell)
     [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[countsAll.Chr countsAll.Pos],'rows');
@@ -163,69 +230,25 @@ for j=1:length(Tcell)
     %AF(~bIdx,j)=Tcell{j}.AcountsComb(~bIdx)./Tcell{j}.ReadDepthPass(~bIdx);
 end
 
-%%%Preliminary Variant Classification
-tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
-if inputParam.NormalSample>0
-    hetPos=(min([Tcell{inputParam.NormalSample}.ApopAFcomb Tcell{inputParam.NormalSample}.BpopAFcomb],[],2)>inputParam.minHetPopFreq) & filtPos & Tcell{inputParam.NormalSample}.BcountsComb>=inputParam.minBCount;
-   % somPos=min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)<inputParam.maxSomPopFreq & filtPos & altCount(:,inputParam.NormalSample)==0 & max(altCount(:,tIdx),[],2)>inputParam.minBCount;
-else
-    hetPos=min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)>inputParam.minHetPopFreq & filtPos;
-    %somPos=Tcell{1}.CosmicCount>1 & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)<inputParam.maxSomPopFreq & filtPos;
-end    
-message=['preliminary variant classification at: ' char(datetime('now'))]
-
-
-%%%Call Copy Number
-for i=1:length(Tcell)
-    diploidPos=(Tcell{i}.BCountF+Tcell{i}.BCountR)./Tcell{i}.ReadDepthPass>inputParam.minHetAF;
-    cInit(i,:)=median(2*Tcell{i}.ControlRD(diploidPos & hetPos)./Tcell{i}.ReadDepthPass(diploidPos & hetPos));
-    wInit(i,:)=nanmedian(exonRD{i}(:,4));
-end
-
-[N, M, Ftable, log2FC, cnaIdx]=callCNAmulti_v2(hetPos,Tcell,exonRD,segsMerged,inputParam,[cInit(:);wInit(:);inputParam.priorF(tIdx)]);
-segsTable=array2table(segsMerged(:,1:3),'VariableNames',{'Chr','StartPos','EndPos'});
-segsTable.N=N;
-segsTable.M=M;
-segsTable.F=Ftable;
-segsTable.cnaIdx=cnaIdx;
-for i=1:length(Tcell)
-    segsTable.F(:,i)=Ftable(:,i);
-    %segsTable.W(:,i)=Wtable(:,i);
-    segsTable.log2FC(:,i)=log2FC(:,i);
-end
-
-%%%Add copy number info to data table
-for i=1:size(Tcell,2)
-    T=Tcell{i};
-    %idxExon=getPosInRegionSplit([T.Chr T.Pos],exonRD(:,1:3),inputParam.blockSize);
-    idx=getPosInRegionSplit([T.Chr T.Pos],segsTable{i}(:,1:3),inputParam.blockSize);
-    T.NumCopies=segsTable{i}(idx,5);
-    T.MinAlCopies=segsTable{i}(idx,6);
-    T.cnaF=segsTable{i}(idx,7);
-    T.W=segsTable{i}(idx,8);
-    T.BmeanBQ(T.BCountF+T.BCountR==0)=inputParam.defaultBQ;
-    Tcell{i}=T;
-    clear T;
-end
-message=['initial copy number calls: ' char(datetime('now'))]
-save([inputParam.outMat],'-v7.3');
-
 
 %%%repeat fitting and variant calling until converges
 i=1;
 somPosOld=zeros(size(hetPos));
+W=wInit;
+CNAscale=cInit;
 save([inputParam.outMat],'-v7.3');
+
 while(true)
     if inputParam.NormalSample>0
         n=1;
         NormalSample=inputParam.NormalSample;
         inputParam.NormalSample=1;
-        inputParam.numClones=1;
+        inputParam.numClones=2;
         for j=1:length(Tcell)
             if j~=NormalSample
                 idx=[NormalSample j];
                 %postComb=jointSNV_v2(Tcell(idx), exonRD(idx), f(n,:), W(idx,:), inputParam);
-                [postCombPair{n},~,pDataCombPair{n}]=jointSNV_v2(Tcell(idx), inputParam.priorF(j), 3*ones(2,1), inputParam);
+                [postCombPair{n},~,pDataCombPair{n}]=jointSNV_v2(Tcell(idx), [inputParam.priorF(j) inputParam.priorF(j)./2], 3*ones(2,1), inputParam);
                 [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[postCombPair{n}.Chr postCombPair{n}.Pos],'rows');
                 P.SomaticPair(:,j)=postCombPair{n}.Somatic(locb);
                 n=n+1;
@@ -258,28 +281,31 @@ while(true)
         E=Ecell{j};
         homPos=P.Hom(:,j)>0.5  & P.SomaticPair(:,j)<0.5 | (max([P.Somatic P.SomaticPair],[],2)>0.5 & (max(P.DataSomatic(:,j),P.DataNonDip(:,j))<=P.DataHom(:,j) | (T.BcountsComb==0 & T.A==T.RefComb))) | (P.Somatic(:,j)>0.5 & inputParam.NormalSample==j);
         P.homPos(:,j)=homPos;
-        [F{j},postTrust,postArtifact]=qualDiscrimCalls(T,E,homPos,inputParam);
+        [F{j},postTrust,postArtifact]=qualDiscrimCalls_v2(T,E,homPos,inputParam);
         P.trust(:,j)=postTrust(:,2);
         P.artifact(:,j)=postArtifact(:,1);
         clear T E;
     end
+    Filter=callVariants(Tcell,P,inputParam);
+    hetPos=strcmp(Filter,'GermlineHetPASS');
+    somPos=strcmp(Filter,'SomaticPASS') | strcmp(Filter,'SomaticPairPASS');
     message=['called variants iteration: ' num2str(i) ' at ' char(datetime('now'))]
-    filtPos=max(P.trust,[],2)>inputParam.pGoodThresh & max(P.artifact,[],2)<inputParam.pGoodThresh;
-    hetPos=max(P.Het,[],2)>inputParam.pGermlineThresh & filtPos;
-    somPos=max([P.Somatic P.SomaticPair],[],2)>inputParam.pSomaticThresh & filtPos & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)<inputParam.maxSomPopFreq;
-    if inputParam.NormalSample>0
-        for j=1:length(tIdx)
-            somPos(max(P.SomaticPair(:,tIdx(j)),[],2)>inputParam.pSomaticThresh & min(P.trust(:,[tIdx(j) inputParam.NormalSample]),[],2)>inputParam.pGoodThresh & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq  &  max(P.artifact(:,[tIdx(j) inputParam.NormalSample]),[],2)<inputParam.pGoodThresh,:)=1;
-        end
-    end
-    message=['quality filtering iteration: ' num2str(i) ' at ' char(datetime('now'))]
+%     filtPos=max(P.trust,[],2)>inputParam.pGoodThresh & max(P.artifact,[],2)<inputParam.pGoodThresh;
+%     hetPos=max(P.Het,[],2)>inputParam.pGermlineThresh & filtPos;
+%     somPos=max([P.Somatic P.SomaticPair],[],2)>inputParam.pSomaticThresh & filtPos & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)<inputParam.maxSomPopFreq;
+%     if inputParam.NormalSample>0
+%         for j=1:length(tIdx)
+%             somPos(max(P.SomaticPair(:,tIdx(j)),[],2)>inputParam.pSomaticThresh & min(P.trust(:,[tIdx(j) inputParam.NormalSample]),[],2)>inputParam.pGoodThresh & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq  &  max(P.artifact(:,[tIdx(j) inputParam.NormalSample]),[],2)<inputParam.pGoodThresh,:)=1;
+%         end
+%     end
+%     message=['quality filtering iteration: ' num2str(i) ' at ' char(datetime('now'))]
     ['Somatic positions: ' num2str(sum(somPos))]
     ['Het positions: ' num2str(sum(hetPos))]
     save([inputParam.outMat],'-v7.3');
     if sum(abs(somPos-somPosOld))/sum(somPos)<=0.05 || i>=inputParam.maxIter
         break;
     end
-    [segsTable, W, f, CNAscale, nll, t{i}]=fitCNAmulti_v2(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam);
+    [segsTable, W, f, CNAscale, nll, t{i}]=fitCNAmulti_v3(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,filtPer,f,CNAscale,W)
     %['clonal fractions: ' num2str(f)]
     for j=1:length(Tcell)
         T=Tcell{j};
@@ -313,8 +339,9 @@ ord=[ord size(f,2)+1];
 [~,segsTable.cnaIdx]=ismember(segsTable.cnaIdx,ord);
 
 save([inputParam.outMat],'-v7.3');
-[Filter,somaticDetected]=writeJointVCF(Tcell,P,fSort,cloneIdSort,F,inputParam);
+[Filter,somaticDetected]=callVariants(Tcell,P,inputParam)
 save([inputParam.outMat],'-v7.3');
+writeJointVCF(Tcell,P,fSort,cloneIdSort,Filter,somaticDetected,inputParam);
 writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputParam)
 writeCloneSummary(segsTable,exonRD,Tcell,fSort,cloneIdSort,inputParam,Filter,somaticDetected);
 plotTumorOnly(exonRD,segsTable,CNAscale,fSort,Tcell,somPos,hetPos,cloneIdSort,inputParam)

@@ -1,4 +1,4 @@
-function nll = nllCNAaddClone_v2(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,CNAscale,W,fOld,fNew)
+function nll = nllCNAaddClone_v2(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,CNAscale,W,fOld,fNew,filtPer)
 %nllCNA - computes negative loglikliehood of copy number parameters
 %
 % Syntax: nll = nllCNA(dataHet,dataSom,exonRD,segs,inputParam,param)
@@ -48,7 +48,7 @@ end
 
 f=[fOld fNew(:)]./100;
 
-[N, M, Ftable, ~, cnaIdx, nllCNA]=callCNAmulti_v2(hetPos,Tcell,exonRD,segsMerged,inputParam,[CNAscale(:); W(:); f(:)]);
+[N, M, Ftable, ~, cnaIdx, nllCNA]=callCNAmulti_v2(hetPos,Tcell,exonRD,segsMerged,inputParam,[CNAscale(:); W(:); f(:)],filtPer);
 segsTable=array2table(segsMerged(:,1:3),'VariableNames',{'Chr','StartPos','EndPos'});
 segsTable.N=N;
 segsTable.M=M;
@@ -72,12 +72,15 @@ for j=1:length(Tsom)
 end
 
 tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
-priorF=ones(sum(somPos),length(Tcell));
+priorF=ones(sum(somPos),1);
 %%% find likelihood of somatic variant
 if(sum(somPos)>0)
-    %fMax=max(f,[],1);
-    for j=1:length(tIdx)
-        priorF(:,tIdx(j))=betapdf(f(j,somIdx(:,tIdx(j))),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF(tIdx(j))-inputParam.alphaF+2)+inputParam.minLik;
+    [fMax,fIdx]=max(f,[],1);
+    %for j=1:length(tIdx)
+        %priorF(:,tIdx(j))=betapdf(f(j,somIdx(:,tIdx(j))),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF(tIdx(j))-inputParam.alphaF+2)+inputParam.minLik;
+            %end
+    for j=1:length(fMax)
+        priorF(somIdx(:,1)==j)=betapdf(fMax(j),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF(tIdx(fIdx(j)))-inputParam.alphaF+2)+inputParam.minLik;
     end
 else
     somLik=1;
@@ -91,5 +94,6 @@ end
 %nll=sum((-sum(log(somLik))-sum(log(hetlikMax))-sum(log(depthlikMax))-sum(log(priorCNAMax))-sum(log(priorMinAlleleMax))-sum(log(priorF))-nansum(log(priorCNAf)))./(length(somLik)+length(hetlikMax)+length(depthlikMax)+length(priorCNAMax)+length(priorMinAlleleMax)+length(priorF)+sum(~isnan(priorCNAf))));
 %nll=sum((-sum(log(somLik))-sum(log(hetlikMax))-sum(log(depthlikMax))))./(length(somLik)+length(hetlikMax)+length(depthlikMax));
 
-nll=sum(-sum((log(priorF)+log(somLik))./(inputParam.priorSomaticSNV*sum(E.EndPos-E.StartPos))))+nllCNA;
+nll=-sum((log(priorF)+sum(log(somLik),2))./(inputParam.priorSomaticSNV*sum(E.EndPos-E.StartPos)))+nllCNA;
+
 return;

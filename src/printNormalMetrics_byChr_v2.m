@@ -81,12 +81,12 @@ if(~exist([outfile '_' chrList{chrIdx} '.txt.gz'],'file'))
         fout=fopen([outfile '_' chrList{chrIdx} '.txt'],'a+');
         ferror=fopen([outfile '_' chrList{chrIdx} '.errorLog.txt'],'a+');
         [q,w] = system(['tail -n 1 ' outfile '_' chrList{chrIdx} '.txt']);
-        data=str2double(regexp(w,'\t','split'))
+        data=str2double(regexp(w,'\t','split'));
         currRegion=double(Regions(Regions(:,1)==chrIdx,:));
         size(currRegion)
         if(size(data,2)==6)
             idx=getPosInRegions([chrIdx data(2)],currRegion);
-            currRegion(idx,:)
+            currRegion(idx,:);
             currRegion=currRegion(idx:end,:);
             currRegion(1,2)=data(2);
         end
@@ -114,7 +114,7 @@ if(~exist([outfile '_' chrList{chrIdx} '.txt.gz'],'file'))
     
     %%% analyze by region
     while(endIdx<size(currRegion,1))
-        currRegion
+        %currRegion
         [startIdx endIdx]
         endIdx=find(cumsum(currRegion(startIdx:end,3)-currRegion(startIdx:end,2))>blockSize,1)+startIdx-1;
         if isempty(endIdx)

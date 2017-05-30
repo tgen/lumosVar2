@@ -82,7 +82,7 @@ cnCorr=max(cnCorr,10.^(inputParam.defaultBQ./-10));
 %%% calculate likliehoods of germline genotypes
 for i=1:size(Acounts,2)
     pDataHom(:,i)=bbinopdf_ln(Acounts(:,i),RDmat(:,i),Wmat(:,i).*(1-10.^(-AmeanBQ(:,i)./10)),Wmat(:,i).*10.^(-AmeanBQ(:,i)./10));
-    pDataHet(:,i)=bbinopdf_ln(Bcounts(:,i),RDmat(:,i),cnCorr(:,i).*Wmat(:,i),(1-cnCorr(:,i)).*Wmat(:,i));
+    pDataHet(:,i)=bbinopdf_ln(Bcounts(:,i),RDmat(:,i),cnCorr(:,i).*Wmat(:,i),(1-cnCorr(:,i)).*Wmat(:,i))+bbinopdf_ln(Acounts(:,i),RDmat(:,i),cnCorr(:,i).*Wmat(:,i),(1-cnCorr(:,i)).*Wmat(:,i));
     pDataOther(:,i)=bbinopdf_ln(max(RDmat(:,i)-Acounts(:,i)-Bcounts(:,i),0),RDmat(:,i),Wmat(:,i).*(1-10.^(-AmeanBQ(:,i)./10)),Wmat(:,i).*10.^(-AmeanBQ(:,i)./10));
 end
 

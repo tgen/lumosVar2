@@ -24,10 +24,10 @@ for i=1:size(Tcell,2)
     RDmat(locb,i)=T.ReadDepthPass;
     RefOrig(locb,i)=T.Ref;
     cosmic(locb,i)=T.CosmicCount;
-    cnaF(locb,i)=T.cnaF;
-    N(locb,i)=T.NumCopies;
-    M(locb,i)=T.MinAlCopies;
-    Wmat(locb,i)=T.W;
+%    cnaF(locb,i)=T.cnaF;
+%    N(locb,i)=T.NumCopies;
+%    M(locb,i)=T.MinAlCopies;
+%    Wmat(locb,i)=T.W;
     BmeanBQ(locb,i)=T.BmeanBQ;
     AmeanBQ(locb,i)=T.AmeanBQ;
     mapQC(locb,i)=T.PosMapQC;
@@ -36,8 +36,8 @@ end
 Ref=zeros(size(Amat));
 Ref(min(RefOrig,[],2)==max(RefOrig,[],2),:)=RefOrig(min(RefOrig,[],2)==max(RefOrig,[],2),:);
 
-for i=1:size(Wmat,2)
-    Wmat(Wmat(:,i)==0,i)=mode(Wmat(Wmat(:,i)~=0,i));
+for i=1:size(BmeanBQ,2)
+%    Wmat(Wmat(:,i)==0,i)=mode(Wmat(Wmat(:,i)~=0,i));
     BmeanBQ(BmeanBQ(:,i)==0,i)=inputParam.defaultBQ;
     AmeanBQ(AmeanBQ(:,i)==0,i)=inputParam.defaultBQ;
 end
