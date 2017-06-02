@@ -46,12 +46,26 @@ Tcell=cell('');
 Ecell=cell('');
 %%%% If outmat exits, uses outmat, otherwise generates data tables
 if(exist([inputParam.outMat],'file'))
-    vars={'T','E','Tcell','Ecell'};
+    vars={'T','E','Tcell','Ecell','sampleNames','bamList','inputParam'};
     load([inputParam.outMat],'-mat',vars{:});
-    inputParam=readInputs(paramFile)
+    NormalSample=inputParam.NormalSample;
+    priorF=inputParam.priorF;
+    inputParam=readInputs(paramFile);
+    inputParam.NormalSample=NormalSample;
+    inputParam.priorF=priorF;
 else
-   [T, E]=preprocessTumorOnly_v2(inputParam,paramFile);
-   save([inputParam.outMat],'-v7.3');
+    [T, E]=preprocessTumorOnly_v2(inputParam,paramFile);   
+    fid=fopen(inputParam.bamList);
+    bamList=textscan(fid,'%s');
+    sampleCount=length(bamList{1});
+    fclose(fid);
+    for i=1:sampleCount
+        folders=regexp(bamList{1}{i},'/','split');
+        names=regexp(folders{end},'\.','split');
+        sampleNames{i}=names{1};
+        message=['sample ' num2str(i) ': ' sampleNames{i} ' from ' bamList{1}{i}]
+    end
+    save([inputParam.outMat],'-v7.3');
 end
 
 if isempty(Tcell)
@@ -61,16 +75,6 @@ if isempty(Ecell)
     Ecell=E;
 end
 
-fid=fopen(inputParam.bamList);
-bamList=textscan(fid,'%s');
-sampleCount=length(bamList{1});
-fclose(fid);
-for i=1:sampleCount
-    folders=regexp(bamList{1}{i},'/','split');
-    names=regexp(folders{end},'\.','split');
-    sampleNames{i}=names{1};
-    message=['sample ' num2str(i) ': ' sampleNames{i} ' from ' bamList{1}{i}]
-end
 inputParam.sampleNames=strjoin(sampleNames,',');
 inputParam.bamPaths=strjoin(bamList{1},',');
 

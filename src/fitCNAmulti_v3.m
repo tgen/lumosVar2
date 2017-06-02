@@ -70,7 +70,8 @@ fOld=reshape(param{j}(2*length(Tcell)+1:end),[],inputParam.numClones)
 while foundMin
     foundMin=0;
     removeClone=1;
-    while removeClone && j>1
+    while removeClone && j>2
+        j=size(fOld,2);
         inputParam.numClones=j-1;
         nllRemove=nan(j,1);
         for i=1:j
@@ -91,6 +92,7 @@ while foundMin
             Wcurr=paramRemove(length(Tcell)+1:2*length(Tcell))
             fOld=reshape(paramRemove(2*length(Tcell)+1:end),[],inputParam.numClones)
         else
+            message=['not removing any at ' num2str(j)'] 
             removeClone=0;
         end
     end  
@@ -111,9 +113,9 @@ while foundMin
         end
         [~,idx]=min(nllPTS)
         t(j,1)=toc
-        fOld=[fOld paramPTS{idx}]
+        fAdd=[fOld paramPTS{idx}]
         tic
-        [param{j}, nll(j)]=fmincon(@(param)nllCNAmulti_v4(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,param,filtPer),[100.*CNAscale(:); Wcurr(:); fOld(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fOld(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fOld(:)));],[],opts2);
+        [param{j}, nll(j)]=fmincon(@(param)nllCNAmulti_v4(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,param,filtPer),[100.*CNAscale(:); Wcurr(:); fAdd(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fAdd(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fAdd(:)));],[],opts2);
         currMin=nll(j)+j*length(tIdx)./inputParam.addCloneWeight;
         t(j,2)=toc;
         if currMin<bestMin
@@ -124,6 +126,7 @@ while foundMin
             Wcurr=param{j}(length(Tcell)+1:2*length(Tcell))
             fOld=reshape(param{j}(2*length(Tcell)+1:end),[],inputParam.numClones)
         else
+            message=['not adding at ' num2str(j)]
             addClone=0;
         end
     end 
