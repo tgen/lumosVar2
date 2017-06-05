@@ -40,6 +40,14 @@ example
 
 This step is also run seperately for each chromosome (See exampleScripts/runLumosVar.sh for automating part 2 and 3).  When running, the files parsePileupData.packed.pl must be in the working directory specified in the config files. You specify the path to the bam, as well as the control metrics files, your samtools and htslib installations, your bed file, and your output path in the yaml config file. See configTemplates/tumorConfig.yaml. This step will produce a tab delimited text file for each chromosome that contains metrics on each canidate variant position.
 
-The caller will produce an SNV and indel VCF (.tumorOnly.all.vcf), a copy number and LOH VCF (.cna.seg.vcf), a clone summary table (.cloneSummary.csv), and a summary figure (.png)
+3.  Main Caller
 
-and cghcbshybridnu.mat
+./lumosVarMain CONFIGNAME
+
+example
+
+./lumosVarMain tumorConfig.yaml
+
+This runs the main caller.  If the file specified by the outMat path in the yaml config file exists, it will read the data from the mat file.  If starting from a mat file, it will also use the sampleNames, bamList, NormalSample, and priorF from the mat file and ignore the values for those parameters specified in the yaml.  If the mat file does not exist, it will read in the data from the chromosome text files created in step two that have file name prefix matching the outName specified in the yaml file. When running, cghcbshybridnu.mat must be in your working directory.  The caller will produce an SNV and indel VCF (.tumorOnly.all.vcf), a copy number and LOH VCF (.cna.seg.vcf), a clone summary table (.cloneSummary.csv), and a summary figure (.png)
+
+
