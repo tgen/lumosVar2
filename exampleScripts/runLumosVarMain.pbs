@@ -1,0 +1,26 @@
+#!/bin/bash
+#PBS -l nodes=1:ppn=16
+#PBS -N runTumorOnly
+#PBS -l walltime=96:00:00
+#PBS -m abe
+#PBS -M rhalperin@tgen.org
+#PBS -j oe
+
+cd $PBS_O_WORKDIR
+
+module load MCR/9.0
+
+TMPDIR=/scratch/rhalperin/TMP_$RANDOM
+mkdir $TMPDIR
+echo "Running MultiSampleCaller"
+echo "CONFIG is ${CONFIG}"
+export MCR_CACHE_ROOT=$TMPDIR
+export TMP=$TMPDIR
+echo "Cache going to $TMPDIR"
+
+date
+IFS='. ' read -a NAMES <<< $CONFIG
+./lumosVarMain ${CONFIG} >${NAMES[0]}_LumosVarOut.txt
+date
+
+rm -r $TMPDIR
