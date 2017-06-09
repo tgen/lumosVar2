@@ -18,7 +18,7 @@ minBQ: 10                                                                       
 maxBQ: 40                                                                                       ####bases with BQ greater than max are set to maxBQ
 minMQ: 10                                                                                       ####minimum mapping quality to count read
 defaultBQ: 30                                                                                   ####BQ used for indels
-#defaultMQ: 40                   
+defaultMQ: 40                   
 BQoffset: 33                                                                                    ####used for tranlation ascii to scores
 MQoffset: 33                                                                                    ####used for tranlation ascii to score
 priorMapError: 0.03                                                                             ####pripr probabiliiyt genotype cannot be determined at postion
