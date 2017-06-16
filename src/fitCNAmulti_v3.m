@@ -63,11 +63,16 @@ j=inputParam.numClones;
 %while max(chi2p)<0.05
 [param{j}, nll(j)]=fmincon(@(param)nllCNAmulti_v4(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,param,filtPer),[100.*cInit(:); wInit(:); 100*fInit(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fInit(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fInit(:)));],[],opts2);
 bestMin=nll(j)+j*length(tIdx)./inputParam.addCloneWeight;
+prevMin=bestMin;
 foundMin=1;
 CNAscale=param{j}(1:length(Tcell))./100
 Wcurr=param{j}(length(Tcell)+1:2*length(Tcell))
 fOld=reshape(param{j}(2*length(Tcell)+1:end),[],inputParam.numClones)
-while foundMin
+cBest=CNAscale;
+wBest=Wcurr;
+fBest=fOld;
+iterStuck=0;
+while iterStuck<inputParam.iterNoImp
     foundMin=0;
     removeClone=1;
     while removeClone && j>2
@@ -88,6 +93,15 @@ while foundMin
             foundMin=1;
             removeClone=1;
             bestMin=currMin
+            CNAscale=paramRemove(1:length(Tcell))./100
+            Wcurr=paramRemove(length(Tcell)+1:2*length(Tcell))
+            fOld=reshape(paramRemove(2*length(Tcell)+1:end),[],inputParam.numClones)
+            cBest=CNAscale;
+            wBest=Wcurr;
+            fBest=fOld;
+        elseif currMin<prevMin
+            removeClone=1;
+            prevMin=currMin
             CNAscale=paramRemove(1:length(Tcell))./100
             Wcurr=paramRemove(length(Tcell)+1:2*length(Tcell))
             fOld=reshape(paramRemove(2*length(Tcell)+1:end),[],inputParam.numClones)
@@ -125,19 +139,30 @@ while foundMin
             CNAscale=param{j}(1:length(Tcell))./100
             Wcurr=param{j}(length(Tcell)+1:2*length(Tcell))
             fOld=reshape(param{j}(2*length(Tcell)+1:end),[],inputParam.numClones)
+            cBest=CNAscale;
+            wBest=Wcurr;
+            fBest=fOld;
         else
-            message=['not adding at ' num2str(j)]
+            message=['stop adding at ' num2str(j)]
             addClone=0;
+            CNAscale=param{j}(1:length(Tcell))./100
+            Wcurr=param{j}(length(Tcell)+1:2*length(Tcell))
+            fOld=reshape(param{j}(2*length(Tcell)+1:end),[],inputParam.numClones)
+            prevMin=currMin
         end
     end 
+    if foundMin==0
+        iterStuck=iterStuck+1
+    end
 end
 
 %%%use optimized parameters to call copy number
 %cloneIdx=find(chi2p<0.05,1,'last');
 %cloneIdx=j-1;
 
-W=Wcurr
-f=fOld./100
+W=wBest
+f=fBest./100
+CNAscale=cBest
 paramOpt=[CNAscale(:); W(:); f(:)];
 inputParam.numClones=size(f,2);
 [N, M, Ftable, log2FC, cnaIdx]=callCNAmulti_v2(hetPos,Tcell,exonRD,segsMerged,inputParam,paramOpt,filtPer);
