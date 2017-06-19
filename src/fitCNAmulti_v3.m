@@ -75,7 +75,7 @@ iterStuck=0;
 while iterStuck<inputParam.iterNoImp
     foundMin=0;
     removeClone=1;
-    while removeClone && j>2
+    while removeClone && j>=2
         j=size(fOld,2);
         inputParam.numClones=j-1;
         nllRemove=nan(j,1);
