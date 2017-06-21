@@ -155,7 +155,10 @@ if(~exist([outfile '_' chrList{chrIdx} '.txt.gz'],'file'))
     end
     fclose(fout);
     %%% bgzip and tabix index output file
-    system(['sh indexControlMetrics.sh ' outfile '_' chrList{chrIdx} '.txt ' inputParam.tabixPath]);
+    [status,cmdout]=system(['sh indexControlMetrics.sh ' outfile '_' chrList{chrIdx} '.txt ' inputParam.tabixPath],'-echo');
+    fprintf(ferror,'%s\n',cmdout);
+else
+    status=0;
 end
 
-exit(0);
+exit(status);
