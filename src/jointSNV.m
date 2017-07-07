@@ -180,7 +180,7 @@ cnCorr=max(cnCorr,10.^(inputParam.defaultBQ./-10));
 
 for i=1:size(Amat,2)
     pos=find(RDmat(:,i)==0);
-    idx=getPosInRegions(posList(pos,:),exonRD{i}(:,1:3));
+    idx=getPosInRegions(posList(pos,:),[exonRD{i}(:,1:2) exonRD{i}(:,3)+1]);
     RDmat(pos(~isnan(idx)),i)=exonRD{i}(idx(~isnan(idx)),4);
 end
 
