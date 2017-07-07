@@ -169,7 +169,7 @@ message='finished processing chromosomes'
 
 for i=1:length(chrList)
     outPosFile=[inputParam.outName '_' chrList{i} '_pos.txt'];
-    if(system(['[ -s ' outposFile ' ]'])==0)    
+    if(system(['[ -s ' outPosFile ' ]'])==0)    
         AllData{i}=dlmread(outPosFile);
     end
     outExonFile=[inputParam.outName '_' chrList{i} '_exon.txt'];
