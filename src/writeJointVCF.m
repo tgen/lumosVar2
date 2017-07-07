@@ -116,6 +116,7 @@ fprintf(fout,['##FORMAT=<ID=CNF,Number=1,Type=Float,Description="Fraction contai
 T=Tcell{1};
 RefNT=int2ntIndels(T.RefComb);
 RefNT(strcmp(RefNT,'<LongIndel>'),:)={'N'};
+AltNT=repmat({'.'},height(T),1);
 AltNT(T.RefComb~=T.Acomb & T.RefComb~=T.Bcomb,:)=cellstr(strcat(int2ntIndels(T.Acomb(T.RefComb~=T.Acomb & T.RefComb~=T.Bcomb)),',', int2ntIndels(T.Bcomb(T.RefComb~=T.Acomb & T.RefComb~=T.Bcomb))));
 AltNT(T.RefComb==T.Acomb & P.Hom(:,1)<=0.5,:)=cellstr(int2ntIndels(T.Bcomb(T.RefComb==T.Acomb & P.Hom(:,1)<=0.5)));
 AltNT(T.RefComb==T.Bcomb,:)=cellstr(int2ntIndels(T.Acomb(T.RefComb==T.Bcomb)));
