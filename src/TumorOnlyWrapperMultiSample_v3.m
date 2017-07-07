@@ -346,9 +346,14 @@ save([inputParam.outMat],'-v7.3');
 [Filter,somaticDetected]=callVariants(Tcell,P,inputParam)
 save([inputParam.outMat],'-v7.3');
 writeJointVCF(Tcell,P,fSort,cloneIdSort,Filter,somaticDetected,inputParam);
-writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputParam)
+writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputParam);
 writeCloneSummary(segsTable,exonRD,Tcell,fSort,cloneIdSort,inputParam,Filter,somaticDetected);
-plotTumorOnly(exonRD,segsTable,CNAscale,fSort,Tcell,somPos,hetPos,cloneIdSort,inputParam)
+plotTumorOnly(exonRD,segsTable,CNAscale,fSort,Tcell,somPos,hetPos,cloneIdSort,inputParam);
+
+for i=1:length(F)
+    writetable([Tcell{i}(:,1:2) F{i}],[inputParam.outName '_' sampleNames{i} 'qualMetrics.txt'],'Delimiter','\t','FileType','text','WriteVariableNames',1);
+end
+
 
 %for i=1:length(Tcell)
 %writeVCF(Tcell{i},P,fAll(i,:),cloneId{i},F{i},inputParam,i);
