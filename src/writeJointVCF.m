@@ -165,7 +165,7 @@ AltNT(strncmp('SomaticPair',Filter,10) & T.RefComb~=T.Acomb,:)=int2ntIndels(T.Ac
 %Info=cellstr(strcat('DP=',num2str(T.ReadDepth,'%-.0f'),';DPQC=',num2str(T.ReadDepthPass,'%-.0f')));
 %Info(T.RefComb==T.Acomb,:)=strcat(Info(T.RefComb==T.Acomb,:),';AF=',num2str(T.BcountsComb(T.RefComb==T.Acomb,:)./T.ReadDepthPass(T.RefComb==T.Acomb,:),'%-.3f'));
 %Info(T.RefComb==T.Bcomb,:)=strcat(Info(T.RefComb==T.Bcomb,:),';AF=',num2str(T.AcountsComb(T.RefComb==T.Bcomb,:)./T.ReadDepthPass(T.RefComb==T.Bcomb,:),'%-.3f'));
-Info=cellstr(strcat('JPT=',num2str(-10*log10(1-mean(P.trust,2)),'%-.1f'),';JPA=',num2str(-10*log10(1-mean(P.artifact,2)),'%-.1f'),';JPS=',num2str(P.Somatic(:,1),'%-.5f'),';JPGAB=',num2str(P.Het(:,1),'%-.5f'),';JPGAA=',num2str(P.Hom(:,1),'%-.5f'),';JPND=',num2str(P.NonDip(:,1),'%-.5f')));
+Info=cellstr(strcat('JPT=',num2str(real(-10*log10(1-mean(P.trust,2))),'%-.1f'),';JPA=',num2str(real(-10*log10(1-mean(P.artifact,2))),'%-.1f'),';JPS=',num2str(P.Somatic(:,1),'%-.5f'),';JPGAB=',num2str(P.Het(:,1),'%-.5f'),';JPGAA=',num2str(P.Hom(:,1),'%-.5f'),';JPND=',num2str(P.NonDip(:,1),'%-.5f')));
 %Info=strcat(Info,';LS=',num2str(P.DataSomatic(:,n),'%-.5f'),';LGAB=',num2str(P.DataHet(:,n),'%-.5f'),';LGAA=',num2str(P.DataHom(:,n),'%-.5f'),';LND=',num2str(P.DataNonDip(:,n),'%-.5f'));
 Info=strcat(Info,';A=',int2ntIndels(T.Acomb),';B=',int2ntIndels(T.Bcomb));
 %Info=strcat(Info,';ACountF=',num2str(T.ACountF,'%-.0f'),';ACountR=',num2str(T.ACountR,'%-.0f'),';BCountF=',num2str(T.BCountF,'%-.0f'),';BCountR=',num2str(T.BCountR,'%-.0f'));
