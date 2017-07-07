@@ -278,7 +278,7 @@ chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
 
 %%% print output
 outData=[chrList(T.Chr) num2cell(T.Pos) cellstr(char(ones(size(T.Pos))*46)) cellstr(RefNT) squeeze(AltNT) num2cell(Qual) Filter Info formatFields formatStr];
-headers={'#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILT', 'INFO', 'FORMAT'};
+headers={'#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT'};
 if inputParam.NormalSample<1
     headers=[headers 'InferredGermline' regexp(inputParam.sampleNames,',','split')];
 else
