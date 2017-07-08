@@ -117,8 +117,8 @@ for i=1:numChr
         idx1=size(segsMerged,1);
         idx2=idx1;
     end
-    segsMerged(idx1,2)=min([Tcell{1}.Pos(Tcell{1}.Chr==i); exonRD{1}(exonRD{1}(:,1)==i,2)]);
-    segsMerged(idx2,3)=max([Tcell{1}.Pos(Tcell{1}.Chr==i); exonRD{1}(exonRD{1}(:,1)==i,3)]);
+    segsMerged(idx1,2)=min([Tcell{1}.Pos(Tcell{1}.Chr==i); Ecell{1}{Ecell{1}{:,1}==i,2}]);
+    segsMerged(idx2,3)=max([Tcell{1}.Pos(Tcell{1}.Chr==i); Ecell{1}{Ecell{1}{:,1}==i,3}]);
 end
 message=['segmented data at: ' char(datetime('now'))]
 
