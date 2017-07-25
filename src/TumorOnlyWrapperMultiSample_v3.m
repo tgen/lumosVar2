@@ -50,9 +50,14 @@ if(exist([inputParam.outMat],'file'))
     load([inputParam.outMat],'-mat',vars{:});
     NormalSample=inputParam.NormalSample;
     priorF=inputParam.priorF;
+    if exist('sampleNames')==0
+        sampleNames=strsplit(inputParam.sampleNames,',');
+    end
     inputParam=readInputs(paramFile);
     inputParam.NormalSample=NormalSample;
-    inputParam.priorF=priorF;
+    if length(priorF)==length(Tcell)
+        inputParam.priorF=priorF;
+    end
 else
     [T, E]=preprocessTumorOnly_v2(inputParam,paramFile);   
     fid=fopen(inputParam.bamList);
@@ -73,6 +78,9 @@ if isempty(Tcell)
 end
 if isempty(Ecell)
     Ecell=E;
+end
+if exist('bamList')==0
+    bamList{1}={'NA','NA'};
 end
 
 inputParam.sampleNames=strjoin(sampleNames,',');

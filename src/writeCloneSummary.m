@@ -46,7 +46,7 @@ else
 end
 
 sampleNames=char(regexp(inputParam.sampleNames,',','split')');
-sampleNamesShort=cellstr(sampleNames(:,1:namelengthmax-2));
+sampleNamesShort=cellstr(sampleNames(:,1:min(namelengthmax-2,size(sampleNames,2))));
 cloneTable=array2table([f'; NaN(1,size(f,1))],'VariableNames',strcat('S_',regexprep(cellstr(sampleNamesShort),'-','_')));
 
 T=Tcell{1};
