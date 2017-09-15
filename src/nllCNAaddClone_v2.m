@@ -1,4 +1,4 @@
-function nll = nllCNAaddClone_v2(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,CNAscale,W,fOld,fNew,filtPer)
+function nll = nllCNAaddClone_v2(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,CNAscale,W,fOld,fNew,filtPer)
 %nllCNA - computes negative loglikliehood of copy number parameters
 %
 % Syntax: nll = nllCNA(dataHet,dataSom,exonRD,segs,inputParam,param)
@@ -71,6 +71,20 @@ for j=1:length(Tsom)
     somIdx(:,j)=clones(locb);
 end
 
+
+for j=1:length(Tcell)
+    T=Tcell{j}(dbPos,:);
+    idx=getPosInRegionSplit([T.Chr T.Pos],segsTable{:,1:3},inputParam.blockSize);
+    T.NumCopies=segsTable.N(idx);
+    T.MinAlCopies=segsTable.M(idx);
+    T.cnaF=segsTable.F(idx,j);
+    Tdb{j}=T;
+end
+postComb=jointSNV_v2(Tdb, f, W, inputParam);
+somDBpos=postComb.Somatic>inputParam.pSomaticThresh;
+totalPosCount=sum(exonRD{1}(:,3)-exonRD{1}(:,2));
+[~,p]=fishertest([sum(somDBpos) inputParam.dbSNPposCount-sum(somDBpos); sum(somPos) totalPosCount-sum(somPos)],'tail','right');
+
 tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
 priorF=ones(sum(somPos),1);
 %%% find likelihood of somatic variant
@@ -94,6 +108,6 @@ end
 %nll=sum((-sum(log(somLik))-sum(log(hetlikMax))-sum(log(depthlikMax))-sum(log(priorCNAMax))-sum(log(priorMinAlleleMax))-sum(log(priorF))-nansum(log(priorCNAf)))./(length(somLik)+length(hetlikMax)+length(depthlikMax)+length(priorCNAMax)+length(priorMinAlleleMax)+length(priorF)+sum(~isnan(priorCNAf))));
 %nll=sum((-sum(log(somLik))-sum(log(hetlikMax))-sum(log(depthlikMax))))./(length(somLik)+length(hetlikMax)+length(depthlikMax));
 
-nll=-sum((log(priorF)+sum(log(somLik),2))./(inputParam.priorSomaticSNV*sum(E.EndPos-E.StartPos)))+nllCNA;
+nll=-sum((log(priorF)+sum(log(somLik),2))./(inputParam.priorSomaticSNV*sum(E.EndPos-E.StartPos)))+nllCNA-log(p+realmin)./((sum(somPos)./totalPosCount)*inputParam.dbSNPposCount);
 
 return;

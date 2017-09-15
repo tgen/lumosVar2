@@ -31,7 +31,7 @@ function output=TumorOnlyWrapperMultiSample_v3(paramFile,varargin)
 
 inputParam=readInputs(paramFile);
 cd(inputParam.workingDirectory);
-addpath(genpath(inputParam.workingDirectory));
+%addpath(genpath(inputParam.workingDirectory));
 
 %%% start parallel pool
 %delete(gcp('nocreate'));
@@ -72,6 +72,16 @@ else
     end
     save([inputParam.outMat],'-v7.3');
 end
+
+sexChr=regexp(inputParam.sexChr,',','split');
+chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
+dbSNPposCount=0;
+for i=1:length(chrList)
+    cmd=strcat({'bcftools view -q '},num2str(inputParam.maxSomPopFreq),{' -R '},inputParam.regionsFile,{' '},inputParam.snpVCFpath,chrList(i),inputParam.snpVCFname,' | wc -l')
+    [~,output]=system(cmd{1})
+    dbSNPposCount=dbSNPposCount+str2double(output);
+end
+inputParam.dbSNPposCount=dbSNPposCount;
 
 if isempty(Tcell)
     Tcell=T;
@@ -298,7 +308,7 @@ while(true)
         P.artifact(:,j)=postArtifact(:,1);
         clear T E;
     end
-    Filter=callVariants(Tcell,P,inputParam);
+    [Filter,filtPos]=callVariants(Tcell,P,inputParam);
     hetPos=strcmp(Filter,'GermlineHetPASS');
     somPos=strcmp(Filter,'SomaticPASS') | strcmp(Filter,'SomaticPairPASS');
     message=['called variants iteration: ' num2str(i) ' at ' char(datetime('now'))]
@@ -317,7 +327,7 @@ while(true)
     if sum(abs(somPos-somPosOld))/sum(somPos)<=0.05 || i>=inputParam.maxIter
         break;
     end
-    [segsTable, W, f, CNAscale, nll, t{i}]=fitCNAmulti_v3(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,filtPer,f,CNAscale,W)
+    [segsTable, W, f, CNAscale, nll, t{i}]=fitCNAmulti_v3(hetPos,somPos,filtPos & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)>inputParam.maxSomPopFreq,Tcell,exonRD,segsMerged,inputParam,filtPer,f,CNAscale,W)
     %['clonal fractions: ' num2str(f)]
     for j=1:length(Tcell)
         T=Tcell{j};
@@ -351,7 +361,7 @@ ord=[ord size(f,2)+1];
 [~,segsTable.cnaIdx]=ismember(segsTable.cnaIdx,ord);
 
 save([inputParam.outMat],'-v7.3');
-[Filter,somaticDetected]=callVariants(Tcell,P,inputParam)
+[Filter,~,somaticDetected]=callVariants(Tcell,P,inputParam)
 save([inputParam.outMat],'-v7.3');
 writeJointVCF(Tcell,P,fSort,cloneIdSort,Filter,somaticDetected,inputParam);
 writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputParam);

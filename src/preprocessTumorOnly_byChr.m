@@ -31,7 +31,7 @@ function preprocessTumorOnly_byChr(paramFile,step)
 
 inputParam=readInputs(paramFile);
 cd(inputParam.workingDirectory);
-addpath(genpath(inputParam.workingDirectory));
+%addpath(genpath(inputParam.workingDirectory));
 chrIdx=str2num(step);
 step 
 chrIdx

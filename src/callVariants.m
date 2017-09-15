@@ -1,4 +1,4 @@
-function [Filter,somaticDetected]=callVariants(Tcell,P,inputParam)
+function [Filter,passPos,somaticDetected]=callVariants(Tcell,P,inputParam)
 
 somaticDetected=zeros(size(Tcell{1},1),length(Tcell));
 for i=1:length(Tcell)

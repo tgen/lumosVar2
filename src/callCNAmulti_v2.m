@@ -198,8 +198,10 @@ for i=1:size(f,2)
             end
             corrSeg(corrSeg(:,i,j,k)<0,i,j,k)=0;
             corrSeg(corrSeg(:,i,j,k)>1,i,j,k)=1;
-            hetlik(:,i,j,k)=bbinopdf_ln(D.MinorReadCount(:,j),D.TotalReadCount(:,j),W(j)*corr(:,i,j,k),W(j)*(1-corr(:,i,j,k)))+bbinopdf_ln(D.MinorReadCount(:,j),D.TotalReadCount(:,j),W(j)*(1-corr(:,i,j,k)),W(j)*corr(:,i,j,k))+inputParam.minLik;
+            hetlik(:,i,j,k)=bbinopdf_ln(D.MinorReadCount(:,j),D.TotalReadCount(:,j),W(j)*corr(:,i,j,k),W(j)*(1-corr(:,i,j,k)))+(corr(:,i,j,k)./0.5).*bbinopdf_ln(D.MinorReadCount(:,j),D.TotalReadCount(:,j),W(j)*(1-corr(:,i,j,k)),W(j)*corr(:,i,j,k))+inputParam.minLik;
+            %hetlik(:,i,j,k)=bbinopdf_ln(D.MinorReadCount(:,j),D.TotalReadCount(:,j),W(j)*corr(:,i,j,k),W(j)*(1-corr(:,i,j,k)))+inputParam.minLik;
             hetlik(corr(:,i,j,k)==0,i,j,k)=inputParam.minLik;
+            %hetlik(corr(:,i,j,k)==0.5,i,j,k)=bbinopdf_ln(D.MinorReadCount(corr(:,i,j,k)==0.5,j),D.TotalReadCount(corr(:,i,j,k)==0.5,j),W(j)*0.5,W(j)*0.5)+bbinopdf_ln(D.TotalReadCount(corr(:,i,j,k)==0.5,j)-D.MinorReadCount(corr(:,i,j,k)==0.5,j),D.TotalReadCount(corr(:,i,j,k)==0.5,j),W(j)*0.5,W(j)*0.5)+inputParam.minLik;
             expReadCount(:,i,j,k)=f(j,i)*E.NormalRD(:,j).*NmatExon(:,i,k)./CNAscale(j)+(1-f(j,i))*E.NormalRD(:,j)*2./CNAscale(j);
             depthlik(:,i,j,k)=poisspdf(round(E.TumorRD(:,j)),round(expReadCount(:,i,j,k)))+inputParam.minLik;
             %depthlik(:,i,j)=normpdf(log(E.TumorRD(:,j)+1),log(expReadCount(:,i,j)+1),0.6);

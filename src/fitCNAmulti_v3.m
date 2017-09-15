@@ -1,4 +1,4 @@
-function [segsTable, W, f, CNAscale, nll, t]=fitCNAmulti_v3(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,filtPer,fInit,cInit,wInit)
+function [segsTable, W, f, CNAscale, nll, t]=fitCNAmulti_v3(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,filtPer,fInit,cInit,wInit)
 %fitCNA - uses EM to fit copy number parameters and estimate copy number
 %
 % Syntax: [segsTable, W, f, c, nll, pCNA]=fitCNA(dataHet,dataSom,exonRD,segs,inputParam)
@@ -61,7 +61,7 @@ opts=optimoptions('fmincon','TolX',1e-1,'TolFun',1e-1,'Display','none');
 opts2=optimoptions('fmincon','Display','iter','UseParallel',true,'TolX',1e-2,'TolFun',1e-2);
 j=inputParam.numClones;
 %while max(chi2p)<0.05
-[param{j}, nll(j)]=fmincon(@(param)nllCNAmulti_v4(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,param,filtPer),[100.*cInit(:); wInit(:); 100*fInit(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fInit(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fInit(:)));],[],opts2);
+[param{j}, nll(j)]=fmincon(@(param)nllCNAmulti_v4(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,param,filtPer),[100.*cInit(:); wInit(:); 100*fInit(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fInit(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fInit(:)));],[],opts2);
 bestMin=nll(j)+j*length(tIdx)./inputParam.addCloneWeight;
 prevMin=bestMin;
 foundMin=1;
@@ -83,11 +83,11 @@ while iterStuck<inputParam.iterNoImp
             idx=setdiff(1:j,i);
             fRemove{i}=fOld(:,idx);
             %[paramRemove{i}, nllRemove(i)]=fmincon(@(param)nllCNAmulti_v4(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,param,filtPer),[100.*CNAscale(:); Wcurr(:); fRemove(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fRemove(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fRemove(:)));],[],opts2);
-            nllRemove(i)=nllCNAmulti_v4(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,[100.*CNAscale(:); Wcurr(:); fRemove{i}(:)],filtPer);
+            nllRemove(i)=nllCNAmulti_v4(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,[100.*CNAscale(:); Wcurr(:); fRemove{i}(:)],filtPer);
         end
         [~,removeIdx]=min(nllRemove)
         j=j-1;
-        [paramRemove, nll(j)]=fmincon(@(param)nllCNAmulti_v4(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,param,filtPer),[100.*CNAscale(:); Wcurr(:); fRemove{removeIdx}(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fRemove{removeIdx}(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fRemove{removeIdx}(:)));],[],opts2);
+        [paramRemove, nll(j)]=fmincon(@(param)nllCNAmulti_v4(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,param,filtPer),[100.*CNAscale(:); Wcurr(:); fRemove{removeIdx}(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fRemove{removeIdx}(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fRemove{removeIdx}(:)));],[],opts2);
         currMin=nll(j)+j*length(tIdx)./inputParam.addCloneWeight;
         if currMin<bestMin
             foundMin=1;
@@ -117,8 +117,8 @@ while iterStuck<inputParam.iterNoImp
         pts=makeFstart(fOld,tIdx,inputParam);
         tic
         parfor i=1:size(pts,2)
-            if isfinite(nllCNAaddClone_v2(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,CNAscale,Wcurr,fOld,pts(:,i),filtPer))
-                [paramPTS{i}, nllPTS(i)]=fmincon(@(fNew)nllCNAaddClone_v2(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,CNAscale,Wcurr,fOld,fNew,filtPer),pts(:,i),[],[],[],[],zeros(size(pts(:,i))),100*ones(size(pts(:,i))),[],opts);
+            if isfinite(nllCNAaddClone_v2(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,CNAscale,Wcurr,fOld,pts(:,i),filtPer))
+                [paramPTS{i}, nllPTS(i)]=fmincon(@(fNew)nllCNAaddClone_v2(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,CNAscale,Wcurr,fOld,fNew,filtPer),pts(:,i),[],[],[],[],zeros(size(pts(:,i))),100*ones(size(pts(:,i))),[],opts);
             else
                 message=['not defined at ' num2str(i)]
                 pts
@@ -129,7 +129,7 @@ while iterStuck<inputParam.iterNoImp
         t(j,1)=toc
         fAdd=[fOld paramPTS{idx}]
         tic
-        [param{j}, nll(j)]=fmincon(@(param)nllCNAmulti_v4(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,param,filtPer),[100.*CNAscale(:); Wcurr(:); fAdd(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fAdd(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fAdd(:)));],[],opts2);
+        [param{j}, nll(j)]=fmincon(@(param)nllCNAmulti_v4(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,param,filtPer),[100.*CNAscale(:); Wcurr(:); fAdd(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fAdd(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fAdd(:)));],[],opts2);
         currMin=nll(j)+j*length(tIdx)./inputParam.addCloneWeight;
         t(j,2)=toc;
         if currMin<bestMin
