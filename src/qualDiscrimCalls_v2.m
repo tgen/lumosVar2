@@ -1,4 +1,4 @@
-function [F,pTrust,pArtifact]=qualDiscrimCalls(T,E,homPos,inputParam)
+function [F,pTrust,pArtifact]=qualDiscrimCalls_v2(T,E,homPos,inputParam)
 %qualDiscrim - finds probability that positions are trusted or artifacts
 %using quadratic discriminant analysis on a number of quality metrics
 %

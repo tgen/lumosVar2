@@ -242,19 +242,19 @@ for i=1:length(Tcell)
     bIdx=T.RefComb==T.Bcomb;
     formatStr(bIdx,n)=strcat(formatStr(bIdx,n),':',num2str(T.BcountsComb(bIdx),'%-.0f'),',',num2str(T.AcountsComb(bIdx),'%-.0f'));
     formatStr(~aIdx & ~bIdx,n)=strcat(formatStr(~aIdx & ~bIdx,n),':NA,',num2str(T.AcountsComb(~aIdx & ~bIdx),'%-.0f'),',',num2str(T.BcountsComb(~aIdx & ~bIdx),'%-.0f'));
+    filtStr=repmat({'REJECT'},height(T),1);
     filtStr(P.trust(:,i)>=inputParam.pGoodThresh)={'PASS'};
     filtStr(P.trust(:,i)<inputParam.pGoodThresh & P.artifact(:,i)<inputParam.pGoodThresh)={'LowQC'};
-    filtStr(P.artifact(:,i)>=inputParam.pGoodThresh)={'REJECT'};
     if inputParam.NormalSample<1
         filtStr(somaticDetected(:,i)==1)=strcat(filtStr(somaticDetected(:,i)==1),';SomaticDetected');
         %somaticDetected(P.Somatic(:,i)>0.5 & P.DataSomatic(:,i)>P.DataHom(:,i) & (T.BcountsComb>0 | T.A~=T.RefComb),i)=1;
         filtStr(P.Somatic(:,i)>0.5 & ~somaticDetected(:,i))=strcat(filtStr(P.Somatic(:,i)>0.5 & ~somaticDetected(:,i)),';SomaticNotDetected');
-        formatStr(:,n)=strcat(formatStr(:,n),':',filtStr',':NA');
+        formatStr(:,n)=strcat(formatStr(:,n),':',filtStr,':NA');
     else
         %somaticDetected(P.SomaticPair(:,i)>0.5 | (P.Somatic(:,i)>0.5 & P.DataSomatic(:,i)>P.DataHom(:,i) & (T.BcountsComb>0 | T.A~=T.RefComb)),i)=1;
         filtStr(somaticDetected(:,i)==1)=strcat(filtStr(somaticDetected(:,i)==1),';SomaticDetected');
         filtStr(P.Somatic(:,i)>0.5 & ~somaticDetected(:,i))=strcat(filtStr(P.Somatic(:,i)>0.5 & ~somaticDetected(:,i)),';SomaticNotDetected');
-        formatStr(:,n)=strcat(formatStr(:,n),':',filtStr',':',num2str(P.SomaticPair(:,i),'%-.3f'));
+        formatStr(:,n)=strcat(formatStr(:,n),':',filtStr,':',num2str(P.SomaticPair(:,i),'%-.3f'));
     end
     formatStr(:,n)=strcat(formatStr(:,n),':',num2str(-10*log10(1-P.trust(:,i)),'%-.0f'),':',num2str(-10*log10(1-P.artifact(:,i)),'%-.0f'),':',num2str(P.DataSomatic(:,i),'%-.0f'));
     formatStr(aIdx,n)=strcat(formatStr(aIdx,n),':',num2str(-10*log10(P.DataHom(aIdx,i)),'%-.0f'),',',num2str(-10*log10(P.DataHet(aIdx,i)),'%-.0f'),',NA');
