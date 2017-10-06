@@ -1,12 +1,12 @@
 #### Input Files
 bamList: BAMLIST
 regionsFile: BED
-snpVCFpath:  /scratch/skulkarni/reference/ExAC.r1.sites.vep.chr
+snpVCFpath: /home/rhalperin/reference/VCF/ExAC.r1.sites.vep.chr
 snpVCFname: .vcf.gz
 #snpVCFpath: /home/rhalperin/reference/ALL.chr
 #snpVCFname: .phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz
 NormalBase: NORMAL
-cosmicVCF: /home/rhalperin/reference/CosmicCodingMuts.vcf.gz
+cosmicVCF: /home/rhalperin/reference/VCF/CosmicCodingMuts_plusTERT.sorted.vcf.gz
 refGenome: /home/tgenref/pecan/refgenome/hs37d5/hs37d5_plusRibo_plusOncoViruses_plusERCC.fa
 autosomes: 1:22
 sexChr: X,Y
@@ -20,7 +20,7 @@ outMat: OUTMAT
 #### Dependency Paths
 samPath: /home/rhalperin/bin/samtools-1.2/
 tabixPath: /home/rhalperin/bin/htslib-1.2.1/
-workingDirectory: /home/rhalperin/scripts/multiSampleCaller
+workingDirectory: /home/rhalperin/multiSampleCaller/work
 
 #### Model Parameters
 NormalSample: 0                           ### position in bamList of normal sample, 0 indicates tumor only
