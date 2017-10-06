@@ -76,7 +76,7 @@ end
 sexChr=regexp(inputParam.sexChr,',','split');
 chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
 dbSNPposCount=0;
-for i=1:length(chrList)
+parfor i=1:length(chrList)
     cmd=strcat({'bcftools view -q '},num2str(inputParam.maxSomPopFreq),{' -R '},inputParam.regionsFile,{' '},inputParam.snpVCFpath,chrList(i),inputParam.snpVCFname,' | wc -l')
     [~,output]=system(cmd{1})
     dbSNPposCount=dbSNPposCount+str2double(output);

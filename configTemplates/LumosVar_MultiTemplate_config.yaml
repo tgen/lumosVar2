@@ -1,9 +1,10 @@
 #### Input Files
 bamList: BAMLIST
-sampleNames: SAMPLENAMES
 regionsFile: BED
-snpVCFpath: /home/rhalperin/reference/ALL.chr
-snpVCFname: .phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz
+snpVCFpath:  /scratch/skulkarni/reference/ExAC.r1.sites.vep.chr
+snpVCFname: .vcf.gz
+#snpVCFpath: /home/rhalperin/reference/ALL.chr
+#snpVCFname: .phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz
 NormalBase: NORMAL
 cosmicVCF: /home/rhalperin/reference/CosmicCodingMuts.vcf.gz
 refGenome: /home/tgenref/pecan/refgenome/hs37d5/hs37d5_plusRibo_plusOncoViruses_plusERCC.fa
@@ -22,9 +23,10 @@ tabixPath: /home/rhalperin/bin/htslib-1.2.1/
 workingDirectory: /home/rhalperin/scripts/multiSampleCaller
 
 #### Model Parameters
-NormalSample: 2                           ### position in bamList of normal sample, 0 indicates tumor only
+NormalSample: 0                           ### position in bamList of normal sample, 0 indicates tumor only
 minStartDiff: 0.1                         ### determines number of clonal fraction starting points tested, lower favors more starting points
 addCloneWeight: 5                         ### determines size of change in nll to add a clone, higher favors more clones
+iterNoImp: 3
 priorF: PRIORF                            ### expected clonal fraction
 alphaF: 1.5                               ### effects shape of prior distribution of clonal fraction
 minBCount: 5                              ### minimum bases supporting alternate allele to examine position
@@ -36,8 +38,8 @@ cnaPrior: [0.1;0.15;0.5;0.15;0.1]         ### copy number priors for [0;1;...;>=
 minAllelePrior: [0.25;0.5;0.25]           ### minor allele priors for [0;1;...;>=N] copies
 priorSomaticSNV: 1E-5                     ### somatic SNV prior
 priorSomaticIndel: 1E-6                   ### somatic indel prior
-pvFreq: 7.14E-5                           ### frequency of private SNVs
-pvFreqIndel: 1.43E-5                      ### frequency of private indels
+pvFreq: 1E-5                              ### frequency of private SNVs
+pvFreqIndel: 1E-6                         ### frequency of private indels
 priorGermCNV: 0.0030                      ### prior probability of germline CNV
 pSomaticThresh: 0.8                       ### minimum probability variant is somatic to call SomaticPASS
 pGermlineThresh: 0.8                      ### minimum probability variant is somatic to call GermlineHetPASS
@@ -47,7 +49,7 @@ defaultBQ: 30                             ### base quality for indels
 defaultMQ: 40                             ### mapping quality for indels
 mpileupC: 50                              ### C parameter for mpileup
 minHetPopFreq: 0.05                       ### minimum population frequency for heterozygous for initial iteration
-maxSomPopFreq: 0.0001                     ### maximum population frequency for somatic for initial iteration
+maxSomPopFreq: 2E-5                     ### maximum population frequency for somatic for initial iteration
 minHetAF: 0.45                            ### minimum AF to select hets for centering
 maxW: 500 
 minW: 50                                  ### mimimum value of W parameter (effects sharpness of allele frequency distribution)
