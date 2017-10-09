@@ -129,7 +129,7 @@ parfor chrIdx=1:length(chrList)
         readDepth=str2num(temp(:,2:end));
         fprintf(fout,'\n%s',['readDepth has length:' num2str(size(readDepth,1))]);
         %%% get normal data
-        cd(inputParam.tabixPath);
+        %cd(inputParam.tabixPath);
         [status,output]=system(['./tabix ' NormalPath ' ' block]);
         NormalData=str2num(char(output));
         fprintf(fout,'\n%s',['NormalData has length:' num2str(size(NormalData,1))]);
