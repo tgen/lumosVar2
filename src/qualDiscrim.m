@@ -68,9 +68,10 @@ F.posMapQC=-10*log10(T.PosMapQC+1E-6);
 F.posMapQC(T.PosMapQC<0)=60;
 F.posMapQC(isnan(T.PosMapQC))=0;
 idx=getPosInRegionSplit([T.Chr T.Pos],[E.Chr E.StartPos E.EndPos+1],inputParam.blockSize);
-F.exonMapQC=-10*log10(E.MapQC(idx)+1E-6);
-F.exonMapQC(E.MapQC(idx)<0)=60;
-F.exonMapQC(isnan(E.MapQC(idx)))=0;
+F.exonMapQC=zeros(height(F),1);
+F.exonMapQC(~isnan(idx))=-10*log10(E.MapQC(idx(~isnan(idx)))+1E-6);
+F.exonMapQC(E.MapQC(idx(~isnan(idx)))<0)=60;
+F.exonMapQC(isnan(E.MapQC(idx(~isnan(idx)))))=0;
 F.Properties.VariableDescriptions={'Percent of Reads in Tumor Passing Quality Thresh', ...
     'Percent of Reads in Normals Passing Quality Thresh', ...
     'Fraction of QC Reads in Tumor Supporting A or B Allele', ...
