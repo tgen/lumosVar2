@@ -129,6 +129,9 @@ badPos(:,14)=F.ReadPosDiff>inputParam.ReadPosDiffReject;
 badPos(:,15)=F.posMapQC<inputParam.posQualReject;
 badPos(:,16)=F.exonMapQC<inputParam.exonQualReject;
 
+pTrust=NaN(height(T),2);
+pArtifact=NaN(height(T),2);
+
 %%%classify SNVs as variants vs artifacts
 sampleSNV=F{~indelPos,:};
 trainingSNV=[F{sum(goodPos,2)>12 & sum(badPos,2)==0 & ~indelPos,:}; F{sum(badPos,2)>2 & ~indelPos,:}];

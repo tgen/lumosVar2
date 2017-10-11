@@ -145,6 +145,8 @@ message=['saved data at: ' char(datetime('now'))]
 
 %%%Quality Filtering
 P=table();
+P.trust=nan(height(Tcell{1}),length(Tcell));
+P.artifact=nan(height(Tcell{1}),length(Tcell));
 for i=1:size(Tcell,2)
     T=Tcell{i};
     E=Ecell{i};
