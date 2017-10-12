@@ -69,7 +69,7 @@ end
 [postComb, ~,pDataComb,clones,~]=jointSNV_v2(Tsom, f, W, inputParam);
 for j=1:length(Tsom)
     [lia,locb]=ismember([Tsom{j}.Chr Tsom{j}.Pos],[postComb.Chr postComb.Pos],'rows');
-    somLik(:,j)=pDataComb{j}.Somatic(locb);
+    somLik(:,j)=pDataComb{j}.Somatic(locb)+inputParam.minLik;
     somIdx(:,j)=clones(locb);
 end
 
