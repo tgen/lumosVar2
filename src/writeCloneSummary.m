@@ -151,11 +151,12 @@ xlabel('Copy Number State');
 ylabel('Number of Exons');
 
 subplot(2,2,4)
-b=bar(cloneTable.somaticDetected','stacked');
+b=bar([cloneTable.somaticDetected'; zeros(1,height(cloneTable))],'stacked');
 for i=1:size(CNcount,1);
     b(i).FaceColor=colors(i,:);
 end
 set(gca,'XTick',1:size(sampleNames,1),'XTickLabel',sampleNames,'FontSize',8,'TickLabelInterpreter','none','XTickLabelRotation',10);
+xlim([0.5 length(sampleNames)+0.5]);
 %legend(num2str([1:size(CNcount,1)]'));
 ylabel('Number of Somatic Variants Detected');
 
