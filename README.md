@@ -2,7 +2,7 @@
 Calls somatic SNVs, indels, and allelic copy number jointly across multiple samples from the same patient.  These can be standard tumor/normal pair, longitudinal samples, primary/met, etc.  Can also be used for tumor only calling, ideally with a high tumor content and a low tumor content sample.
 
 PREREQUISITES
-samtools and htslib (tested with 1.2)
+samtools and htslib (tested with 1.2, 1.3, and 1.4)
 http://www.htslib.org/download/
 Matlab Runtime (MCR 9.0)
 http://www.mathworks.com/products/compiler/mcr/
@@ -16,7 +16,7 @@ https://github.com/mozack/abra
 OVERVIEW
 Running lumosVar involves three main steps:
 1. lumosVarNormalMetrics: analyzes a set of unmatched controls to find average read depths and position quality metrics
-2. lumosVarPreproccess: reads data from bam files and creates table of read counts and metrics for each canidate variant position
+2. gvm: reads data from bam files and creates table of read counts and metrics for each canidate variant position
 3. lumosVarMain: call somatic, germline, and copy number variants
 
 USAGE 
@@ -32,13 +32,11 @@ This step is run seperately for each chromosome (See exampleScripts/runPrintNorm
 
 2. Preprocces bam files:
 
-./lumosVarPreproccess CONFIGNAME CHR
+Preprocessing is done by a seperate tool called gvm, which is available from:
 
-example 
-
-./lumosVarPreproccess tumorConfig.yaml 1
-
-This step is also run seperately for each chromosome (See exampleScripts/runLumosVar.sh for automating part 2 and 3).  When running, the files parsePileupData.packed.pl must be in the working directory specified in the config files. You specify the path to the bam, as well as the control metrics files, your samtools and htslib installations, your bed file, and your output path in the yaml config file. See configTemplates/tumorConfig.yaml. This step will produce a tab delimited text file for each chromosome that contains metrics on each canidate variant position.
+https://github.com/tgen/gvm
+ 
+Detailed instructions for running are provided in the gvm repository.  It takes the same config file as input as lumosVarMain.  It will produce two tab delimited text file for each chromosome, a "pos" file that contains metrics on each canidate variant position, and an "exon" file that contains metrics for each region in the BED file.
 
 3.  Main Caller
 
