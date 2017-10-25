@@ -136,4 +136,4 @@ exonsOut.N=segsTableCond.N(idx);
 exonsOut.M=segsTableCond.M(idx);
 exonsOut.cloneId=segsTableCond.cnaIdx(idx);
 
-writetable(exonsOut,[inputParam.outName '.exonData.tsv']);
+writetable(exonsOut,[inputParam.outName '.exonData.tsv'],'FileType','text');
