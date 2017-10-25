@@ -371,7 +371,7 @@ writeCloneSummary(segsTable,exonRD,Tcell,fSort,cloneIdSort,inputParam,Filter,som
 plotTumorOnly(exonRD,segsTable,CNAscale,fSort,Tcell,somPos,hetPos,cloneIdSort,inputParam);
 
 for i=1:length(F)
-    writetable([Tcell{i}(:,1:2) F{i}],[inputParam.outName '_' sampleNames{i} 'qualMetrics.txt'],'Delimiter','\t','FileType','text','WriteVariableNames',1);
+    writetable([Tcell{i}(:,1:2) F{i}],[inputParam.outName '_' sampleNames{i} '.qualMetrics.txt'],'Delimiter','\t','FileType','text','WriteVariableNames',1);
 end
 
 

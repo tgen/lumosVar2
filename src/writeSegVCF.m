@@ -117,5 +117,23 @@ end
 for i=1:size(outData,1)
     fprintf(fout,strcat('\n%s\t%d\t%d\t%s\t%s\t%f\t%s\t%s\t%s',repmat('\t%s',1,size(segsTableCond.F,2))),outData{i,:});
 end
-
 fclose(fout);
+
+
+sampleNames=char(regexp(inputParam.sampleNames,',','split')');
+sampleNamesShort=cellstr(sampleNames(:,1:min(namelengthmax-10,size(sampleNames,2))));
+exonsOut=table();
+exonsOut.Chr=exonRD{1}(:,1);
+exonsOut.StartPos=exonRD{1}(:,2);
+exonsOut.EndPos=exonRD{1}(:,3);
+for i=1:length(exonRD)
+    exonsOut.(strcat('meanDP_',sampleNamesShort{i}))=exonRD{i}(:,4);
+    exonsOut.(strcat('log2FC_',sampleNamesShort{i}))=log2(exonRD{i}(:,4)./exonRD{i}(:,5));
+end
+exonsOut.meanDP_controls=exonRD{1}(:,5);
+exonsOut.meanControlQC=-10*log10(exonRD{1}(:,6));
+exonsOut.N=segsTableCond.N(idx);
+exonsOut.M=segsTableCond.M(idx);
+exonsOut.cloneId=segsTableCond.cnaIdx(idx);
+
+writetable(exonsOut,[inputParam.outName '.exonData.tsv']);
