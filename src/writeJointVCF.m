@@ -115,16 +115,27 @@ fprintf(fout,['##FORMAT=<ID=CNF,Number=1,Type=Float,Description="Fraction contai
 %%% get reference and alternate bases
 T=Tcell{1};
 RefNT=int2ntIndels(T.RefComb);
-RefNT(strcmp(RefNT,'<LongIndel>'),:)={'N'};
+%RefNT(strcmp(RefNT,'<LongIndel>'),:)={'N'};
+delPos=cellfun('length',RefNT)>1;
+longDelPos=strncmp(RefNT,'LEN',3);
+svLen=zeros(height(T),1);
+svLen(delPos)=1-cellfun('length',RefNT(delPos));
+svLen(longDelPos)=-1*str2double(regexprep(RefNT(longDelPos),'LEN_',''));
+endPos=T.Pos-svLen;
+RefNT(longDelPos)={'N'};
 AltNT=repmat({'.'},height(T),1);
 AltNT(T.RefComb~=T.Acomb & T.RefComb~=T.Bcomb,:)=cellstr(strcat(int2ntIndels(T.Acomb(T.RefComb~=T.Acomb & T.RefComb~=T.Bcomb)),',', int2ntIndels(T.Bcomb(T.RefComb~=T.Acomb & T.RefComb~=T.Bcomb))));
 AltNT(T.RefComb==T.Acomb & P.Hom(:,1)<=0.5,:)=cellstr(int2ntIndels(T.Bcomb(T.RefComb==T.Acomb & P.Hom(:,1)<=0.5)));
 AltNT(T.RefComb==T.Bcomb,:)=cellstr(int2ntIndels(T.Acomb(T.RefComb==T.Bcomb)));
 AltNT(T.RefComb==T.Acomb & P.Hom(:,1)>0.5,:)={'.'};
-AltNT(strcmp(RefNT,'<LongIndel>'),:)={'<DEL>'};
-AltNT(strcmp(AltNT,'<LongIndel>'),:)={'<INS>'};
-RefNT(~cellfun('isempty',strfind(AltNT,'N')) & T.RefComb>4,:)={'N'};
-AltNT(~cellfun('isempty',strfind(AltNT,'N')) & T.RefComb>4,:)={'<DEL>'};
+insPos=cellfun('length',AltNT)>1;
+AltNT(longDelPos,:)={'<DEL>'};
+svLen(insPos)=cellfun(@(x) max(cellfun('length',strsplit(x,','))),AltNT(insPos))-1;
+longInsPos=strncmp(AltNT,'LEN',3);
+svLen(longInsPos)=str2double(regexprep(AltNT(longInsPos),'LEN_',''));
+AltNT(longInsPos)={'<INS>'};
+%RefNT(~cellfun('isempty',strfind(AltNT,'N')) & T.RefComb>4,:)={'N'};
+%AltNT(~cellfun('isempty',strfind(AltNT,'N')) & T.RefComb>4,:)={'<DEL>'};
 
 
 %%% calculate quality
@@ -172,6 +183,8 @@ Info=strcat(Info,';A=',int2ntIndels(T.Acomb),';B=',int2ntIndels(T.Bcomb));
 %Info=strcat(Info,';ACountF=',num2str(T.ACountF,'%-.0f'),';ACountR=',num2str(T.ACountR,'%-.0f'),';BCountF=',num2str(T.BCountF,'%-.0f'),';BCountR=',num2str(T.BCountR,'%-.0f'));
 Info=strcat(Info,';ApopAF=',num2str(T.ApopAF,'%-.5f'),';BpopAF=',num2str(T.BpopAF,'%-.5f'),';CosmicCount=',num2str(T.CosmicCount,'%-.0f'));
 Info=strcat(Info,';CloneId=',num2str(cloneId(:,1)));
+Info(delPos)=strcat(Info(delPos),';END=',num2str(endPos(delPos)));
+Info(insPos)=strcat(Info(insPos),';SVLEN=',num2str(svLen(insPos)));
 Info(T.NumCopies~=2 | T.MinAlCopies~=1)=strcat(Info(T.NumCopies~=2 | T.MinAlCopies~=1),';CN=',num2str(T.NumCopies(T.NumCopies~=2 | T.MinAlCopies~=1)),';MACN=',num2str(T.MinAlCopies(T.NumCopies~=2 | T.MinAlCopies~=1)));
 %Info=strcat(Info,';PCNA=',num2str(pCNA,'%-.5f'));
 %for i=1:size(F,2)
