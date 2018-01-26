@@ -83,21 +83,23 @@ end
 
 %cmap=colormap('hsv');
 %colors=cmap(1:64./size(f,2):64,:);
-colors=linspecer(size(f,2));
+colors=linspecer(size(f,2)-1);
+colors=[colors; [0 0 0]];
 for j=1:length(Tcell)
     subplot(length(Tcell)+1,5,j*5);
     hold on;
-    for i=1:size(f,2)
+    for i=1:size(f,2)-1
         b=bar(i,f(j,i));
         b.FaceColor=colors(i,:);
-        if(rem(i,2)==0)
-            b.EdgeColor=[0 0 0];
-        else
-            b.EdgeColor=[1 1 1];
-        end
+%         if(rem(i,2)==0)
+%             b.EdgeColor=[0 0 0];
+%         else
+%             b.EdgeColor=[1 1 1];
+%         end
     end
+    axis tight;
     ylim([0 1]);
-    xlim([0 size(f,2)+1]);
+    %xlim([0 size(f,2)+1]);
     ylabel('Sample Fraction','FontSize',10);
 end
 
@@ -105,14 +107,16 @@ end
 samples=regexp(inputParam.sampleNames,',','split');
 for j=1:length(Tcell)
     subplot(length(Tcell)+1,5,[j*5-4 j*5-1])
+    plot(reshape(segCoord',[],1),reshape(ones(2,1)*Nlog2R(:,j)',[],1),'k','linewidth',1);
+    hold on;
     for i=1:size(f,2)
         pos=segsTable.cnaIdx==i & (segsTable.N~=2 | segsTable.M~=1);
-        if(rem(i,2)==0)
-            plot(segCoord(pos,:)',ones(2,1)*Nlog2R(pos,j)','Color',[0 0 0],'linewidth',4);
-            plot(segCoord(pos,:)',ones(2,1)*Nlog2R(pos,j)','Color',colors(i,:),'linewidth',3);
-        else
-            plot(segCoord(pos,:)',ones(2,1)*Nlog2R(pos,j)','Color',colors(i,:),'linewidth',4); 
-        end
+%         if(rem(i,2)==0)
+%             plot(segCoord(pos,:)',ones(2,1)*Nlog2R(pos,j)','Color',[0 0 0],'linewidth',4);
+%             plot(segCoord(pos,:)',ones(2,1)*Nlog2R(pos,j)','Color',colors(i,:),'linewidth',3);
+%         els
+        plot(segCoord(pos,:)',ones(2,1)*Nlog2R(pos,j)','Color',colors(i,:),'linewidth',4); 
+%         end
         %plot(segCoord(pos,:)',ones(2,1)*Mlog2R(pos)',colors(i),'linewidth',4);
     end
     pos=(segsTable.N==2 & segsTable.M==1);
@@ -127,14 +131,15 @@ for j=1:length(Tcell)
 end
 subplot(length(Tcell)+1,5,[5*(length(Tcell)+1)-4 5*(length(Tcell)+1)-1])
 hold on;
+plot(reshape(segCoord',[],1),reshape(log2(ones(2,1)*segsTable.N'+1),[],1),'k','linewidth',1);
 for i=1:size(f,2)
     pos=segsTable.cnaIdx(:,1)==i & (segsTable.N~=2 | segsTable.M~=1);
-    if(rem(i,2)==0)
-        plot(segCoord(pos,:)',log2(ones(2,1)*segsTable.N(pos)'+1),'Color',[0 0 0],'linewidth',3);
-        plot(segCoord(pos,:)',log2(ones(2,1)*segsTable.N(pos)'+1),'Color',colors(i,:),'linewidth',2);
-    else
-        plot(segCoord(pos,:)',log2(ones(2,1)*segsTable.N(pos)'+1),'Color',colors(i,:),'linewidth',3);
-    end
+%     if(rem(i,2)==0)
+%         plot(segCoord(pos,:)',log2(ones(2,1)*segsTable.N(pos)'+1),'Color',[0 0 0],'linewidth',3);
+%         plot(segCoord(pos,:)',log2(ones(2,1)*segsTable.N(pos)'+1),'Color',colors(i,:),'linewidth',2);
+%     else
+    plot(segCoord(pos,:)',log2(ones(2,1)*segsTable.N(pos)'+1),'Color',colors(i,:),'linewidth',3);
+    %end
     %plot(segCoord(pos,:)',ones(2,1)*Mlog2R(pos)',colors(i),'linewidth',4);
 end
 pos=(segsTable.N==2 & segsTable.M==1);
@@ -148,11 +153,11 @@ set(gca,'YTick',tickpos,'YTickLabel',ticks,'tickDir','out');
 set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',chrList,'FontSize',6);
 axis([0 max(segCoord(:,2)) log2(1) log2(max(segsTable.N)+1)])
 title('Copy Number','FontSize',10);
-
+% 
 set(gcf, 'PaperPositionMode', 'manual');
 set(gcf, 'PaperUnits', 'inches');
 set(gcf, 'PaperPosition', [1 1 7.5 10]);
-print(gcf,'-dpng',[inputParam.outName '.cnaPlot.png'],'-r300');
+print(gcf,'-dpdf',[inputParam.outName '.cnaPlot.pdf'],'-r300');
 close(gcf);
 
 
@@ -184,11 +189,11 @@ for j=1:length(Tcell)
     AF(aIdx)=(T.ACountF(aIdx)+T.ACountR(aIdx))./T.ReadDepthPass(aIdx);
     for i=1:size(f,2)
         pos=cloneId(:,1)==i & somPos;
-        if(rem(i,2)==0)
-            scatter(Tcoord(pos),AF(pos),5,'o','MarkerFaceColor',colors(i,:),'MarkerEdgeColor',[0 0 0]);
-        else
-            scatter(Tcoord(pos),AF(pos),5,'o','MarkerFaceColor',colors(i,:),'MarkerEdgeColor',colors(i,:));
-        end
+%         if(rem(i,2)==0)
+%             scatter(Tcoord(pos),AF(pos),5,'o','MarkerFaceColor',colors(i,:),'MarkerEdgeColor',[0 0 0]);
+%         else
+        scatter(Tcoord(pos),AF(pos),5,'o','MarkerFaceColor',colors(i,:),'MarkerEdgeColor',colors(i,:));
+        %end
     end
     axis([0 max(segCoord(:,2)) 0 1]);
     set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',chrList,'tickDir','out','FontSize',8);
@@ -198,22 +203,24 @@ end
 for j=1:length(Tcell)
     subplot(length(Tcell)+1,5,j*5);
     hold on;
-    for i=1:size(f,2)
+    for i=1:size(f,2)-1
         b=bar(i,f(j,i));
         b.FaceColor=colors(i,:);
-        if(rem(i,2)==0)
-            b.EdgeColor=[0 0 0];
-        else
-            b.EdgeColor=[1 1 1];
-        end
+%         if(rem(i,2)==0)
+%             b.EdgeColor=[0 0 0];
+%         else
+%             b.EdgeColor=[1 1 1];
+%         end
     end
+    axis tight;
     ylim([0 1]);
-    xlim([0 size(f,2)+1]);
+    %xlim([0 size(f,2)+1]);
     ylabel('Sample Fraction','FontSize',10);
 end
 
 for j=1:length(Tcell)
-    cnCorr(:,j)=segsTable.F(:,j).*segsTable.M./segsTable.N+(1-segsTable.F(:,j))*0.5;
+    %cnCorr(:,j)=segsTable.F(:,j).*segsTable.M./segsTable.N+(1-segsTable.F(:,j))*0.5;
+    cnCorr(:,j)=(segsTable.F(:,j).*segsTable.M+(1-segsTable.F(:,j)))./(segsTable.F(:,j).*segsTable.N+2*(1-segsTable.F(:,j)));
     cnCorr(segsTable.N==0,j)=0.5;
 end
 
@@ -239,12 +246,12 @@ subplot(length(Tcell)+1,5,[5*(length(Tcell)+1)-4 5*(length(Tcell)+1)-1])
 hold on;
 for i=1:size(f,2)
     pos=segsTable.cnaIdx==i & (segsTable.N~=2 | segsTable.M~=1);
-    if(rem(i,2)==0)
-        plot(segCoord(pos,:)',ones(2,1)*(segsTable.M(pos)'./segsTable.N(pos)'),'Color',[0 0 0],'linewidth',3);
-        plot(segCoord(pos,:)',ones(2,1)*(segsTable.M(pos)'./segsTable.N(pos)'),'Color',colors(i,:),'linewidth',2);
-    else
-        plot(segCoord(pos,:)',ones(2,1)*(segsTable.M(pos)'./segsTable.N(pos)'),'Color',colors(i,:),'linewidth',3);
-    end
+%     if(rem(i,2)==0)
+%         plot(segCoord(pos,:)',ones(2,1)*(segsTable.M(pos)'./segsTable.N(pos)'),'Color',[0 0 0],'linewidth',3);
+%         plot(segCoord(pos,:)',ones(2,1)*(segsTable.M(pos)'./segsTable.N(pos)'),'Color',colors(i,:),'linewidth',2);
+%     else
+    plot(segCoord(pos,:)',ones(2,1)*(segsTable.M(pos)'./segsTable.N(pos)'),'Color',colors(i,:),'linewidth',3);
+    %end
     %plot(segCoord(pos,:)',ones(2,1)*Mlog2R(pos)',colors(i),'linewidth',4);
 end
 pos=(segsTable.N==2 & segsTable.M==1);
@@ -260,7 +267,7 @@ title('M/N','FontSize',10);
 %%% print plot
 set(gcf, 'PaperPositionMode', 'manual');
 set(gcf, 'PaperUnits', 'inches');
-set(gcf, 'PaperPosition', [1 1 10 7.5]);
-print(gcf,'-dpng',[inputParam.outName '.vafPlot.png'],'-r300');
+set(gcf, 'PaperPosition', [1 1 7.5 10]);
+print(gcf,'-dpdf',[inputParam.outName '.vafPlot.pdf'],'-r300');
 close(gcf);
 return;
