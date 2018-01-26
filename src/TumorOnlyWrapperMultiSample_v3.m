@@ -75,13 +75,18 @@ end
 
 sexChr=regexp(inputParam.sexChr,',','split');
 chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
-dbSNPposCount=0;
+%dbSNPposCount=0;
+tic;
 parfor i=1:length(chrList)
-    cmd=strcat({'bcftools view -q '},num2str(inputParam.maxSomPopFreq),{' -R '},inputParam.regionsFile,{' '},inputParam.snpVCFpath,chrList(i),inputParam.snpVCFname,' | wc -l')
-    [~,output]=system(cmd{1})
-    dbSNPposCount=dbSNPposCount+str2double(output);
+    cmd=strcat({'bcftools view -q '},num2str(inputParam.maxSomPopFreq),{' -R '},inputParam.regionsFile,{' '},inputParam.snpVCFpath,chrList(i),inputParam.snpVCFname,' | grep -v ^# | awk ''{ print $2 "\n" }''')
+    [~,output]=system(cmd{1});
+    tmp=strsplit(output,'\n');
+    dbPosList{i}=[i*ones(length(tmp)-1,1) str2double(tmp(1:end-1)')]; 
+    %dbSNPposCount=dbSNPposCount+str2double(output);
 end
-inputParam.dbSNPposCount=dbSNPposCount;
+dbPosList=cell2mat(dbPosList');
+toc
+%inputParam.dbSNPposCount=dbSNPposCount;
 
 if isempty(Tcell)
     Tcell=T;
@@ -139,6 +144,8 @@ for i=1:numChr
     segsMerged(idx2,3)=max([Tcell{1}.Pos(Tcell{1}.Chr==i); Ecell{1}{Ecell{1}{:,1}==i,3}]);
 end
 message=['segmented data at: ' char(datetime('now'))]
+idxDB=getPosInRegions(dbPosList,segsMerged(:,1:3));
+dbCounts=hist(idxDB,1:size(segsMerged,1))';
 
 save([inputParam.outMat],'-v7.3');
 message=['saved data at: ' char(datetime('now'))]
@@ -174,6 +181,7 @@ for j=1:length(Tcell)
     Tcell{j}.BcountsComb=countsAll.Bcounts(locb,j);
     Tcell{j}.ApopAFcomb=countsAll.ApopAF(locb);
     Tcell{j}.BpopAFcomb=countsAll.BpopAF(locb);
+    Tcell{j}.CosmicCount=countsAll.cosmicCount(locb);
     %altCount(bIdx,j)=Tcell{j}.BcountsComb(bIdx);
     %altCount(~bIdx,j)=Tcell{j}.AcountsComb(~bIdx);
     %AF(bIdx,j)=Tcell{j}.BcountsComb(bIdx)./Tcell{j}.ReadDepthPass(bIdx);
@@ -197,20 +205,35 @@ else
     %somPos=Tcell{1}.CosmicCount>1 & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)<inputParam.maxSomPopFreq & filtPos;
 end    
 hetPos=commonHet & filtPos;
-filtPer=sum(hetPos)./sum(commonHet);
+%filtPer=sum(hetPos)./sum(commonHet);
 message=['preliminary variant classification at: ' char(datetime('now'))]
 
-f=[inputParam.priorF(tIdx) diag(inputParam.priorF(tIdx)-0.05)+0.05 (diag(inputParam.priorF(tIdx)-0.05)+0.05)*0.5];
+%f=[inputParam.priorF(tIdx) diag(inputParam.priorF(tIdx)-0.05)+0.05 (diag(inputParam.priorF(tIdx)-0.05)+0.05)*0.5];
+f=[inputParam.priorF(tIdx) diag(inputParam.priorF(tIdx)) diag(inputParam.priorF(tIdx))*0.5];
 inputParam.numClones=size(f,2);
 
 %%%Call Copy Number
 for i=1:length(Tcell)
     diploidPos=(Tcell{i}.BCountF+Tcell{i}.BCountR)./Tcell{i}.ReadDepthPass>inputParam.minHetAF;
+    %RDratio(:,i)=Tcell{i}.ReadDepthPass./Tcell{i}.ControlRD;
     cInit(i,:)=median(2*Tcell{i}.ControlRD(diploidPos & hetPos)./Tcell{i}.ReadDepthPass(diploidPos & hetPos));
     wInit(i,:)=nanmedian(exonRD{i}(:,4));
 end
-%inputParam.numClones=1;
-[N, M, Ftable, log2FC, cnaIdx]=callCNAmulti_v2(hetPos,Tcell,exonRD,segsMerged,inputParam,[cInit(:);wInit(:);f(:)],filtPer);
+% cnPos=Tcell{1}.ControlRD>quantile(Tcell{1}.ControlRD(hetPos),0.1);
+% for k=1:6
+%     gmm{k}=fitgmdist(log2(RDratio(all(diploidPos')' & hetPos & cnPos,:)),k,'SharedCovariance',true,'replicates',100);
+%     aic(k)=gmm{k}.AIC;
+%     bic(k)=gmm{k}.BIC;
+% end
+% %eva=evalclusters(log2(RDratio(all(diploidPos')' & hetPos & cnPos,:)),'gmdistribution','silhouette','kList',[1:6])
+% %inputParam.numClones=1;
+% [~,mIdx]=min(bic);
+% cInit=2./(2.^gmm{mIdx}.mu);
+% for i=1:mIdx
+%     [N{i}, M{i}, Ftable{i}, log2FC{i}, cnaIdx{i},nll{i}]=callCNAmulti_v2(hetPos,Tcell,exonRD,segsMerged,inputParam,[cInit(i,:)';wInit(:);f(:)],filtPer);
+% end
+ dbPos=filtPos & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)>inputParam.maxSomPopFreq;
+[N, M, Ftable, log2FC, cnaIdx]=callCNAmulti_v3(hetPos,Tcell,exonRD,segsMerged,inputParam,[cInit(:);wInit(:);f(:)],dbPos,dbCounts);
 segsTable=array2table(segsMerged(:,1:3),'VariableNames',{'Chr','StartPos','EndPos'});
 segsTable.N=N;
 segsTable.M=M;
@@ -329,7 +352,7 @@ while(true)
     if sum(abs(somPos-somPosOld))/sum(somPos)<=0.05 || i>=inputParam.maxIter
         break;
     end
-    [segsTable, W, f, CNAscale, nll, t{i}]=fitCNAmulti_v3(hetPos,somPos,filtPos & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)>inputParam.maxSomPopFreq,Tcell,exonRD,segsMerged,inputParam,filtPer,f,CNAscale,W)
+    [segsTable, W, f, CNAscale, nll, t{i}]=fitCNAmulti_v3(hetPos,somPos,filtPos & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)>inputParam.maxSomPopFreq,Tcell,exonRD,segsMerged,inputParam,f,CNAscale,W,dbCounts)
     %['clonal fractions: ' num2str(f)]
     for j=1:length(Tcell)
         T=Tcell{j};

@@ -1,20 +1,37 @@
 function [postComb, pDataSum, pDataComb,cloneId,prior]=jointSNV_v2(Tcell, fIn, W, inputParam)
 
+%tic;
 f=zeros(length(Tcell),inputParam.numClones);
 tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
 f(tIdx,1:end)=reshape(fIn,[],inputParam.numClones);
-
-posList=[];
+% 
+% posList=[];
+% for i=1:size(Tcell,2)
+%     T=Tcell{i};
+%     posList=[posList; T.Chr T.Pos];
+% end
+% 
+% posList=unique(posList,'rows');
+A=NaN(size(Tcell{1},1),1);
+B=NaN(size(Tcell{1},1),1);
+Acounts=NaN(size(Tcell{1},1),length(Tcell));
+Bcounts=NaN(size(Tcell{1},1),length(Tcell));
+ApopAF=NaN(size(Tcell{1},1),1);
+BpopAF=NaN(size(Tcell{1},1),1);
+RDmat=NaN(size(Tcell{1},1),length(Tcell));
+Ref=NaN(size(Tcell{1},1),1);
+cosmic=NaN(size(Tcell{1},1),length(Tcell));
+cnaF=NaN(size(Tcell{1},1),length(Tcell));
+N=NaN(size(Tcell{1},1),1);
+M=NaN(size(Tcell{1},1),1);
+Wmat=NaN(size(Tcell{1},1),length(Tcell));
+BmeanBQ=NaN(size(Tcell{1},1),length(Tcell));
+AmeanBQ=NaN(size(Tcell{1},1),length(Tcell));
+mapQC=NaN(size(Tcell{1},1),length(Tcell));
 for i=1:size(Tcell,2)
     T=Tcell{i};
-    posList=[posList; T.Chr T.Pos];
-end
-
-posList=unique(posList,'rows');
-
-for i=1:size(Tcell,2)
-    T=Tcell{i};
-    [lia,locb]=ismember([T.Chr T.Pos],posList,'rows');
+    %[lia,locb]=ismember([T.Chr T.Pos],posList,'rows');
+    locb=1:height(T);
     A(locb,1)=T.Acomb;
     B(locb,1)=T.Bcomb;
     Acounts(locb,i)=T.AcountsComb;
@@ -23,7 +40,7 @@ for i=1:size(Tcell,2)
     BpopAF(locb,1)=T.BpopAFcomb;
     RDmat(locb,i)=T.ReadDepthPass;
     Ref(locb,1)=T.RefComb;
-    cosmic(locb,1)=T.CosmicCount;
+    cosmic(locb,i)=T.CosmicCount;
     cnaF(locb,i)=T.cnaF;
     N(locb,i)=T.NumCopies;
     M(locb,i)=T.MinAlCopies;
@@ -32,8 +49,9 @@ for i=1:size(Tcell,2)
     AmeanBQ(locb,i)=T.AmeanBQ;
     mapQC(locb,i)=T.PosMapQC;
 end
-
+%toc
 M=min(M,N-M);
+cosmic=max(cosmic,[],2);
 
 for i=1:size(Wmat,2)
     Wmat(Wmat(:,i)==0,i)=mode(Wmat(Wmat(:,i)~=0,i));
@@ -66,7 +84,8 @@ priorOther=1-priorHet-priorHom-priorSomatic-priorNonDip;
 prior=array2table([priorSomatic priorHet priorHom priorOther priorNonDip],'VariableNames',{'Somatic','Het','Hom','Other','nonDiploid'});
 
 %%% calculate expected heterozygous allele frequencies
-cnCorr=cnaF.*M./N+(1-cnaF)*0.5;
+%cnCorr=cnaF.*M./N+(1-cnaF)*0.5;
+cnCorr=(cnaF.*M+(1-cnaF))./(cnaF.*N+(1-cnaF)*2);
 cnCorr(N==0 & cnaF<1)=0.5;
 cnCorr(N==0 & cnaF==1)=0;
 cnCorr=max(cnCorr,10.^(inputParam.defaultBQ./-10));
@@ -80,6 +99,9 @@ cnCorr=max(cnCorr,10.^(inputParam.defaultBQ./-10));
 
 %Acounts(Acounts+Bcounts==0 & (A==Ref)*ones(1,size(Acounts,2)))=RDmat(Acounts+Bcounts==0 & (A==Ref)*ones(1,size(Acounts,2)));
 %%% calculate likliehoods of germline genotypes
+pDataHom=NaN(size(Acounts));
+pDataHet=NaN(size(Acounts));
+pDataOther=NaN(size(Acounts));
 for i=1:size(Acounts,2)
     pDataHom(:,i)=bbinopdf_ln(Acounts(:,i),RDmat(:,i),Wmat(:,i).*(1-10.^(-AmeanBQ(:,i)./10)),Wmat(:,i).*10.^(-AmeanBQ(:,i)./10));
     pDataHet(:,i)=bbinopdf_ln(Bcounts(:,i),RDmat(:,i),cnCorr(:,i).*Wmat(:,i),(1-cnCorr(:,i)).*Wmat(:,i))+(binopdf(round(cnCorr(:,i).*Wmat(:,i)),round(Wmat(:,i)),1-cnCorr(:,i))./binopdf(round(cnCorr(:,i).*Wmat(:,i)),round(Wmat(:,i)),cnCorr(:,i))).*bbinopdf_ln(Acounts(:,i),RDmat(:,i),cnCorr(:,i).*Wmat(:,i),(1-cnCorr(:,i)).*Wmat(:,i));
@@ -87,6 +109,7 @@ for i=1:size(Acounts,2)
     pDataOther(:,i)=bbinopdf_ln(max(RDmat(:,i)-Acounts(:,i)-Bcounts(:,i),0),RDmat(:,i),Wmat(:,i).*(1-10.^(-AmeanBQ(:,i)./10)),Wmat(:,i).*10.^(-AmeanBQ(:,i)./10));
 end
 
+expAF=NaN(size(Acounts,1),size(f,2),size(Acounts,2));
 %%% calculate expected somatic allele frequencies
 for j=1:size(Acounts,2)
     for i=1:length(f(j,:))
@@ -106,6 +129,13 @@ expAF(expAF<0)=0;
 
 %%% find likelihood of somatic mutations
 %tumorIdx=setdiff([1:size(Acounts,2)],inputParam.NormalSample);
+cloneLik=NaN(size(expAF));
+alpha=NaN(size(Acounts,1),size(f,2));
+beta=NaN(size(Acounts,1),size(f,2));
+shiftAF=NaN(size(Acounts,1),size(Acounts,2),2);
+pDataNonDip1=NaN(size(Acounts));
+pDataNonDip2=NaN(size(Acounts));
+pDataNonDip=NaN(size(Acounts));
 for j=1:size(Acounts,2)
     if j==inputParam.NormalSample
         cloneLik(bIdx,:,j)=bbinopdf_ln(Acounts(bIdx,j),RDmat(bIdx,j),Wmat(bIdx,j).*(1-10.^(-AmeanBQ(bIdx,j)./10)),Wmat(bIdx,j).*10.^(-AmeanBQ(bIdx,j)./10))*ones(1,length(f(j,:)));
@@ -132,6 +162,7 @@ for j=1:size(Acounts,2)
     end
 end
 [~,cloneId]=max(prod(cloneLik,3),[],2);
+pDataSomatic=NaN(size(Acounts));
 for i=1:size(f,2)
     pDataSomatic(cloneId==i,:)=squeeze(cloneLik(cloneId==i,i,:));
 end
@@ -161,10 +192,11 @@ pHom=prod(pDataHom,2).*priorHom./pData;
 pOther=prod(pDataOther,2).*priorOther./pData;
 pNonDip=prod(pDataNonDip,2).*priorNonDip./pData;
 
-postComb=array2table([posList pSomatic pGermline pHom pOther pNonDip],'VariableNames',{'Chr', 'Pos', 'Somatic','Het','Hom','Other','NonDip'});
+postComb=array2table([Tcell{1}.Chr Tcell{1}.Pos pSomatic pGermline pHom pOther pNonDip],'VariableNames',{'Chr', 'Pos', 'Somatic','Het','Hom','Other','NonDip'});
 %countsAll=array2table([posList Ref A B],'VariableNames',{'Chr','Pos','Ref','A','B'});
+pDataComb=cell(size(Tcell));
 for i=1:size(Acounts,2)
-    pDataComb{i}=array2table([posList pDataSomatic(:,i) pDataHet(:,i) pDataHom(:,i) pDataOther(:,i) pDataNonDip(:,i)],'VariableNames',{'Chr', 'Pos', 'Somatic','Het','Hom','Other','NonDip'});
+    pDataComb{i}=array2table([Tcell{1}.Chr Tcell{1}.Pos pDataSomatic(:,i) pDataHet(:,i) pDataHom(:,i) pDataOther(:,i) pDataNonDip(:,i)],'VariableNames',{'Chr', 'Pos', 'Somatic','Het','Hom','Other','NonDip'});
  %   countsAll.Acounts(:,i)=Acounts(:,i);
   %  countsAll.Bcounts(:,i)=Bcounts(:,i);
 end
