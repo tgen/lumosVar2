@@ -1,4 +1,4 @@
-function writeJointVCF(Tcell,P,fIn,cloneId,Filter,somaticDetected,inputParam)
+function writeJointVCF(Tcell,P,fIn,cloneId,alleleId,Filter,somaticDetected,trustScore,artifactScore,inputParam)
 %writeVCF - writes VCF for SNV and indel calls
 %
 % Syntax: writeVCF(T,pSomatic,posterior,pArtifact,pGermline,pHom,cloneId,f,W,inputParam,pDataSomatic,pDataHet,pDataHom,pCNA,F)
@@ -139,7 +139,7 @@ AltNT(longInsPos)={'<INS>'};
 
 
 %%% calculate quality
-Qual=-10*log10(1-mean([mean(P.trust,2) mean(1-P.artifact,2) max([P.Het P.Hom P.Somatic P.NonDip],[],2)],2));
+Qual=-10*log10(1-mean([trustScore artifactScore max([P.Het P.Hom P.Somatic P.NonDip],[],2)],2));
 %Qual=zeros(size(T.Pos));
 %Qual(P.Somatic(:,n)>0.5,:)=min(min(-10*log10(1-P.Somatic(P.Somatic(:,n)>0.5,n)),-10*log10(1-P.trust(P.Somatic(:,n)>0.5,n))),-10*log10(P.artifact(P.Somatic(:,n)>0.5,n)));
 %Qual(P.Het(:,n)>0.5,:)=min(min(-10*log10(1-P.Het(P.Het(:,n)>0.5,n)),-10*log10(1-P.trust(P.Het(:,n)>0.5,n))),-10*log10(P.artifact(P.Het(:,n)>0.5,n)));
@@ -178,7 +178,7 @@ AltNT(strncmp('SomaticPair',Filter,10) & T.RefComb~=T.Acomb,:)=int2ntIndels(T.Ac
 %Info(T.RefComb==T.Acomb,:)=strcat(Info(T.RefComb==T.Acomb,:),';AF=',num2str(T.BcountsComb(T.RefComb==T.Acomb,:)./T.ReadDepthPass(T.RefComb==T.Acomb,:),'%-.3f'));
 %Info(T.RefComb==T.Bcomb,:)=strcat(Info(T.RefComb==T.Bcomb,:),';AF=',num2str(T.AcountsComb(T.RefComb==T.Bcomb,:)./T.ReadDepthPass(T.RefComb==T.Bcomb,:),'%-.3f'));
 %Info=cellstr(strcat('JPT=',num2str(real(-10*log10(1-mean(P.trust,2))),'%-.1f'),';JPA=',num2str(real(-10*log10(1-mean(P.artifact,2))),'%-.1f'),';JPS=',num2str(P.Somatic(:,1),'%-.5f'),';JPGAB=',num2str(P.Het(:,1),'%-.5f'),';JPGAA=',num2str(P.Hom(:,1),'%-.5f'),';JPND=',num2str(P.NonDip(:,1),'%-.5f')));
-Info=cellstr(strcat('JPT=',strsplit(sprintf('%-.1f\n',real(-10*log10(1-mean(P.trust,2)))))',';JPA=',strsplit(sprintf('%-.1f\n',real(-10*log10(1-mean(P.artifact,2)))))',';JPS=',strsplit(sprintf('%-.5f\n',P.Somatic(:,1)))',';JPGAB=',strsplit(sprintf('%-.5f\n',P.Het(:,1)))',';JPGAA=',strsplit(sprintf('%-.5f\n',P.Hom(:,1)))',';JPND=',strsplit(sprintf('%-.5f\n',P.NonDip(:,1)))'));
+Info=cellstr(strcat('JPT=',strsplit(sprintf('%-.1f\n',real(-10*log10(1-trustScore))))',';JPA=',strsplit(sprintf('%-.1f\n',real(-10*log10(1-artifactScore))))',';JPS=',strsplit(sprintf('%-.5f\n',P.Somatic(:,1)))',';JPGAB=',strsplit(sprintf('%-.5f\n',P.Het(:,1)))',';JPGAA=',strsplit(sprintf('%-.5f\n',P.Hom(:,1)))',';JPND=',strsplit(sprintf('%-.5f\n',P.NonDip(:,1)))'));
 %Info=strcat(Info,';LS=',num2str(P.DataSomatic(:,n),'%-.5f'),';LGAB=',num2str(P.DataHet(:,n),'%-.5f'),';LGAA=',num2str(P.DataHom(:,n),'%-.5f'),';LND=',num2str(P.DataNonDip(:,n),'%-.5f'));
 Info=strcat(Info,';A=',[int2ntIndels(T.Acomb);{''}],';B=',[int2ntIndels(T.Bcomb); {''}]);
 %Info=strcat(Info,';ACountF=',num2str(T.ACountF,'%-.0f'),';ACountR=',num2str(T.ACountR,'%-.0f'),';BCountF=',num2str(T.BCountF,'%-.0f'),';BCountR=',num2str(T.BCountR,'%-.0f'));
@@ -222,7 +222,8 @@ for i=1:size(copyList,1)
     currSomIdx=strncmp(Filter,'Somatic',7) & T.cnaF==f(tIdx(1),cloneId(:,1))' & idx;
     if copyList(i,1)>1
         tumorGT(P.Hom(:,1)>0.5 & idx)=cellstr(repmat(gt(P.Hom(:,1)>0.5 & idx,1),1,copyList(i,1)));
-        tumorGT(currSomIdx)=cellstr(sort([repmat(gt(currSomIdx,1),1,copyList(i,2)) repmat(gt(currSomIdx,2),1,copyList(i,1)-copyList(i,2))],2));
+        tumorGT(currSomIdx & alleleId==1)=cellstr(sort([repmat(gt(currSomIdx & alleleId==1,1),1,copyList(i,1)-copyList(i,2)) repmat(gt(currSomIdx & alleleId==1,2),1,copyList(i,2))],2));
+        tumorGT(currSomIdx & alleleId==2)=cellstr(sort([repmat(gt(currSomIdx & alleleId==2,1),1,copyList(i,2)) repmat(gt(currSomIdx & alleleId==2,2),1,copyList(i,1)-copyList(i,2))],2));
     elseif copyList(i,1)==1
         tumorGT(P.Hom(:,1)>0.5 & idx)=cellstr(gt(P.Hom(:,1)>0.5 & idx,1));
         tumorGT(currSomIdx)=cellstr(gt(currSomIdx,2));

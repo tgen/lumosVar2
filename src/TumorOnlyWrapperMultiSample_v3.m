@@ -209,7 +209,8 @@ hetPos=commonHet & filtPos;
 message=['preliminary variant classification at: ' char(datetime('now'))]
 
 %f=[inputParam.priorF(tIdx) diag(inputParam.priorF(tIdx)-0.05)+0.05 (diag(inputParam.priorF(tIdx)-0.05)+0.05)*0.5];
-f=[inputParam.priorF(tIdx) diag(inputParam.priorF(tIdx)) diag(inputParam.priorF(tIdx))*0.5];
+%f=[inputParam.priorF(tIdx) diag(inputParam.priorF(tIdx)) diag(inputParam.priorF(tIdx))*0.5];
+f=[inputParam.priorF(tIdx) diag(inputParam.priorF(tIdx))];
 inputParam.numClones=size(f,2);
 
 %%%Call Copy Number
@@ -295,7 +296,8 @@ while(true)
             if j~=NormalSample
                 idx=[NormalSample j];
                 %postComb=jointSNV_v2(Tcell(idx), exonRD(idx), f(n,:), W(idx,:), inputParam);
-                [postCombPair{n},~,pDataCombPair{n}]=jointSNV_v2(Tcell(idx), [inputParam.priorF(j) inputParam.priorF(j)./2], 3*ones(2,1), inputParam);
+                %[postCombPair{n},~,pDataCombPair{n}]=jointSNV_v2(Tcell(idx), [inputParam.priorF(j) inputParam.priorF(j)./2], 3*ones(2,1), inputParam);
+                [postCombPair{n},~,pDataCombPair{n},~,~,alleleIdPair{n}]=jointSNV_v2(Tcell(idx), [max(f(n,:)) max(f(n,:))./2],W(idx), inputParam);
                 [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[postCombPair{n}.Chr postCombPair{n}.Pos],'rows');
                 P.SomaticPair(:,j)=postCombPair{n}.Somatic(locb);
                 n=n+1;
@@ -308,7 +310,7 @@ while(true)
     else
         P.SomaticPair=zeros(size(P,1),length(Tcell));
     end
-    [postComb, pDataSum(i+1),pDataComb,clones,prior]=jointSNV_v2(Tcell, f, W, inputParam);
+    [postComb, pDataSum(i+1),pDataComb,clones,prior,alleleId]=jointSNV_v2(Tcell, f, W, inputParam);
     for j=1:length(Tcell)
         [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[postComb.Chr postComb.Pos],'rows');
         P.Somatic(:,j)=postComb.Somatic(locb);
@@ -386,9 +388,9 @@ ord=[ord size(f,2)+1];
 [~,segsTable.cnaIdx]=ismember(segsTable.cnaIdx,ord);
 
 save([inputParam.outMat],'-v7.3');
-[Filter,~,somaticDetected]=callVariants(Tcell,P,inputParam)
+[Filter,~,somaticDetected,trustScore,artifactScore]=callVariants(Tcell,P,inputParam);
 save([inputParam.outMat],'-v7.3');
-writeJointVCF(Tcell,P,fSort,cloneIdSort,Filter,somaticDetected,inputParam);
+writeJointVCF(Tcell,P,fSort,cloneIdSort,alleleId,Filter,somaticDetected,trustScore,artifactScore,inputParam);
 writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputParam);
 writeCloneSummary(segsTable,exonRD,Tcell,fSort,cloneIdSort,inputParam,Filter,somaticDetected);
 plotTumorOnly(exonRD,segsTable,CNAscale,fSort,Tcell,somPos,hetPos,cloneIdSort,inputParam);
