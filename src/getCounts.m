@@ -159,7 +159,7 @@ ApopAF=max(ApopAF,[],2);
 BpopAF=max(BpopAF,[],2);
 cosmic=max(cosmic,[],2);
 
-countsAll=array2table([posList Ref A B ApopAF BpopAF],'VariableNames',{'Chr','Pos','Ref','A','B','ApopAF','BpopAF'});
+countsAll=array2table([posList Ref A B ApopAF BpopAF cosmic],'VariableNames',{'Chr','Pos','Ref','A','B','ApopAF','BpopAF','cosmicCount'});
 for i=1:size(Acounts,2)
     countsAll.Acounts(:,i)=Acounts(:,i);
     countsAll.Bcounts(:,i)=Bcounts(:,i);
