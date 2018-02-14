@@ -1,4 +1,4 @@
-function writeJointVCF(Tcell,P,fIn,cloneId,alleleId,Filter,somaticDetected,trustScore,artifactScore,inputParam)
+function sampleFrac=writeJointVCF(Tcell,P,fIn,cloneId,alleleId,Filter,somaticDetected,trustScore,artifactScore,inputParam)
 %writeVCF - writes VCF for SNV and indel calls
 %
 % Syntax: writeVCF(T,pSomatic,posterior,pArtifact,pGermline,pHom,cloneId,f,W,inputParam,pDataSomatic,pDataHet,pDataHom,pCNA,F)
@@ -265,6 +265,8 @@ else
     bIdx=T.ApopAFcomb>=T.BpopAFcomb;
 end
 
+AF=NaN(height(Tcell{1}),length(Tcell));
+sampleFrac=NaN(height(Tcell{1}),length(Tcell));
 for j=1:length(Tcell)
     T=Tcell{j};
     AF(bIdx,j)=T.BcountsComb(bIdx)./T.ReadDepthPass(bIdx);
@@ -272,10 +274,10 @@ for j=1:length(Tcell)
     matchIdx=f(j,cloneId(:,j))'==T.cnaF;
     sfMajor=AF(:,j).*(T.cnaF.*T.NumCopies+2.*(1-T.cnaF))./(T.NumCopies-T.MinAlCopies);
     sfMinor=AF(:,j).*(T.cnaF.*T.NumCopies+2.*(1-T.cnaF));
-    pairIdx=strncmp(Filter,'SomaticPair',10);
-    sampleFrac(matchIdx,j)=sfMajor(matchIdx);
-    sampleFrac(~matchIdx,j)=sfMinor(~matchIdx);
-    sampleFrac(pairIdx,j)=min(sfMajor(pairIdx),sfMinor(pairIdx));
+    %pairIdx=strncmp(Filter,'SomaticPair',10);
+    sampleFrac(matchIdx & alleleId==2,j)=sfMajor(matchIdx & alleleId==2);
+    sampleFrac(~matchIdx | alleleId==1,j)=sfMinor(~matchIdx | alleleId==1);
+    %sampleFrac(pairIdx,j)=min(sfMajor(pairIdx),sfMinor(pairIdx));
 end
 
 

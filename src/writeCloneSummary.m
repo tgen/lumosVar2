@@ -1,4 +1,4 @@
-function writeCloneSummary(segsTable,exonRD,Tcell,fIn,cloneId,inputParam,Filter,somaticDetected)
+function writeCloneSummary(segsTable,exonRD,Tcell,fIn,cloneId,inputParam,Filter,somaticDetected,sampleFrac)
 %writeCloneSummary - writes summary of variant counts by clone
 %
 % Syntax: writeCloneSummary(segsTable,E,T,pSomatic,posterior,f,W,cloneId,inputParam)
@@ -47,7 +47,9 @@ end
 
 sampleNames=char(regexp(inputParam.sampleNames,',','split')');
 sampleNamesShort=cellstr(sampleNames(:,1:min(namelengthmax-2,size(sampleNames,2))));
-cloneTable=array2table([f'; NaN(1,size(f,1))],'VariableNames',strcat('S_',regexprep(cellstr(sampleNamesShort),'-','_')));
+cloneTable=array2table([f'; NaN(1,size(f,1))],'VariableNames',strcat('SF_',regexprep(cellstr(sampleNamesShort),'-','_')));
+cloneTable{size(f,2),1:size(f,1)}=1-max(f(:,1:end-1),[],2)';
+cloneTable.Row=[cellstr(strcat('ClonalGroup_',num2str([1:size(f,2)-1]'))); 'Germline'; 'Pair'];
 
 T=Tcell{1};
 %rejectPos=max(P.artifact,[],2)>inputParam.pGoodThresh;
@@ -94,7 +96,7 @@ for i=1:size(f,2)
 end
 message=['made summary table']
 
-writetable([cloneTable array2table([CNcount; NaN(1,size(CNcount,2))],'VariableNames',CNname)],[inputParam.outName '.cloneSummary.csv']);
+writetable([cloneTable array2table([CNcount; NaN(1,size(CNcount,2))],'VariableNames',CNname)],[inputParam.outName '.cloneSummary.tsv'],'Delimiter','\t','WriteRowNames',1,'FileType','text');
 %if inputParam.NormalSample>0
 colors=linspecer(size(f,2)-1);
 %else
@@ -117,20 +119,20 @@ set(gca,'XTick',1:size(f,1),'XTickLabel',sampleNames,'FontSize',8,'TickLabelInte
 ylabel('Clonal Sample Fraction');
 
 
-if inputParam.NormalSample>0
-    bIdx=Tcell{inputParam.NormalSample}.AcountsComb>=Tcell{inputParam.NormalSample}.BcountsComb;
-else
-    bIdx=T.ApopAFcomb>=T.BpopAFcomb;
-end
-
-for j=1:length(Tcell)
-    T=Tcell{j};
-    AF(bIdx,j)=T.BcountsComb(bIdx)./T.ReadDepthPass(bIdx);
-    AF(~bIdx,j)=T.AcountsComb(~bIdx)./T.ReadDepthPass(~bIdx);
-    matchIdx=f(j,cloneId(:,j))'==T.cnaF;
-    sampleFrac(matchIdx,j)=AF(matchIdx,j).*(T.cnaF(matchIdx).*T.NumCopies(matchIdx)+2.*(1-T.cnaF(matchIdx)))./(T.NumCopies(matchIdx)-T.MinAlCopies(matchIdx));
-    sampleFrac(~matchIdx,j)=AF(~matchIdx,j).*(T.cnaF(~matchIdx).*T.NumCopies(~matchIdx)+2.*(1-T.cnaF(~matchIdx)));
-end
+% if inputParam.NormalSample>0
+%     bIdx=Tcell{inputParam.NormalSample}.AcountsComb>=Tcell{inputParam.NormalSample}.BcountsComb;
+% else
+%     bIdx=T.ApopAFcomb>=T.BpopAFcomb;
+% end
+% 
+% for j=1:length(Tcell)
+%     T=Tcell{j};
+%     AF(bIdx,j)=T.BcountsComb(bIdx)./T.ReadDepthPass(bIdx);
+%     AF(~bIdx,j)=T.AcountsComb(~bIdx)./T.ReadDepthPass(~bIdx);
+%     matchIdx=f(j,cloneId(:,j))'==T.cnaF;
+%     sampleFrac(matchIdx,j)=AF(matchIdx,j).*(T.cnaF(matchIdx).*T.NumCopies(matchIdx)+2.*(1-T.cnaF(matchIdx)))./(T.NumCopies(matchIdx)-T.MinAlCopies(matchIdx));
+%     sampleFrac(~matchIdx,j)=AF(~matchIdx,j).*(T.cnaF(~matchIdx).*T.NumCopies(~matchIdx)+2.*(1-T.cnaF(~matchIdx)));
+% end
 
 if (size(sampleFrac,2)>1)
     subplot(3,2,3);
@@ -163,8 +165,8 @@ cloneIdplot(strcmp(Filter,'SomaticPairPASS'))=0;
 cIdx=str2double(gName);
 cIdx=cIdx(cIdx>0);
 somIdx=~isnan(cloneIdplot);
-if inputParam.NormalSample<1
-    plotSpread(min(sampleFrac(somIdx,:),1),'CategoryIdx',repmat(cloneIdplot(somIdx),1,size(sampleFrac,2)),'CategoryColors',colors);
+if sum(strcmp(Filter,'SomaticPairPASS'))<1
+    plotSpread(min(sampleFrac(somIdx,:),1),'CategoryIdx',repmat(cloneIdplot(somIdx),1,size(sampleFrac,2)),'CategoryColors',colors(cIdx,:));
 else
     plotSpread(min(sampleFrac(somIdx,:),1),'CategoryIdx',repmat(cloneIdplot(somIdx),1,size(sampleFrac,2)),'CategoryColors',[0 0 0; colors(cIdx,:)])
 end
@@ -212,9 +214,10 @@ if(size(sampleFrac,2)>1)
     h2=histcounts2(gIdx(cIdx),cloneId(cIdx,1),1:length(gName)+1,1:max(cloneId(:,1))+1);
     h=histcounts(gIdx(strcmp(Filter,'SomaticPairPASS')),1:length(gName)+1);
     hcomb=[h2 h'];
-    gPos=find(sum(hcomb')>0);
-    [~,ord]=sort(sum(hcomb(gPos,:)'),'descend');
-    b=bar(hcomb(gPos(ord),:),'stacked');
+    %gPos=find(sum(hcomb')>0);
+    %[~,ord]=sort(sum(hcomb(gPos,:)'),'descend');
+    [~,ord]=sort(sum(hcomb,2),'descend');
+    b=bar(hcomb(ord,:),'stacked');
     for i=1:size(h2,2)
         b(i).FaceColor=colors(i,:);
     end
@@ -224,11 +227,12 @@ if(size(sampleFrac,2)>1)
     ylm=ylim();
     hold on;
     for i=1:size(gNum,2)
-        x=find(gNum(gPos(ord),i));
+        x=find(gNum(ord,i));
         scatter(x,-0.1*ylm(2)*i*ones(size(x)),'.k');
     end
-    xlm=xlim();
-    text(ones(size(sampleNamesShort'))*xlm(1),linspace(-0.1*ylm(2),-0.1*ylm(2)*length(sampleNamesShort),length(sampleNamesShort)),sampleNamesShort,'HorizontalAlignment','right','Interpreter','none','FontSize',8);
+    xlm=[0.5 sum(sum(hcomb(ord,:),2)>0)+0.5];
+    xlim(xlm);
+    text(ones(size(sampleNamesShort'))*xlm(2),linspace(-0.1*ylm(2),-0.1*ylm(2)*length(sampleNamesShort),length(sampleNamesShort)),sampleNamesShort,'HorizontalAlignment','left','Interpreter','none','FontSize',8);
     yt=get(gca,'YTick');
     set(gca,'YTick',yt(yt>0),'FontSize',8,'XTick',[]);
     legend([cellstr(num2str([1:size(colors,1)]')); {'NA'}]);
