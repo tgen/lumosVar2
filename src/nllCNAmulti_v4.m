@@ -78,8 +78,13 @@ end
 
 cnState=strcat(strsplit(sprintf('%d\n',Tsom{1}.NumCopies)),'_',strsplit(sprintf('%d\n',Tsom{1}.MinAlCopies)));
 cnState=cnState(1:end-1);
-[~,~,chiP,~]=crosstab(somIdx(:,1),cnState);
-chiP=min(chiP,1);
+
+if (height(Tsom{1})>0)
+   [~,~,chiP,~]=crosstab(somIdx(:,1),cnState);
+   chiP=min(chiP,1);
+else
+   chiP=1;
+end
 
 % 
 % for j=1:length(Tcell)
@@ -123,10 +128,12 @@ end
 
 %nll=-sum((log(priorF)+sum(log(somLik),2))./(inputParam.priorSomaticSNV*sum(E.EndPos-E.StartPos)))+nllCNA-log(p+realmin)./((sum(somPos)./totalPosCount)*inputParam.dbSNPposCount)+log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount);
 %sum((log(priorF)+sum(log(somLik),2)))./(inputParam.priorSomaticSNV*totalPosCount)
-%nllCNA
+%sum((log(priorF)+sum(log(somLik),2)))./size(somLik,2);
+%nllCNA;
 %log(p+realmin)./(inputParam.priorSomaticSNV*inputParam.dbSNPposCount)
-%log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount)
+%log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount);
 %nll=-(sum((log(priorF)+sum(log(somLik),2)))./(inputParam.priorSomaticSNV*totalPosCount)+nllCNA+log(p+realmin)./(inputParam.priorSomaticSNV*inputParam.dbSNPposCount)+log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount));
-nll=-(sum((log(priorF)+sum(log(somLik),2)))./(inputParam.priorSomaticSNV*totalPosCount)+nllCNA+log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount));
+%nll=-(sum((log(priorF)+sum(log(somLik),2)))./(inputParam.priorSomaticSNV*totalPosCount)+nllCNA+log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount));
+nll=-(sum((log(priorF)+sum(log(somLik),2)))./size(somLik,2)+nllCNA+log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount));
 
 return;
