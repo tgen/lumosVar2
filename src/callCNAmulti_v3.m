@@ -204,24 +204,26 @@ hetCount=NaN(size(Mseg));
 somDBcounts=NaN(size(Mseg));
 dbLik=NaN(size(Mseg));
 Tdb=cell(size(Tcell));
-for i=1:size(f,2)
-    for k=1:2
-        for m=1:2
-            for j=1:length(Tcell)
-                T=Tcell{j}(dbPos,:);
-                T.NumCopies=Nseg(idxDB,i,k);
-                T.MinAlCopies=Mseg(idxDB,i,k,m);
-                T.cnaF=f(j,i)*ones(height(T),1);
-                T.W=W(j)*ones(height(T),1);
-                Tdb{j}=T;
+if inputParam.NormalSample<1
+    for i=1:size(f,2)
+        for k=1:2
+            for m=1:2
+                for j=1:length(Tcell)
+                    T=Tcell{j}(dbPos,:);
+                    T.NumCopies=Nseg(idxDB,i,k);
+                    T.MinAlCopies=Mseg(idxDB,i,k,m);
+                    T.cnaF=f(j,i)*ones(height(T),1);
+                    T.W=W(j)*ones(height(T),1);
+                    Tdb{j}=T;
+                end
+                postComb=jointSNV_v2(Tdb, f(tIdx,1:end-1), W, inputParam);
+                somDBpos=postComb.Somatic>inputParam.pSomaticThresh;
+                [lia,locb]=ismember([Tcell{1}.Chr Tcell{1}.Pos],[postComb.Chr postComb.Pos],'rows');
+                hetPosDB(lia,i,k,m)=postComb.Het(locb(lia))>inputParam.pGermlineThresh;
+                hetCount(:,i,k,m)=hist(idxAll(hetPosDB(:,i,k,m)==1),1:size(segsMerged),1);
+                somDBcounts(:,i,k,m)=hist(idxDB(somDBpos),1:size(segsMerged,1));
+                dbLik(:,i,k,m)=1-binocdf(somDBcounts(:,i,k,m),dbCounts,inputParam.priorSomaticSNV);
             end
-            postComb=jointSNV_v2(Tdb, f(tIdx,1:end-1), W, inputParam);
-            somDBpos=postComb.Somatic>inputParam.pSomaticThresh;
-            [lia,locb]=ismember([Tcell{1}.Chr Tcell{1}.Pos],[postComb.Chr postComb.Pos],'rows');
-            hetPosDB(lia,i,k,m)=postComb.Het(locb(lia))>inputParam.pGermlineThresh;
-            hetCount(:,i,k,m)=hist(idxAll(hetPosDB(:,i,k,m)==1),1:size(segsMerged),1);
-            somDBcounts(:,i,k,m)=hist(idxDB(somDBpos),1:size(segsMerged,1));
-            dbLik(:,i,k,m)=1-binocdf(somDBcounts(:,i,k,m),dbCounts,inputParam.priorSomaticSNV);
         end
     end
 end
