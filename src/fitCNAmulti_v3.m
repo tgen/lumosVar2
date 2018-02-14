@@ -49,7 +49,7 @@ if isempty(pool)
     pc.NumWorkers = inputParam.numCPU;
     parpool(pc, pc.NumWorkers);
 end
-% 
+
 % parfor i=1:length(Tcell)
 %     diploidPos=(Tcell{i}.BCountF+Tcell{i}.BCountR)./Tcell{i}.ReadDepthPass>inputParam.minHetAF;
 %     cInit(i,:)=median(2*Tcell{i}.ControlRD(diploidPos & hetPos)./Tcell{i}.ReadDepthPass(diploidPos & hetPos));
@@ -57,8 +57,9 @@ end
 % end
 
 tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
-opts=optimoptions('fmincon','TolX',1e-1,'TolFun',1e-1,'Display','none');
-opts2=optimoptions('fmincon','Display','iter','UseParallel',true,'TolX',1e-2,'TolFun',1e-2);
+%opts=optimoptions('fmincon','TolX',1e-1,'TolFun',1e-1,'Display','none');
+%opts2=optimoptions('fmincon','Display','iter','UseParallel',true,'TolX',1e-2,'TolFun',1e-2);
+opts2=optimoptions('fmincon','Display','iter','UseParallel',true,'TolX',1e-1,'TolFun',0.1*length(tIdx));
 j=inputParam.numClones;
 %while max(chi2p)<0.05
 
@@ -81,7 +82,7 @@ while iterStuck<inputParam.iterNoImp
     max(fOld./100,[],2)
     cTest=CNAscale*ones(1,21);
     cTest(tIdx,:)=(2.^(max(fOld./100,[],2)*[-1:0.1:1])).*(CNAscale(tIdx)*ones(1,21));
-    for k=1:size(cTest,2)
+    parfor k=1:size(cTest,2)
         nllRecenter(k)=nllCNAmulti_v4(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,[100.*cTest(:,k); Wcurr(:); fOld(:)],dbCounts);
     end
     [~,cIdx]=min(nllRecenter);
@@ -106,7 +107,7 @@ while iterStuck<inputParam.iterNoImp
         j=size(fOld,2);
         inputParam.numClones=j-1;
         nllRemove=nan(j,1);
-        for i=1:j
+        parfor i=1:j
             idx=setdiff(1:j,i);
             fRemove{i}=fOld(:,idx);
             %[paramRemove{i}, nllRemove(i)]=fmincon(@(param)nllCNAmulti_v4(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,param,filtPer),[100.*CNAscale(:); Wcurr(:); fRemove(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fRemove(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fRemove(:)));],[],opts2);
@@ -133,7 +134,8 @@ while iterStuck<inputParam.iterNoImp
             Wcurr=paramRemove(length(Tcell)+1:2*length(Tcell))
             fOld=reshape(paramRemove(2*length(Tcell)+1:end),[],inputParam.numClones)
         else
-            message=['not removing any at ' num2str(j)'] 
+            j
+            message=['not removing any at ' num2str(j)] 
             removeClone=0;
         end
     end  
@@ -143,18 +145,24 @@ while iterStuck<inputParam.iterNoImp
         inputParam.numClones=j;
         pts=makeFstart(fOld,tIdx,inputParam);
         tic
+        nllPTS=NaN(size(pts,2),1);
         parfor i=1:size(pts,2)
-            if isfinite(nllCNAaddClone_v2(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,CNAscale,Wcurr,fOld,pts(:,i),dbCounts))
-                [paramPTS{i}, nllPTS(i)]=fmincon(@(fNew)nllCNAaddClone_v2(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,CNAscale,Wcurr,fOld,fNew,dbCounts),pts(:,i),[],[],[],[],zeros(size(pts(:,i))),100*ones(size(pts(:,i))),[],opts);
-            else
-                message=['not defined at ' num2str(i)]
-                pts
-                nllPTS(i)=inf;
-            end
+           %if isfinite(nllCNAaddClone_v2(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,CNAscale,Wcurr,fOld,pts(:,i),dbCounts))
+                %[paramPTS{i}, nllPTS(i)]=fmincon(@(fNew)nllCNAaddClone_v2(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,CNAscale,Wcurr,fOld,fNew,dbCounts),pts(:,i),[],[],[],[],zeros(size(pts(:,i))),100*ones(size(pts(:,i))),[],opts);
+                nllPTS(i)=nllCNAaddClone_v2(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,CNAscale,Wcurr,fOld,pts(:,i),dbCounts);
+            %else
+            %    message=['not defined at ' num2str(i)]
+             %   pts
+             %   nllPTS(i)=inf;
+            %end
         end
         [~,idx]=min(nllPTS)
+        toc
         t(j,1)=toc
-        fAdd=[fOld paramPTS{idx}]
+        %fAdd=[fOld paramPTS{idx}]
+        fOld
+	pts(:,idx)
+	fAdd=[fOld pts(:,idx)]
         tic
         [param{j}, nll(j)]=fmincon(@(param)nllCNAmulti_v4(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,param,dbCounts),[100.*CNAscale(:); Wcurr(:); fAdd(:)],[],[],[],[],[50*cInit(:); inputParam.minW*ones(size(wInit(:))); zeros(size(fAdd(:)));],[200*cInit(:); inputParam.maxW*ones(size(wInit(:))); 100*ones(size(fAdd(:)));],[],opts2);
         currMin=nll(j)+j*length(tIdx)./inputParam.addCloneWeight;
