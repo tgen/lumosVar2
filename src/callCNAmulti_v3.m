@@ -71,8 +71,8 @@ meanNormalRDexon=NaN(size(segsMerged,1),length(Tcell));
 meanTumorRD=NaN(size(segsMerged,1),length(Tcell));
 meanMinorRD=NaN(size(segsMerged,1),length(Tcell));
 for i=1:length(Tcell)
-    meanTumorRDexon(:,i)=getMeanInRegions([E.Chr E.StartPos],E.TumorRD(:,i),segsMerged);
-    meanNormalRDexon(:,i)=getMeanInRegions([E.Chr E.StartPos],E.NormalRD(:,i),segsMerged);
+    meanTumorRDexon(:,i)=getMeanInRegions([E.Chr E.StartPos],E.TumorRD(:,i),segsMerged)+1;
+    meanNormalRDexon(:,i)=getMeanInRegions([E.Chr E.StartPos],E.NormalRD(:,i),segsMerged)+1;
     meanTumorRD(:,i)=getMeanInRegions([D.Chr D.Pos],D.TotalReadCount(:,i),segsMerged);
     if ismember(i,inputParam.contamIdx)
         meanMinorRD(:,i)=nan(size(segsMerged,1),1);
@@ -188,7 +188,7 @@ priorMinAllele(:,end,:,:)=germPriorMat;
 
 %%% find likelihoods of read counts and depth
 
-posCounts=accumarray(idxExon,E.EndPos-E.StartPos);
+posCounts=accumarray(idxExon,E.EndPos-E.StartPos,[size(segsMerged,1) 1],[],NaN);
 %pHet=sum(hetPos & dbPos)./sum(dbCounts);
 pHet=sum(hetPos)./sum(posCounts);
 priorCNAf=NaN(size(Mmat));
