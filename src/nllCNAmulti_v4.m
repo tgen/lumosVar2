@@ -134,6 +134,6 @@ end
 %log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount);
 %nll=-(sum((log(priorF)+sum(log(somLik),2)))./(inputParam.priorSomaticSNV*totalPosCount)+nllCNA+log(p+realmin)./(inputParam.priorSomaticSNV*inputParam.dbSNPposCount)+log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount));
 %nll=-(sum((log(priorF)+sum(log(somLik),2)))./(inputParam.priorSomaticSNV*totalPosCount)+nllCNA+log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount));
-nll=-(sum((log(priorF)+sum(log(somLik),2)))./size(somLik,2)+nllCNA+log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount));
+nll=-(sum((log(priorF)+sum(log(somLik),2)))./size(somLik,1)+nllCNA+log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount));
 
 return;
