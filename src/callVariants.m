@@ -19,12 +19,14 @@ for i=1:length(Tcell)
    end
    altCount(somaticDetected(:,i) & bIdx,i)=T.BcountsComb(somaticDetected(:,i) & bIdx);
    altCount(somaticDetected(:,i) & aIdx,i)=T.AcountsComb(somaticDetected(:,i) & aIdx);
-   altCount(max([P.Somatic P.SomaticPair],[],2)<0.5 & P.Het(:,i)>0.5,i)=T.BcountsComb(max([P.Somatic P.SomaticPair],[],2)<0.5 & P.Het(:,i)>0.5);
-   altCount(max([P.Somatic P.SomaticPair],[],2)<0.5 & P.Hom(:,i)>0.5,i)=T.AcountsComb(max([P.Somatic P.SomaticPair],[],2)<0.5 & P.Hom(:,i)>0.5);
+   altCount(max([P.Somatic P.SomaticPair],[],2)<0.5 & P.Het(:,i)>P.Hom(:,i),i)=T.BcountsComb(max([P.Somatic P.SomaticPair],[],2)<0.5 & P.Het(:,i)>P.Hom(:,i));
+   altCount(max([P.Somatic P.SomaticPair],[],2)<0.5 & P.Hom(:,i)>P.Het(:,i),i)=T.AcountsComb(max([P.Somatic P.SomaticPair],[],2)<0.5 & P.Hom(:,i)>P.Het(:,i));
 end
 %[mCount,mIdx]=max(altCount,[],2);
-trustScore=sum((altCount+1).*P.trust,2)./sum(altCount+1,2);
-artifactScore=sum((altCount+1).*P.artifact,2)./sum(altCount+1,2);
+trustScore=1-prod((1-P.trust).^altCount,2).^(1./sum(altCount,2));
+%trustScore=sum((altCount+1).*P.trust,2)./sum(altCount+1,2);
+%artifactScore=sum((altCount+1).*P.artifact,2)./sum(altCount+1,2);
+artifactScore=prod(P.artifact.^altCount,2).^(1./sum(altCount,2));
 passPos=trustScore>inputParam.pGoodThresh & artifactScore<inputParam.pGoodThresh;
 
 %%% assign filters
