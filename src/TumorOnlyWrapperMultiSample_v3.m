@@ -1,4 +1,4 @@
-function output=TumorOnlyWrapperMultiSample_v3(paramFile,varargin)
+function output=TumorOnlyWrapperMultiSample_v3(paramFile,numCPU,varargin)
 %TumorOnlyWrapper - Entry function for tumor only caller
 %uses a bayesian framework to call somatic variants and germline variants
 %from tumor only exome sequencing
@@ -32,7 +32,6 @@ function output=TumorOnlyWrapperMultiSample_v3(paramFile,varargin)
 inputParam=readInputs(paramFile);
 cd(inputParam.workingDirectory);
 %addpath(genpath(inputParam.workingDirectory));
-
 %%% start parallel pool
 %delete(gcp('nocreate'));
 %distcomp.feature( 'LocalUseMpiexec', true);
@@ -73,6 +72,17 @@ else
     save([inputParam.outMat],'-v7.3');
 end
 
+inputParam.numCPU=str2num(numCPU);
+
+pool=gcp('nocreate');
+if isempty(pool)
+    delete(gcp('nocreate'));
+    %distcomp.feature( 'LocalUseMpiexec', true);
+    pc = parcluster('local');
+    pc.NumWorkers = inputParam.numCPU;
+    parpool(pc, pc.NumWorkers);
+end
+
 sexChr=regexp(inputParam.sexChr,',','split');
 chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
 %dbSNPposCount=0;
@@ -111,15 +121,7 @@ for i=1:size(Ecell,2)
     TumorRD(:,i)=E.TumorRD;
     NormalRD(:,i)=E.NormalRD;
 end
-
-pool=gcp('nocreate');
-if isempty(pool) || pool.NumWorkers<inputParam.numCPU
-    delete(gcp('nocreate'));
-    %distcomp.feature( 'LocalUseMpiexec', true);
-    pc = parcluster('local');
-    pc.NumWorkers = inputParam.numCPU;
-    parpool(pc, pc.NumWorkers);
-end
+% 
 
 for i=1:size(Ecell,2)
     E=Ecell{i};
@@ -162,7 +164,7 @@ for i=1:size(Tcell,2)
     idx2=T.ApopAF+T.BpopAF>1 & T.ApopAF>=T.BpopAF;
     T.ApopAF(idx2)=1-T.BpopAF(idx2)-3*inputParam.pvFreqIndel;
     Tcell{i}=T;
-    [F{i},postTrust,postArtifact]=qualDiscrim(T,E,inputParam);
+    [~,postTrust,postArtifact]=qualDiscrim(T,E,inputParam);
     P.trust(:,i)=postTrust(:,2);
     P.artifact(:,i)=postArtifact(:,1);
     clear T E;
@@ -208,9 +210,14 @@ hetPos=commonHet & filtPos;
 %filtPer=sum(hetPos)./sum(commonHet);
 message=['preliminary variant classification at: ' char(datetime('now'))]
 
-%f=[inputParam.priorF(tIdx) diag(inputParam.priorF(tIdx)-0.05)+0.05 (diag(inputParam.priorF(tIdx)-0.05)+0.05)*0.5];
+if inputParam.NormalSample<1
+    f=[inputParam.priorF(tIdx) diag(inputParam.priorF(tIdx)-0.05)+0.05 (diag(inputParam.priorF(tIdx)-0.05)+0.05)*0.5];
+else
+    f=inputParam.priorF(tIdx);
+end
 %f=[inputParam.priorF(tIdx) diag(inputParam.priorF(tIdx)) diag(inputParam.priorF(tIdx))*0.5];
-f=[inputParam.priorF(tIdx) diag(inputParam.priorF(tIdx))];
+%f=[inputParam.priorF(tIdx) diag(inputParam.priorF(tIdx))];
+%f=[inputParam.priorF(tIdx) diag(inputParam.priorF(tIdx)-0.05)+0.05];
 inputParam.numClones=size(f,2);
 
 %%%Call Copy Number
@@ -261,22 +268,22 @@ for i=1:size(Tcell,2)
 end
 message=['initial copy number calls: ' char(datetime('now'))]
 save([inputParam.outMat],'-v7.3');
-
-countsAll=getCounts(Tcell, inputParam);
-for j=1:length(Tcell)
-    [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[countsAll.Chr countsAll.Pos],'rows');
-    Tcell{j}.RefComb=countsAll.Ref(locb);
-    Tcell{j}.Acomb=countsAll.A(locb);
-    Tcell{j}.Bcomb=countsAll.B(locb);
-    Tcell{j}.AcountsComb=countsAll.Acounts(locb,j);
-    Tcell{j}.BcountsComb=countsAll.Bcounts(locb,j);
-    Tcell{j}.ApopAFcomb=countsAll.ApopAF(locb);
-    Tcell{j}.BpopAFcomb=countsAll.BpopAF(locb);
-    %altCount(bIdx,j)=Tcell{j}.BcountsComb(bIdx);
-    %altCount(~bIdx,j)=Tcell{j}.AcountsComb(~bIdx);
-    %AF(bIdx,j)=Tcell{j}.BcountsComb(bIdx)./Tcell{j}.ReadDepthPass(bIdx);
-    %AF(~bIdx,j)=Tcell{j}.AcountsComb(~bIdx)./Tcell{j}.ReadDepthPass(~bIdx);
-end
+% 
+% countsAll=getCounts(Tcell, inputParam);
+% for j=1:length(Tcell)
+%     [lia,locb]=ismember([Tcell{j}.Chr Tcell{j}.Pos],[countsAll.Chr countsAll.Pos],'rows');
+%     Tcell{j}.RefComb=countsAll.Ref(locb);
+%     Tcell{j}.Acomb=countsAll.A(locb);
+%     Tcell{j}.Bcomb=countsAll.B(locb);
+%     Tcell{j}.AcountsComb=countsAll.Acounts(locb,j);
+%     Tcell{j}.BcountsComb=countsAll.Bcounts(locb,j);
+%     Tcell{j}.ApopAFcomb=countsAll.ApopAF(locb);
+%     Tcell{j}.BpopAFcomb=countsAll.BpopAF(locb);
+%     %altCount(bIdx,j)=Tcell{j}.BcountsComb(bIdx);
+%     %altCount(~bIdx,j)=Tcell{j}.AcountsComb(~bIdx);
+%     %AF(bIdx,j)=Tcell{j}.BcountsComb(bIdx)./Tcell{j}.ReadDepthPass(bIdx);
+%     %AF(~bIdx,j)=Tcell{j}.AcountsComb(~bIdx)./Tcell{j}.ReadDepthPass(~bIdx);
+% end
 
 
 %%%repeat fitting and variant calling until converges
@@ -348,7 +355,8 @@ while(true)
 %         end
 %     end
 %     message=['quality filtering iteration: ' num2str(i) ' at ' char(datetime('now'))]
-    ['Somatic positions: ' num2str(sum(somPos))]
+    ['Total Somatic positions: ' num2str(sum(somPos))]
+    ['SomaticPair positions: ' num2str(sum(strcmp(Filter,'SomaticPairPASS')))]
     ['Het positions: ' num2str(sum(hetPos))]
     save([inputParam.outMat],'-v7.3');
     if sum(abs(somPos-somPosOld))/sum(somPos)<=0.05 || i>=inputParam.maxIter
@@ -380,8 +388,9 @@ end
 % fAll(tIdx,1:end)=reshape(f,[],inputParam.numClones);
 
 
-cloneCounts=hist(cloneId(somPos,1),1:size(f,2));
-[~,ord]=sort(cloneCounts,'descend');
+%cloneCounts=hist(cloneId(somPos,1),1:size(f,2));
+%[~,ord]=sort(cloneCounts,'descend');
+[~,ord]=sort(mean(f,1),2,'descend');
 fSort=f(:,ord);
 [~,cloneIdSort]=ismember(cloneId,ord);
 ord=[ord size(f,2)+1];
@@ -390,13 +399,20 @@ ord=[ord size(f,2)+1];
 save([inputParam.outMat],'-v7.3');
 [Filter,~,somaticDetected,trustScore,artifactScore]=callVariants(Tcell,P,inputParam);
 save([inputParam.outMat],'-v7.3');
-writeJointVCF(Tcell,P,fSort,cloneIdSort,alleleId,Filter,somaticDetected,trustScore,artifactScore,inputParam);
+[~,mIdx]=max(P.SomaticPair,[],2);
+pairPos=strncmp(Filter,'SomaticPair',11);
+if sum(pairPos)>0
+    for i=1:length(alleleIdPair)
+        alleleId(pairPos & mIdx==i)=alleleIdPair{i}(pairPos & mIdx==i);
+    end
+end
+sampleFrac=writeJointVCF(Tcell,P,fSort,cloneIdSort,alleleId,Filter,somaticDetected,trustScore,artifactScore,inputParam);
 writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputParam);
-writeCloneSummary(segsTable,exonRD,Tcell,fSort,cloneIdSort,inputParam,Filter,somaticDetected);
+writeCloneSummary(segsTable,exonRD,Tcell,fSort,cloneIdSort,inputParam,Filter,somaticDetected,sampleFrac);
 plotTumorOnly(exonRD,segsTable,CNAscale,fSort,Tcell,somPos,hetPos,cloneIdSort,inputParam);
 
 for i=1:length(F)
-    writetable([Tcell{i}(:,1:2) F{i}],[inputParam.outName '_' sampleNames{i} '.qualMetrics.txt'],'Delimiter','\t','FileType','text','WriteVariableNames',1);
+    writetable([Tcell{i}(:,1:2) F{i}],[inputParam.outName '_' sampleNames{i} '.qualMetrics.tsv'],'Delimiter','\t','FileType','text','WriteVariableNames',1);
 end
 
 
