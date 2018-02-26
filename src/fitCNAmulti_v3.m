@@ -59,7 +59,7 @@ end
 tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
 %opts=optimoptions('fmincon','TolX',1e-1,'TolFun',1e-1,'Display','none');
 %opts2=optimoptions('fmincon','Display','iter','UseParallel',true,'TolX',1e-2,'TolFun',1e-2);
-opts2=optimoptions('fmincon','Display','iter','UseParallel',true,'TolX',1e-1,'TolFun',0.1*length(tIdx));
+opts2=optimoptions('fmincon','Display','iter','UseParallel',true,'TolX',1e-1,'TolFun',0.1*length(tIdx)./inputParam.addCloneWeight);
 j=inputParam.numClones;
 %while max(chi2p)<0.05
 
