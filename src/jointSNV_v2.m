@@ -50,6 +50,7 @@ for i=1:size(Tcell,2)
     mapQC(locb,i)=T.PosMapQC;
 end
 %toc
+mapQC(isnan(mapQC))=inputParam.minPosQual;
 M=min(M,N-M);
 cosmic=max(cosmic,[],2);
 
