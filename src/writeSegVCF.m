@@ -1,4 +1,4 @@
-function writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputParam)
+function segsTableCond=writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputParam)
 %writeSegVCF - writes VCF for copy number alterations
 %
 % Syntax: writeSegVCF(segsTable,inputParam)
@@ -45,6 +45,8 @@ fprintf(fout,['##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of Struc
 fprintf(fout,['##INFO=<ID=END,Number=1,Type=String,Description="End of Variant">\n']);
 fprintf(fout,['##INFO=<ID=EXONCOUNT,Number=1,Type=Float,Description="Number of Exons in Segment">\n']);
 fprintf(fout,['##INFO=<ID=HETCOUNT,Number=1,Type=Float,Description="Number of Heterozygous Variants in Segment">\n']);
+fprintf(fout,['##INFO=<ID=CloneId,Number=1,Type=Integer,Description="CloneId">\n']);
+
 
 fprintf(fout,['##FORMAT=<ID=CNF,Number=1,Type=Float,Description="Fraction containg Copy Number Alteration">\n']);
 fprintf(fout,['##FORMAT=<ID=LOG2FC,Number=1,Type=Float,Description="log2 fold change">\n']);
@@ -96,6 +98,7 @@ Info=cellstr(strcat('CN=',num2str(segsTableCond.N,'%-.0f'),';MACN=',num2str(segs
 Info=strcat(Info,';SVLEN=',num2str(segsTableCond.EndPos-segsTableCond.StartPos,'%-.0f'));
 Info=strcat(Info,';SVTYPE=',type,';END=',num2str(segsTableCond.EndPos,'%-.0f'));
 Info=strcat(Info,';EXONCOUNT=',num2str(segsTableCond.exonCounts,'%-.0f'),';HETCOUNT=',num2str(segsTableCond.hetCounts,'%-.0f'));
+Info=strcat(Info,';CloneId=',num2str(segsTableCond.cnaIdx,'%-.0f'));
 
 for i=1:size(segsTableCond.F,2)
     formatStr(segsTableCond.N~=2 | segsTableCond.M~=1,i)=cellstr(strcat(num2str(segsTableCond.F(segsTableCond.N~=2 | segsTableCond.M~=1,i),'%-.3f'),':',num2str(segsTableCond.log2FC(segsTableCond.N~=2 | segsTableCond.M~=1,i),'%-.2f'),':',num2str(segsTableCond.meanBAF(segsTableCond.N~=2 | segsTableCond.M~=1,i),'%-.2f')));
