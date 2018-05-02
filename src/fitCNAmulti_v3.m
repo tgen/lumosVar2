@@ -77,9 +77,9 @@ iterStuck=0;
 while iterStuck<inputParam.iterNoImp
     foundMin=0;
     removeClone=1;
-    size(fOld)
-    size(CNAscale)
-    max(fOld./100,[],2)
+    %size(fOld)
+    %size(CNAscale)
+    %max(fOld./100,[],2)
     cTest=CNAscale*ones(1,21);
     cTest(tIdx,:)=(2.^(max(fOld./100,[],2)*[-1:0.1:1])).*(CNAscale(tIdx)*ones(1,21));
     parfor k=1:size(cTest,2)

@@ -107,12 +107,21 @@ tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
 priorF=ones(sum(somPos),1);
 %%% find likelihood of somatic variant
 if(sum(somPos)>0)
-    [fMax,fIdx]=max(f,[],1);
-    %for j=1:length(tIdx)
-        %priorF(:,tIdx(j))=betapdf(f(j,somIdx(:,tIdx(j))),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF(tIdx(j))-inputParam.alphaF+2)+inputParam.minLik;
-            %end
-    for j=1:length(fMax)
-        priorF(somIdx(:,1)==j)=betapdf(fMax(j),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF(tIdx(fIdx(j)))-inputParam.alphaF+2)+inputParam.minLik;
+    fDiff=nan(size(f,2),1);
+    for i=1:size(f,2)
+        if size(f,1)>1
+            fDiff(i)=geomean(pdist(f(:,i),'cityblock')+0.05);
+        else
+            fDiff(i)=geomean(pdist([0; f(:,i); 1],'cityblock')+0.05);
+        end
+    end
+    if length(inputParam.priorF)>1
+        priorFDiff=geomean(pdist(inputParam.priorF,'cityblock')+0.05);
+    else
+        priorFDiff=geomean(pdist([0; inputParam.priorF; 1],'cityblock')+0.05);
+    end
+    for j=1:length(fDiff)
+        priorF(somIdx(:,1)==j)=betapdf(fDiff(j),inputParam.alphaF,(inputParam.alphaF-1)./priorFDiff-inputParam.alphaF+2)+inputParam.minLik;
     end
 else
     somLik=1;

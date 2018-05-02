@@ -192,7 +192,21 @@ posCounts=accumarray(idxExon,E.EndPos-E.StartPos,[size(segsMerged,1) 1],[],NaN);
 %pHet=sum(hetPos & dbPos)./sum(dbCounts);
 pHet=sum(hetPos)./sum(posCounts);
 priorCNAf=NaN(size(Mmat));
-[fMax,fIdx]=max(f(:,1:end-1),[],1);
+%[fMax,fIdx]=max(f(:,1:end-1),[],1);
+fDiff=nan(size(f,2)-1,1);
+for i=1:size(f,2)-1
+    if size(f,1)>1
+        fDiff(i)=geomean(pdist(f(:,i),'cityblock')+0.05);
+    else
+        fDiff(i)=geomean(pdist([0; f(:,i); 1],'cityblock')+0.05);
+    end
+end
+if length(inputParam.priorF)>1
+    priorFDiff=geomean(pdist(inputParam.priorF,'cityblock')+0.05);
+else
+    priorFDiff=geomean(pdist([0; inputParam.priorF; 1],'cityblock')+0.05);
+end
+
 corrSeg=NaN(size(Nseg,1),size(f,2),length(Tcell),2,2);
 hetCountOrig=hist(idx,1:size(segsMerged,1))';
 %hetPosDB=repmat(hetPos,1,size(f,2),2);
@@ -244,8 +258,10 @@ for i=1:size(f,2)
                 if i==size(f,2)
                     priorCNAf(:,i,k,m)=germPriorMat(:,k,m);
                 else
-                    priorCNAf(:,i,k,m)=betapdf(fMax(i),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF(fIdx(i))-inputParam.alphaF+2)+inputParam.minLik;
-                    priorCNAf(Nmat(:,i,k)==2 & Mmat(:,i,k,m)==1,i,k,m)=betapdf(inputParam.priorF(j),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF(j)-inputParam.alphaF+2);
+                    %priorCNAf(:,i,k,m)=betapdf(fMax(i),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF(fIdx(i))-inputParam.alphaF+2)+inputParam.minLik;
+                    %priorCNAf(Nmat(:,i,k)==2 & Mmat(:,i,k,m)==1,i,k,m)=betapdf(inputParam.priorF(j),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF(j)-inputParam.alphaF+2);
+                    priorCNAf(:,i,k,m)=betacdf(fDiff(i),inputParam.alphaF,(inputParam.alphaF-1)./priorFDiff-inputParam.alphaF+2)+inputParam.minLik;
+                    priorCNAf(Nmat(:,i,k)==2 & Mmat(:,i,k,m)==1,i,k,m)=1;
                 end
                 %corr(:,i,j,k)=f(j,i).*Mmat(:,i,k)./Nmat(:,i,k)+(1-f(j,i))*0.5;
                 corr(:,i,j,k,m)=(f(j,i).*Mmat(:,i,k,m)+(1-f(j,i)))./(f(j,i).*Nmat(:,i,k)+(1-f(j,i)).*2);

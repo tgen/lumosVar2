@@ -74,10 +74,11 @@ if inputParam.NormalSample>0
     germAF(RDmat(:,inputParam.NormalSample)==0,:)=0;
     tAF=mean(Bcounts(:,tIdx),2)./mean(RDmat(:,tIdx),2);
     germAF=min(germAF,tAF);
-    germAF=max(germAF,inputParam.minBCount./(max(RDmat,[],2)+2*inputParam.minBCount));
+    %germAF=max(germAF,inputParam.minBCount./(max(RDmat,[],2)+2*inputParam.minBCount));
 else
     bIdx=ApopAF>=BpopAF;
     aIdx=ApopAF<BpopAF;
+    %germAF=inputParam.minBCount./(max(RDmat,[],2)+2*inputParam.minBCount);
 end
 
 indelPos=A>4 | B>4 | Ref >4 | A<0 | B<0 | Ref <0;
@@ -172,11 +173,14 @@ for j=1:size(Acounts,2)
         %pDataNonDip(:,j,3)=bbinopdf_ln(Bcounts(:,j),RDmat(:,j),tAF*W(j),(1-tAF)*W(j));
         %pDataNonDip(:,j)=max(pDataNonDip1(:,j),pDataNonDip2(:,j));
     else
-        pDataNonDip(:,j,1)=zeros(size(Bcounts(:,j)));
-        pDataNonDip(:,j,2)=zeros(size(Bcounts(:,j)));
+        pDataNonDip(:,j,1)=bbinopdf_ln(Bcounts(:,j),RDmat(:,j),germAF.*W(j),(1-germAF).*W(j));
+        pDataNonDip(:,j,2)=pDataNonDip(:,j,1);
+        %pDataNonDip(:,j,1)=zeros(size(Bcounts(:,j)));
+        %pDataNonDip(:,j,2)=zeros(size(Bcounts(:,j)));
         %pDataNonDip(:,j,3)=zeros(size(Bcounts(:,j)));
     end
 end
+cloneLik(isnan(expAF))=NaN;
 [~,nonDipIdx]=max(prod(pDataNonDip,2),[],3);
 pDataNonDipMax=NaN(size(Acounts));
 for i=1:size(pDataNonDip,3)
