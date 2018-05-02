@@ -165,8 +165,8 @@ close(gcf);
 for j=1:length(Tcell)
     subplot(length(Tcell)+1,5,[j*5-4 j*5-1])
     T=Tcell{j};
-    bIdx=T.ApopAF>=T.BpopAF;
-    aIdx=T.ApopAF<T.BpopAF;
+    bIdx=T.ApopAFcomb>=T.BpopAFcomb;
+    aIdx=T.ApopAFcomb<T.BpopAFcomb;
     AF(bIdx)=(T.BCountF(bIdx)+T.BCountR(bIdx))./T.ReadDepthPass(bIdx);
     AF(aIdx)=(T.ACountF(aIdx)+T.ACountR(aIdx))./T.ReadDepthPass(aIdx);
     for i=1:2:maxChr
@@ -183,8 +183,8 @@ for j=1:length(Tcell)
     subplot(length(Tcell)+1,5,[j*5-4 j*5-1])
     hold on;
     T=Tcell{j};
-    bIdx=T.ApopAF>=T.BpopAF;
-    aIdx=T.ApopAF<T.BpopAF;
+    bIdx=T.ApopAFcomb>=T.BpopAFcomb;
+    aIdx=T.ApopAFcomb<T.BpopAFcomb;
     AF(bIdx)=(T.BCountF(bIdx)+T.BCountR(bIdx))./T.ReadDepthPass(bIdx);
     AF(aIdx)=(T.ACountF(aIdx)+T.ACountR(aIdx))./T.ReadDepthPass(aIdx);
     for i=1:size(f,2)
