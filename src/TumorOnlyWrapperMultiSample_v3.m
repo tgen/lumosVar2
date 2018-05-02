@@ -121,33 +121,6 @@ for i=1:size(Ecell,2)
     TumorRD(:,i)=E.TumorRD;
     NormalRD(:,i)=E.NormalRD;
 end
-% 
-
-for i=1:size(Ecell,2)
-    E=Ecell{i};
-    exonRD{i}=E{median(MapQC,2)<inputParam.minExonQual & median(perReadPass,2)>inputParam.minPerReadPASS & median(abFrac,2)>inputParam.minABFrac & min(TumorRD,[],2)>=0 & min(NormalRD,[],2)>=0,:};
-    segs{i}=segmentData(exonRD{i},inputParam.cnaAlpha);
-    clear E;
-end
-
-segsMerged=mergeSegments_v2(segs,exonRD,inputParam);
-numChr=max(Ecell{1}.Chr);
-%%%Make sure segments extend to ends of chromosome
-for i=1:numChr
-    idx1=find(segsMerged(:,1)==i,1,'first');
-    idx2=find(segsMerged(:,1)==i,1,'last');
-    if(isempty(idx1))
-        segsMerged=[segsMerged; NaN(1,4)];
-        segsMerged(end,1)=i;
-        idx1=size(segsMerged,1);
-        idx2=idx1;
-    end
-    segsMerged(idx1,2)=min([Tcell{1}.Pos(Tcell{1}.Chr==i); Ecell{1}{Ecell{1}{:,1}==i,2}]);
-    segsMerged(idx2,3)=max([Tcell{1}.Pos(Tcell{1}.Chr==i); Ecell{1}{Ecell{1}{:,1}==i,3}]);
-end
-message=['segmented data at: ' char(datetime('now'))]
-idxDB=getPosInRegions(dbPosList,segsMerged(:,1:3));
-dbCounts=hist(idxDB,1:size(segsMerged,1))';
 
 save([inputParam.outMat],'-v7.3');
 message=['saved data at: ' char(datetime('now'))]
@@ -200,15 +173,43 @@ pDataSum(1)=0;
 %%%Preliminary Variant Classification
 tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
 if inputParam.NormalSample>0
-    commonHet=(min([Tcell{inputParam.NormalSample}.ApopAF Tcell{inputParam.NormalSample}.BpopAF],[],2)>inputParam.minHetPopFreq) & Tcell{inputParam.NormalSample}.BCountF+Tcell{inputParam.NormalSample}.BCountR>=inputParam.minBCount;
+    commonHet=(min([Tcell{inputParam.NormalSample}.ApopAFcomb Tcell{inputParam.NormalSample}.BpopAFcomb],[],2)>inputParam.minHetPopFreq) & Tcell{inputParam.NormalSample}.BCountF+Tcell{inputParam.NormalSample}.BCountR>=inputParam.minBCount;
    % somPos=min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)<inputParam.maxSomPopFreq & filtPos & altCount(:,inputParam.NormalSample)==0 & max(altCount(:,tIdx),[],2)>inputParam.minBCount;
 else
-    commonHet=min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)>inputParam.minHetPopFreq;
+    commonHet=min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)>inputParam.minHetPopFreq;
     %somPos=Tcell{1}.CosmicCount>1 & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)<inputParam.maxSomPopFreq & filtPos;
 end    
 hetPos=commonHet & filtPos;
 %filtPer=sum(hetPos)./sum(commonHet);
 message=['preliminary variant classification at: ' char(datetime('now'))]
+
+
+for i=1:size(Ecell,2)
+    E=Ecell{i};
+    exonRD{i}=E{median(MapQC,2)<inputParam.minExonQual & median(perReadPass,2)>inputParam.minPerReadPASS & median(abFrac,2)>inputParam.minABFrac & min(TumorRD,[],2)>=0 & min(NormalRD,[],2)>=0,:};
+    [segs{i},bafSegs{i}]=segmentData(exonRD{i},Tcell{i}(hetPos,:),inputParam.cnaAlpha);
+    clear E;
+end
+
+segsMerged=mergeSegments_v2([segs bafSegs],exonRD,Tcell,hetPos,inputParam);
+numChr=max(Ecell{1}.Chr);
+%%%Make sure segments extend to ends of chromosome
+for i=1:numChr
+    idx1=find(segsMerged(:,1)==i,1,'first');
+    idx2=find(segsMerged(:,1)==i,1,'last');
+    if(isempty(idx1))
+        segsMerged=[segsMerged; NaN(1,4)];
+        segsMerged(end,1)=i;
+        idx1=size(segsMerged,1);
+        idx2=idx1;
+    end
+    segsMerged(idx1,2)=min([Tcell{1}.Pos(Tcell{1}.Chr==i); Ecell{1}{Ecell{1}{:,1}==i,2}]);
+    segsMerged(idx2,3)=max([Tcell{1}.Pos(Tcell{1}.Chr==i); Ecell{1}{Ecell{1}{:,1}==i,3}]);
+end
+message=['segmented data at: ' char(datetime('now'))]
+idxDB=getPosInRegions(dbPosList,segsMerged(:,1:3));
+dbCounts=hist(idxDB,1:size(segsMerged,1))';
+
 
 if inputParam.NormalSample<1
     f=[inputParam.priorF(tIdx) diag(inputParam.priorF(tIdx)-0.05)+0.05 (diag(inputParam.priorF(tIdx)-0.05)+0.05)*0.5];
@@ -267,7 +268,7 @@ for i=1:size(Tcell,2)
     clear T;
 end
 message=['initial copy number calls: ' char(datetime('now'))]
-save([inputParam.outMat],'-v7.3');
+%save([inputParam.outMat],'-v7.3');
 % 
 % countsAll=getCounts(Tcell, inputParam);
 % for j=1:length(Tcell)
@@ -292,6 +293,7 @@ somPosOld=zeros(size(hetPos));
 W=wInit;
 CNAscale=cInit;
 save([inputParam.outMat],'-v7.3');
+indelPos=(Tcell{1}.Acomb>4 | Tcell{1}.Bcomb>4);
 
 while(true)
     if inputParam.NormalSample>0
@@ -362,7 +364,7 @@ while(true)
     if sum(abs(somPos-somPosOld))/sum(somPos)<=0.05 || i>=inputParam.maxIter
         break;
     end
-    [segsTable, W, f, CNAscale, nll, t{i}]=fitCNAmulti_v3(hetPos,somPos,filtPos & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)>inputParam.maxSomPopFreq,Tcell,exonRD,segsMerged,inputParam,f,CNAscale,W,dbCounts)
+    [segsTable, W, f, CNAscale, nll, t{i}]=fitCNAmulti_v3(hetPos & ~indelPos,somPos & ~indelPos,filtPos & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)>inputParam.maxSomPopFreq,Tcell,exonRD,segsMerged,inputParam,f,CNAscale,W,dbCounts)
     %['clonal fractions: ' num2str(f)]
     for j=1:length(Tcell)
         T=Tcell{j};
@@ -398,7 +400,6 @@ ord=[ord size(f,2)+1];
 
 save([inputParam.outMat],'-v7.3');
 [Filter,~,somaticDetected,trustScore,artifactScore]=callVariants(Tcell,P,inputParam);
-save([inputParam.outMat],'-v7.3');
 [~,mIdx]=max(P.SomaticPair,[],2);
 pairPos=strncmp(Filter,'SomaticPair',11);
 if sum(pairPos)>0
@@ -407,7 +408,8 @@ if sum(pairPos)>0
     end
 end
 sampleFrac=writeJointVCF(Tcell,P,fSort,cloneIdSort,alleleId,Filter,somaticDetected,trustScore,artifactScore,inputParam);
-writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputParam);
+segsTableCond=writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputParam);
+save([inputParam.outMat],'-v7.3');
 writeCloneSummary(segsTable,exonRD,Tcell,fSort,cloneIdSort,inputParam,Filter,somaticDetected,sampleFrac);
 plotTumorOnly(exonRD,segsTable,CNAscale,fSort,Tcell,somPos,hetPos,cloneIdSort,inputParam);
 
