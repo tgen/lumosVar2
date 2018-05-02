@@ -62,7 +62,7 @@ for i=1:size(f,2)
     for j=1:size(f,1)
         outString=[outString ',f' num2str(j) '=' num2str(f(j,i))];
     end
-    outString=[outString ',PassCount=' num2str(sum(P.Somatic(:,1)>inputParam.pSomaticThresh & max(P.trust,[],2)>inputParam.pGoodThresh & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq & cloneId(:,1)==i))];
+    outString=[outString ',PassCount=' num2str(sum(P.Somatic(:,1)>inputParam.pSomaticThresh & max(P.trust,[],2)>inputParam.pGoodThresh & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)<inputParam.maxSomPopFreq & cloneId(:,1)==i))];
     fprintf(fout,[outString '\n']);
 end
 
@@ -117,10 +117,10 @@ T=Tcell{1};
 RefNT=int2ntIndels(T.RefComb);
 %RefNT(strcmp(RefNT,'<LongIndel>'),:)={'N'};
 delPos=cellfun('length',RefNT)>1;
-longDelPos=strncmp(RefNT,'LEN',3);
+longDelPos=strncmp(RefNT,'L',1);
 svLen=zeros(height(T),1);
 svLen(delPos)=1-cellfun('length',RefNT(delPos));
-svLen(longDelPos)=-1*str2double(regexprep(RefNT(longDelPos),'LEN_',''));
+svLen(longDelPos)=-1*str2double(regexprep(RefNT(longDelPos),'L',''));
 endPos=T.Pos-svLen;
 RefNT(longDelPos)={'N'};
 AltNT=repmat({'.'},height(T),1);
@@ -128,50 +128,21 @@ AltNT(T.RefComb~=T.Acomb & T.RefComb~=T.Bcomb,:)=cellstr(strcat(int2ntIndels(T.A
 AltNT(T.RefComb==T.Acomb & P.Hom(:,1)<=0.5,:)=cellstr(int2ntIndels(T.Bcomb(T.RefComb==T.Acomb & P.Hom(:,1)<=0.5)));
 AltNT(T.RefComb==T.Bcomb,:)=cellstr(int2ntIndels(T.Acomb(T.RefComb==T.Bcomb)));
 AltNT(T.RefComb==T.Acomb & P.Hom(:,1)>0.5,:)={'.'};
+AltNT(strncmp('SomaticPair',Filter,10) & T.RefComb==T.Acomb,:)=int2ntIndels(T.Bcomb(strncmp('SomaticPair',Filter,10) & T.RefComb==T.Acomb,:));
+AltNT(strncmp('SomaticPair',Filter,10) & T.RefComb~=T.Acomb,:)=int2ntIndels(T.Acomb(strncmp('SomaticPair',Filter,10) & T.RefComb~=T.Acomb,:));
+
 insPos=cellfun('length',AltNT)>1;
 AltNT(longDelPos,:)={'<DEL>'};
 svLen(insPos)=cellfun(@(x) max(cellfun('length',strsplit(x,','))),AltNT(insPos))-1;
-longInsPos=strncmp(AltNT,'LEN',3);
-svLen(longInsPos)=str2double(regexprep(AltNT(longInsPos),'LEN_',''));
+longInsPos=strncmp(AltNT,'L',1);
+svLen(longInsPos)=str2double(regexprep(AltNT(longInsPos),'L',''));
 AltNT(longInsPos)={'<INS>'};
 %RefNT(~cellfun('isempty',strfind(AltNT,'N')) & T.RefComb>4,:)={'N'};
 %AltNT(~cellfun('isempty',strfind(AltNT,'N')) & T.RefComb>4,:)={'<DEL>'};
 
 
-%%% calculate quality
-Qual=-10*log10(1-mean([trustScore artifactScore max([P.Het P.Hom P.Somatic P.NonDip],[],2)],2));
-%Qual=zeros(size(T.Pos));
-%Qual(P.Somatic(:,n)>0.5,:)=min(min(-10*log10(1-P.Somatic(P.Somatic(:,n)>0.5,n)),-10*log10(1-P.trust(P.Somatic(:,n)>0.5,n))),-10*log10(P.artifact(P.Somatic(:,n)>0.5,n)));
-%Qual(P.Het(:,n)>0.5,:)=min(min(-10*log10(1-P.Het(P.Het(:,n)>0.5,n)),-10*log10(1-P.trust(P.Het(:,n)>0.5,n))),-10*log10(P.artifact(P.Het(:,n)>0.5,n)));
-%Qual(P.Hom(:,n)>0.5,:)=min(min(-10*log10(1-P.Hom(P.Hom(:,n)>0.5,n)),-10*log10(1-P.trust(P.Hom(:,n)>0.5,n))),-10*log10(P.artifact(P.Hom(:,n)>0.5,n)));
-%Qual(P.NonDip(:,n)>0.5,:)=min(min(-10*log10(1-P.NonDip(P.NonDip(:,n)>0.5,n)),-10*log10(1-P.trust(P.NonDip(:,n)>0.5,n))),-10*log10(P.artifact(P.NonDip(:,n)>0.5,n)));
 
-%%% assign filters
-% passPos=max(P.trust,[],2)>inputParam.pGoodThresh & max(P.artifact,[],2)<inputParam.pGoodThresh & Tcell{1}.RefComb>0 & Tcell{1}.Acomb>0 & Tcell{1}.Bcomb>0;
-% Filter=cell(size(passPos));
-% Filter(P.Somatic(:,1)>0.5,:)={'SomaticLowQC'};
-% Filter(P.Somatic(:,1)>inputParam.pSomaticThresh & passPos,:)={'SomaticPASS'};
-% Filter(P.Somatic(:,1)>0.5 & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)>inputParam.maxSomPopFreq,:)={'SomaticDBsnp'};
-% Filter(P.Het(:,1)>0.5,:)={'GermlineHetLowQC'};
-% Filter(P.Het(:,1)>inputParam.pGermlineThresh & passPos,:)={'GermlineHetPASS'};
-% Filter(P.Hom(:,1)>0.5,:)={'GermlineHomLowQC'};
-% Filter(P.Hom(:,1)>inputParam.pGermlineThresh & passPos,:)={'GermlineHomPASS'};
-% Filter(P.NonDip(:,1)>0.5,:)={'GermlineShiftLowQC'};
-% Filter(P.NonDip(:,1)>inputParam.pGermlineThresh & passPos,:)={'GermlineShiftPASS'};
-% Filter(P.Somatic(:,1)<0.5 & P.Het(:,1)<0.5 & P.Hom(:,1)<0.5 & P.NonDip(:,1)<0.5,:)={'NoCall'};
-% Filter(min(P.artifact,[],2)>inputParam.pGoodThresh,:)={'REJECT'};
-% %tIdx=setdiff(1:length(Tcell),inputParam.NormalSample)
-% if inputParam.NormalSample>0
-%     idxSom=strncmp(Filter,'Somatic',7);
-%     idxSomPass=strncmp(Filter,'SomaticPASS',11);
-%     for i=1:length(tIdx)
-%         Filter(P.SomaticPair(:,tIdx(i))>0.5 & ~idxSom & min(P.artifact(:,[tIdx(i) inputParam.NormalSample]),[],2)<inputParam.pGoodThresh,:)={'SomaticPairLowQC'};
-%         Filter(max(P.SomaticPair(:,tIdx(i)),[],2)>inputParam.pSomaticThresh & ~idxSomPass & max(P.trust(:,[tIdx(i) inputParam.NormalSample]),[],2)>inputParam.pGoodThresh &  max(P.artifact(:,[tIdx(i) inputParam.NormalSample]),[],2)<inputParam.pGoodThresh,:)={'SomaticPairPASS'};
-%     end
-% end
-
-AltNT(strncmp('SomaticPair',Filter,10) & T.RefComb==T.Acomb,:)=int2ntIndels(T.Bcomb(strncmp('SomaticPair',Filter,10) & T.RefComb==T.Acomb,:));
-AltNT(strncmp('SomaticPair',Filter,10) & T.RefComb~=T.Acomb,:)=int2ntIndels(T.Acomb(strncmp('SomaticPair',Filter,10) & T.RefComb~=T.Acomb,:));
+Qual=-10*log10(1-geomean(max(min([trustScore 1-artifactScore max([P.Het P.Hom P.Somatic P.NonDip],[],2)],1-inputParam.minLik),inputParam.minLik),2));
 
 %%% construct info fields
 %Info=cellstr(strcat('DP=',num2str(T.ReadDepth,'%-.0f'),';DPQC=',num2str(T.ReadDepthPass,'%-.0f')));
@@ -182,7 +153,7 @@ Info=cellstr(strcat('JPT=',strsplit(sprintf('%-.1f\n',real(-10*log10(1-trustScor
 %Info=strcat(Info,';LS=',num2str(P.DataSomatic(:,n),'%-.5f'),';LGAB=',num2str(P.DataHet(:,n),'%-.5f'),';LGAA=',num2str(P.DataHom(:,n),'%-.5f'),';LND=',num2str(P.DataNonDip(:,n),'%-.5f'));
 Info=strcat(Info,';A=',[int2ntIndels(T.Acomb);{''}],';B=',[int2ntIndels(T.Bcomb); {''}]);
 %Info=strcat(Info,';ACountF=',num2str(T.ACountF,'%-.0f'),';ACountR=',num2str(T.ACountR,'%-.0f'),';BCountF=',num2str(T.BCountF,'%-.0f'),';BCountR=',num2str(T.BCountR,'%-.0f'));
-Info=strcat(Info,';ApopAF=',strsplit(sprintf('%-.5f\n',T.ApopAF))',';BpopAF=',strsplit(sprintf('%-.5f\n',T.BpopAF))',';CosmicCount=',strsplit(sprintf('%-.0f\n',T.CosmicCount))');
+Info=strcat(Info,';ApopAF=',strsplit(sprintf('%-.5f\n',T.ApopAFcomb))',';BpopAF=',strsplit(sprintf('%-.5f\n',T.BpopAFcomb))',';CosmicCount=',strsplit(sprintf('%-.0f\n',T.CosmicCount))');
 Info=strcat(Info,';CloneId=',strsplit(sprintf('%d\n',cloneId(:,1)))');
 Info([delPos; true])=strcat(Info([delPos; true]),';END=',strsplit(sprintf('%d\n',endPos(delPos)))');
 Info([insPos; true])=strcat(Info([insPos; true]),';SVLEN=',strsplit(sprintf('%d\n',svLen(insPos)))');
@@ -278,6 +249,7 @@ for j=1:length(Tcell)
     sampleFrac(matchIdx & alleleId==2,j)=sfMajor(matchIdx & alleleId==2);
     sampleFrac(~matchIdx | alleleId==1,j)=sfMinor(~matchIdx | alleleId==1);
     %sampleFrac(pairIdx,j)=min(sfMajor(pairIdx),sfMinor(pairIdx));
+    RD(:,j)=T.ReadDepthPass;
 end
 
 
