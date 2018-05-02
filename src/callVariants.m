@@ -23,10 +23,10 @@ for i=1:length(Tcell)
    altCount(max([P.Somatic P.SomaticPair],[],2)<0.5 & P.Hom(:,i)>P.Het(:,i),i)=T.AcountsComb(max([P.Somatic P.SomaticPair],[],2)<0.5 & P.Hom(:,i)>P.Het(:,i));
 end
 %[mCount,mIdx]=max(altCount,[],2);
-trustScore=1-prod((1-P.trust).^altCount,2).^(1./sum(altCount,2));
+trustScore=1-prod((1-P.trust+realmin).^altCount,2).^(1./sum(altCount,2));
 %trustScore=sum((altCount+1).*P.trust,2)./sum(altCount+1,2);
 %artifactScore=sum((altCount+1).*P.artifact,2)./sum(altCount+1,2);
-artifactScore=prod(P.artifact.^altCount,2).^(1./sum(altCount,2));
+artifactScore=prod((P.artifact+realmin).^altCount,2).^(1./sum(altCount,2));
 passPos=trustScore>inputParam.pGoodThresh & artifactScore<inputParam.pGoodThresh;
 
 %%% assign filters
@@ -40,7 +40,7 @@ passPos=trustScore>inputParam.pGoodThresh & artifactScore<inputParam.pGoodThresh
 Filter=cell(size(passPos));
 Filter(P.Somatic(:,1)>0.5,:)={'SomaticLowQC'};
 Filter(P.Somatic(:,1)>inputParam.pSomaticThresh & passPos,:)={'SomaticPASS'};
-Filter(P.Somatic(:,1)>0.5 & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)>inputParam.maxSomPopFreq,:)={'SomaticDBsnp'};
+%Filter(P.Somatic(:,1)>0.5 & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)>inputParam.maxSomPopFreq,:)={'SomaticDBsnp'};
 Filter(P.Het(:,1)>0.5,:)={'GermlineHetLowQC'};
 Filter(P.Het(:,1)>inputParam.pGermlineThresh & passPos,:)={'GermlineHetPASS'};
 Filter(P.Hom(:,1)>0.5,:)={'GermlineHomLowQC'};
@@ -59,4 +59,6 @@ if inputParam.NormalSample>0
         Filter(P.SomaticPair(:,tIdx(i))>inputParam.pSomaticThresh & ~idxSom & passPos)={'SomaticPairPASS'};
     end
 end
+idxSom=strncmp(Filter,'Somatic',7);
+Filter(idxSom & passPos & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)>inputParam.maxSomPopFreq,:)={'SomaticDBsnp'};
 Filter(artifactScore>inputParam.pGoodThresh,:)={'REJECT'};
