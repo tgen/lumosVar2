@@ -1,5 +1,5 @@
 
-function [normalMetrics]=calculateNormalMetrics(NormalData, priorMapError)
+function [normalMetrics]=calculateNormalMetrics(NormalData, priorMapError,ploidy)
 %calculateNormalMetrics - calculates mean read depths and 
 %position quality scores for a control sample
 %calls parsePileupData.packed.pl to parse samtools output
@@ -39,7 +39,11 @@ N=array2table(NormalData,'VariableNames',NormalColHeaders);
 clear NormalColHeaders NormalData;
 
 %%% calculate priors
-priorHet=2.*N.ApopAF.*N.BpopAF;
+if ploidy==2
+    priorHet=2.*N.ApopAF.*N.BpopAF;
+else
+    priorHet=0;
+end
 priorHom=N.ApopAF.^2;
 
 %%% calculate liklihoods
@@ -60,7 +64,13 @@ perReadPass=N.ReadDepthPass./N.ReadDepth;
 perReadPass(N.ReadDepth==0)=NaN;
 abFrac=(N.ACountF+N.ACountR+N.BCountF+N.BCountR)./N.ReadDepthPass;
 
-normalMetrics=[N.Chr N.Pos N.ReadDepthPass pMapError perReadPass abFrac];
+if ploidy==2
+    normalMetrics=[N.Chr N.Pos max(N.ReadDepthPass,0) pMapError perReadPass abFrac];
+elseif ploidy==1
+    normalMetrics=[N.Chr N.Pos max(2*N.ReadDepthPass,0) pMapError perReadPass abFrac];
+else
+    normalMetrics=[N.Chr N.Pos nan(size(N,1),4)];
+end
 
 return;
 

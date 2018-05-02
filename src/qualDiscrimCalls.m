@@ -1,4 +1,4 @@
-function [F,pTrust,pArtifact]=qualDiscrimCalls(T,E,homPos,inputParam)
+function [F,pTrust,pArtifact]=qualDiscrimCalls_v2(T,E,homPos,inputParam)
 %qualDiscrim - finds probability that positions are trusted or artifacts
 %using quadratic discriminant analysis on a number of quality metrics
 %
@@ -50,16 +50,18 @@ aIdx=homPos & T.ACountF+T.ACountR >= T.BCountF+T.BCountR;
 bIdx=homPos & T.ACountF+T.ACountR < T.BCountF+T.BCountR;
 %%%Create Quality Metrics Table
 F=table();
-F.TumorPerPassReads=T.ReadDepthPass./T.ReadDepth;
+F.TumorPerPassReads=(T.ReadDepthPass+1)./(T.ReadDepth+1);
 F.normalPerReadPass=T.perReadPass;
 F.normalPerReadPass(~isfinite(T.perReadPass))=inputParam.minPerReadPASS;
-F.ABfrac=(T.AcountsComb+T.BcountsComb)./T.ReadDepthPass;
-F.ABfrac(T.ReadDepthPass==0)=0;
-F.normalABfrac=max(T.abFrac,0);
+F.ABfrac=(T.AcountsComb+T.BcountsComb+1)./(T.ReadDepthPass+1);
+%F.ABfrac(T.ReadDepthPass==0)=0;
+%F.normalABfrac=max(T.abFrac,0);
+F.normalABfrac=T.abFrac;
+F.normalABfrac(~isfinite(T.abFrac))=inputParam.minABFrac;
 F.minPerStrand=NaN(size(F,1),1);
-F.minPerStrand(~homPos)=min([T.ACountF(~homPos)./(T.ACountF(~homPos)+T.ACountR(~homPos)) T.ACountR(~homPos)./(T.ACountF(~homPos)+T.ACountR(~homPos)) T.BCountF(~homPos)./(T.BCountF(~homPos)+T.BCountR(~homPos)) T.BCountR(~homPos)./(T.BCountF(~homPos)+T.BCountR(~homPos))],[],2);
-F.minPerStrand(aIdx)=min([T.ACountF(aIdx)./(T.ACountF(aIdx)+T.ACountR(aIdx)) T.ACountR(aIdx)./(T.ACountF(aIdx)+T.ACountR(aIdx))],[],2);
-F.minPerStrand(bIdx)=min([T.BCountF(bIdx)./(T.BCountF(bIdx)+T.BCountR(bIdx)) T.BCountR(bIdx)./(T.BCountF(bIdx)+T.BCountR(bIdx))],[],2);
+F.minPerStrand(~homPos)=min([T.ACountF(~homPos)./(T.ACountF(~homPos)+T.ACountR(~homPos)) T.ACountR(~homPos)./(T.ACountF(~homPos)+T.ACountR(~homPos)) T.BCountF(~homPos)./(T.BCountF(~homPos)+T.BCountR(~homPos)) T.BCountR(~homPos)./(T.BCountF(~homPos)+T.BCountR(~homPos)) 0.5*ones(sum(~homPos),1)],[],2);
+F.minPerStrand(aIdx)=min([T.ACountF(aIdx)./(T.ACountF(aIdx)+T.ACountR(aIdx)) T.ACountR(aIdx)./(T.ACountF(aIdx)+T.ACountR(aIdx)) 0.5*ones(sum(aIdx),1)],[],2);
+F.minPerStrand(bIdx)=min([T.BCountF(bIdx)./(T.BCountF(bIdx)+T.BCountR(bIdx)) T.BCountR(bIdx)./(T.BCountF(bIdx)+T.BCountR(bIdx)) 0.5*ones(sum(bIdx),1)],[],2);
 F.minBQ=NaN(size(F,1),1);
 F.minBQ(~homPos)=min([T.AmeanBQ(~homPos) T.BmeanBQ(~homPos)],[],2);
 F.minBQ(aIdx)=T.AmeanBQ(aIdx);
@@ -88,9 +90,11 @@ F.ReadPosDiff=zeros(size(F,1),1);
 F.ReadPosDiff(~homPos)=max(abs((T.AmeanReadPos(~homPos)-T.BmeanReadPos(~homPos))),0);
 F.posMapQC=-10*log10(T.PosMapQC+1E-6);
 F.posMapQC(T.PosMapQC<0)=0;
-idx=getPosInRegionSplit([T.Chr T.Pos],[E.Chr E.StartPos E.EndPos],inputParam.blockSize);
+F.posMapQC(~isfinite(T.PosMapQC))=inputParam.minPosQual;
+idx=getPosInRegionSplit([T.Chr T.Pos],[E.Chr E.StartPos E.EndPos+1],inputParam.blockSize);
 E.MapQC(E.MapQC<0)=1-1E6;
-F.exonMapQC=-10*log10(E.MapQC(idx)+1E-6);
+F.exonMapQC=zeros(height(F),1);
+F.exonMapQC(~isnan(idx))=-10*log10(E.MapQC(idx(~isnan(idx)))+1E-6);
 F.Properties.VariableDescriptions={'Percent of Reads in Tumor Passing Quality Thresh', ...
     'Percent of Reads in Normals Passing Quality Thresh', ...
     'Fraction of QC Reads in Tumor Supporting A or B Allele', ...
@@ -149,18 +153,32 @@ badPos(:,15)=F.posMapQC<inputParam.posQualReject;
 badPos(:,16)=F.exonMapQC<inputParam.exonQualReject;
 
 %%%classify SNVs as variants vs artifacts
-sampleSNV=F{~indelPos,:};
-trainingSNV=[F{sum(goodPos,2)>12 & sum(badPos,2)==0 & ~indelPos,:}; F{sum(badPos,2)>2 & ~indelPos,:}];
-groupSNV=[ones(sum(sum(goodPos,2)>12 & sum(badPos,2)==0 & ~indelPos),1); zeros(sum(sum(badPos,2)>2 & ~indelPos),1)];
+sampleSNV=F{~indelPos & ~homPos,:};
+trainingSNV=[F{sum(goodPos,2)>12 & sum(badPos,2)==0 & ~indelPos & ~homPos,:}; F{sum(badPos,2)>2 & ~indelPos & ~homPos,:}];
+groupSNV=[ones(sum(sum(goodPos,2)>12 & sum(badPos,2)==0 & ~indelPos & ~homPos),1); zeros(sum(sum(badPos,2)>2 & ~indelPos & ~homPos),1)];
 discrSNV=fitcdiscr(trainingSNV,groupSNV,'DiscrimType', 'pseudoQuadratic');
-[~,pArtifact(~indelPos,:)] = predict(discrSNV,sampleSNV);
+[~,pArtifact(~indelPos & ~homPos,:)] = predict(discrSNV,sampleSNV);
 
 %%%classify SNVs as trusted vs low quality positions
-sampleSNV=F{~indelPos,:};
-trainingSNV=[F{sum(goodPos,2)==16 & ~indelPos,:}; F{sum(badPos,2)>0 & ~indelPos,:}];
-groupSNV=[ones(sum(sum(goodPos,2)==16 & ~indelPos),1); zeros(sum(sum(badPos,2)>0 & ~indelPos),1)];
+sampleSNV=F{~indelPos & ~homPos,:};
+trainingSNV=[F{sum(goodPos,2)==16 & ~indelPos & ~homPos,:}; F{sum(badPos,2)>0 & ~indelPos & ~homPos,:}];
+groupSNV=[ones(sum(sum(goodPos,2)==16 & ~indelPos & ~homPos),1); zeros(sum(sum(badPos,2)>0 & ~indelPos & ~homPos),1)];
 discrSNV=fitcdiscr(trainingSNV,groupSNV,'DiscrimType', 'pseudoQuadratic');
-[~,pTrust(~indelPos,:)] = predict(discrSNV,sampleSNV);
+[~,pTrust(~indelPos & ~homPos,:)] = predict(discrSNV,sampleSNV);
+
+%%%classify SNVs as variants vs artifacts
+sampleSNV=F{~indelPos & homPos,:};
+trainingSNV=[F{sum(goodPos,2)>12 & sum(badPos,2)==0 & ~indelPos & homPos,:}; F{sum(badPos,2)>2 & ~indelPos & homPos,:}];
+groupSNV=[ones(sum(sum(goodPos,2)>12 & sum(badPos,2)==0 & ~indelPos & homPos),1); zeros(sum(sum(badPos,2)>2 & ~indelPos & homPos),1)];
+discrSNV=fitcdiscr(trainingSNV,groupSNV,'DiscrimType', 'pseudoQuadratic');
+[~,pArtifact(~indelPos & homPos,:)] = predict(discrSNV,sampleSNV);
+
+%%%classify SNVs as trusted vs low quality positions
+sampleSNV=F{~indelPos & homPos,:};
+trainingSNV=[F{sum(goodPos,2)==16 & ~indelPos & homPos,:}; F{sum(badPos,2)>0 & ~indelPos & homPos,:}];
+groupSNV=[ones(sum(sum(goodPos,2)==16 & ~indelPos & homPos),1); zeros(sum(sum(badPos,2)>0 & ~indelPos & homPos),1)];
+discrSNV=fitcdiscr(trainingSNV,groupSNV,'DiscrimType', 'pseudoQuadratic');
+[~,pTrust(~indelPos & homPos,:)] = predict(discrSNV,sampleSNV);
 
 %%%classify indels as variants vs artifacts
 finitePos=sum(isfinite(F{:,:}),2)==16;

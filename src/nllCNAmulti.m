@@ -1,4 +1,4 @@
-function nll = nllCNAmulti(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,param)
+function nll = nllCNAmulti(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,param,dbCounts)
 %nllCNA - computes negative loglikliehood of copy number parameters
 %
 % Syntax: nll = nllCNA(dataHet,dataSom,exonRD,segs,inputParam,param)
@@ -37,152 +37,112 @@ function nll = nllCNAmulti(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,para
 %------------- BEGIN CODE --------------
 
 %%% read in inputs
-D=table();
-D.Chr=Tcell{1}.Chr(hetPos);
-D.Pos=Tcell{1}.Pos(hetPos);
-S=table();
-S.Chr=Tcell{1}.Chr(somPos);
-S.Pos=Tcell{1}.Pos(somPos);
 E=table();
 E.Chr=exonRD{1}(:,1);
 E.StartPos=exonRD{1}(:,2);
 E.EndPos=exonRD{1}(:,3);
 for i=1:length(Tcell)
-    D.ExpReadCount(:,i)=Tcell{i}.ControlRD(hetPos);
-    D.TotalReadCount(:,i)=Tcell{i}.ReadDepthPass(hetPos);
-    D.MinorReadCount(:,i)=Tcell{i}.BCountF(hetPos)+Tcell{i}.BCountR(hetPos);
-    S.ExpReadCount(:,i)=Tcell{i}.ControlRD(somPos);
-    S.TotalReadCount(:,i)=Tcell{i}.ReadDepthPass(somPos);
-    S.MinorReadCount(:,i)=Tcell{i}.BCountF(somPos)+Tcell{i}.BCountR(somPos);
     E.TumorRD(:,i)=exonRD{i}(:,4);
     E.NormalRD(:,i)=exonRD{i}(:,5);
 end
-CNAscale=param(:,1);
-W=param(:,2:(size(param,2)-1)./2+1);
-f=param(:,(size(param,2)-1)./2+2:end);
 
-%%% find means accross segments
-for i=1:length(Tcell)
-    meanTumorRDexon(:,i)=getMeanInRegions([E.Chr E.StartPos],E.TumorRD(:,i),segsMerged);
-    meanNormalRDexon(:,i)=getMeanInRegions([E.Chr E.StartPos],E.NormalRD(:,i),segsMerged);
-    meanTumorRD(:,i)=getMeanInRegions([D.Chr D.Pos],D.TotalReadCount(:,i),segsMerged);
-    meanMinorRD(:,i)=getMeanInRegions([D.Chr D.Pos],D.MinorReadCount(:,i),segsMerged);
+CNAscale=param(1:length(Tcell))./100;
+W=param(length(Tcell)+1:2*length(Tcell));
+f=reshape(param(2*length(Tcell)+1:end)./100,[],inputParam.numClones);
+    
+[N, M, Ftable, ~, cnaIdx, nllCNA]=callCNAmulti(hetPos,Tcell,exonRD,segsMerged,inputParam,[CNAscale(:); W(:); f(:)],dbPos,dbCounts);
+segsTable=array2table(segsMerged(:,1:3),'VariableNames',{'Chr','StartPos','EndPos'});
+segsTable.N=N;
+segsTable.M=M;
+segsTable.F=Ftable;
+segsTable.cnaIdx=cnaIdx;
+
+Tsom=cell(size(Tcell));
+for j=1:length(Tcell)
+    T=Tcell{j}(somPos,:);
+    idx=getPosInRegionSplit([T.Chr T.Pos],segsTable{:,1:3},inputParam.blockSize);
+    T.NumCopies=segsTable.N(idx);
+    T.MinAlCopies=segsTable.M(idx);
+    T.cnaF=segsTable.F(idx,j);
+    Tsom{j}=T;
 end
 
-%%% find most likely copy number and minor for each segment and clone
-for i=1:size(f,2)
-    for j=1:length(Tcell)
-        if(f(j,i)==0)
-            NsegSample(:,i,j)=2*ones(size(segsMerged,1),1);
-            MsegSample(:,i,j)=ones(size(segsMerged,1),1);
-        else
-            NsegSample(:,i,j)=max((CNAscale(j)*(meanTumorRDexon(:,j)./(meanNormalRDexon(:,j)))-2*(1-f(j,i)))/f(j,i),0);
-            MsegSample(isfinite(meanMinorRD(:,j)),i,j)=(NsegSample(isfinite(meanMinorRD(:,j)),i,j)/f(j,i)).*((meanMinorRD(isfinite(meanMinorRD(:,j)),j)./(meanTumorRD(isfinite(meanMinorRD(:,j)),j)))-0.5*(1-f(j,i)));
-            MsegSample(~isfinite(meanMinorRD(:,j)),i,j)=min(NsegSample(~isfinite(meanMinorRD(:,j)),i,j)-1,1);
-        end
-    end
-end
-NsegSample(NsegSample<0)=0;
-MsegSample(MsegSample<0)=0;
-for i=1:size(f,2)
-    Nseg(:,i)=round(squeeze(NsegSample(:,i,:))*f(:,i)./(ones(size(segsMerged,1),size(f,1))*f(:,i)));
-    Mseg(:,i)=round(squeeze(MsegSample(:,i,:))*f(:,i)./(ones(size(segsMerged,1),size(f,1))*f(:,i)));
+somLik=NaN(height(Tsom{1}),length(Tsom));
+somIdx=NaN(height(Tsom{1}),length(Tsom));
+[~, ~,pDataComb,clones,~]=jointSNV_v2(Tsom, f, W, inputParam);
+for j=1:length(Tsom)
+    %[~,locb]=ismember([Tsom{j}.Chr Tsom{j}.Pos],[postComb.Chr postComb.Pos],'rows');
+    somLik(:,j)=pDataComb{j}.Somatic+inputParam.minLik;
+    somIdx(:,j)=clones;
 end
 
+cnState=strcat(strsplit(sprintf('%d\n',Tsom{1}.NumCopies)),'_',strsplit(sprintf('%d\n',Tsom{1}.MinAlCopies)));
+cnState=cnState(1:end-1);
 
-%%% lookup copy number for positions and exons
-idx=getPosInRegions([D.Chr D.Pos], segsMerged);
-Nmat=Nseg(idx,:);
-Mmat=Mseg(idx,:);
-idxExon=getPosInRegions([E.Chr E.StartPos],segsMerged);
-NmatExon=Nseg(idxExon,:);
-
-%%% find prior of copy number
-priorCNA=nan(size(NmatExon));
-for i=1:length(inputParam.cnaPrior)-1
-    priorCNA(NmatExon==i-1)=inputParam.cnaPrior(i);
-end
-priorCNA(NmatExon>=length(inputParam.cnaPrior)-1)=inputParam.cnaPrior(end);
-priorMinAllele=nan(size(Mmat));
-for i=1:length(inputParam.minAllelePrior)-1
-    priorMinAllele(Mmat==i-1)=inputParam.minAllelePrior(i);
-end
-priorMinAllele(Mmat>=length(inputParam.minAllelePrior)-1)=inputParam.minAllelePrior(end);
-
-%%% find likelihoods of read counts and depth
-for i=1:size(f,2)
-    for j=1:length(Tcell)
-        corr(:,i,j)=f(j,i).*Mmat(:,i)./Nmat(:,i)+(1-f(j,i))*0.5;
-        corr(Nmat(:,i)==0,i,j)=0.5;
-        corr(corr(:,i,j)<0,i,j)=0;
-        corr(corr(:,i,j)>1,i,j)=1;
-        if min(corr(:,i,j))<0 || max(corr(:,i,j))>1
-            idx=corr(:,i,j)<0 | corr(:,i,j)>1;
-            size(idx)
-            [min(corr(:,i,j)) max(corr(:,i,j))]
-            f(j,i)
-%             %corr(idx,i,j) 
-%             %Nmat(idx,i) 
-%             %Mmat(idx,i)
-         end
-        hetlik(:,i,j)=bbinopdf_ln(D.MinorReadCount(:,j),D.TotalReadCount(:,j),W(j,i)*corr(:,i,j),W(j,i)*(1-corr(:,i,j)))+inputParam.minLik;
-        hetlik(corr(:,i,j)==0,i,j)=inputParam.minLik;
-        expReadCount(:,i,j)=f(j,i)*E.NormalRD(:,j).*NmatExon(:,i)./CNAscale(j)+(1-f(j,i))*E.NormalRD(:,j)*2./CNAscale(j);
-        depthlik(:,i,j)=poisspdf(round(E.TumorRD(:,j)),round(expReadCount(:,i,j)))+inputParam.minLik;
-        segLik(:,i,j)=getMeanInRegions([D.Chr D.Pos],log(hetlik(:,i,j)),segsMerged)+getMeanInRegions([E.Chr E.StartPos],log(depthlik(:,i,j)),segsMerged);
-    end
+if (height(Tsom{1})>0)
+   [~,~,chiP,~]=crosstab(somIdx(:,1),cnState);
+   chiP=min(chiP,1);
+else
+   chiP=1;
 end
 
-%%% find which clone contains most likely CNV per segment
-[m,cnaIdx]=max(sum(segLik,3),[],2);
-for i=1:size(f,2)
-    NsegMax(cnaIdx==i,:)=Nseg(cnaIdx==i,i);
-    MsegMax(cnaIdx==i,:)=Mseg(cnaIdx==i,i);
-    for j=1:length(Tcell)   
-        hetlikMax(cnaIdx(idx)==i,j)=hetlik(cnaIdx(idx)==i,i,j);
-        depthlikMax(cnaIdx(idxExon)==i,j)=depthlik(cnaIdx(idxExon)==i,i,j); 
-    end
-    priorCNAMax(cnaIdx(idxExon)==i,:)=priorCNA(cnaIdx(idxExon)==i,i);
-    priorMinAlleleMax(cnaIdx(idx)==i,:)=priorMinAllele(cnaIdx(idx)==i,i);
-    %priorCNAf(cnaIdx(idx)==i,j)=betapdf(f(j,i),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2);
-end
-%priorCNAf(NsegMax==2 & MsegMax==1)=NaN;
-priorCNAf=1;
+% 
+% for j=1:length(Tcell)
+%     T=Tcell{j}(dbPos,:);
+%     idx=getPosInRegionSplit([T.Chr T.Pos],segsTable{:,1:3},inputParam.blockSize);
+%     T.NumCopies=segsTable.N(idx);
+%     T.MinAlCopies=segsTable.M(idx);
+%     T.cnaF=segsTable.F(idx,j);
+%     Tdb{j}=T;
+% end
+% postComb=jointSNV_v2(Tdb, f, W, inputParam);
+% somDBpos=postComb.Somatic>inputParam.pSomaticThresh;
+totalPosCount=sum(exonRD{1}(:,3)-exonRD{1}(:,2));
+% [~,p]=fishertest([sum(somDBpos) inputParam.dbSNPposCount-sum(somDBpos); sum(somPos) totalPosCount-sum(somPos)],'tail','right');
 
-%%% find expected allele frequency for somatic variants
-for i=1:size(f,2)
-    for j=1:length(Tcell)
-        expAF(cnaIdx==i,i,j)=f(j,i)*(NsegMax(cnaIdx==i,:)-MsegMax(cnaIdx==i,:))./(f(j,i)*NsegMax(cnaIdx==i,:)+(1-f(j,i))*2);
-        if sum(cnaIdx~=i)>0
-            expAF(cnaIdx~=i,i,j)=f(j,i)./(f(j,cnaIdx(cnaIdx~=i))'.*NsegMax(cnaIdx~=i,:)+(1-f(j,cnaIdx(cnaIdx~=i))')*2);
-            expAF(NsegMax==0 & cnaIdx~=i,i,j)=min([(1-f(j,cnaIdx(cnaIdx~=i))'); f(j,i)])./2;
-        end
-        %[ones(sum(expAF(:,i,j)>1),1)*[i j f(j,i)] NsegMax(expAF(:,i,j)>1,j) MsegMax(expAF(:,i,j)>1,j) expAF(expAF(:,i,j)>1,i,j) cnaIdx(expAF(:,i,j)>1)]
-        %[ones(sum(expAF(:,i,j)<0),1)*[i j f(j,i)] NsegMax(expAF(:,i,j)<0,j) MsegMax(expAF(:,i,j)<0,j) expAF(expAF(:,i,j)<0,i,j) cnaIdx(expAF(:,i,j)<0)]
-    end
-end
+
 
 %%% find likelihood of somatic variant
-idxSom=getPosInRegions([S.Chr S.Pos], segsMerged);
-for i=1:size(f,2)
-    for j=1:length(Tcell)
-        alpha(:,i,j)=expAF(idxSom,i,j)*W(j,i);
-        beta(:,i,j)=(1-expAF(idxSom,i,j))*W(j,i);
-        cloneLik(:,i,j)=bbinopdf_ln(S.MinorReadCount(:,j),S.TotalReadCount(:,j),alpha(:,i,j),beta(:,i,j))+inputParam.minLik;
+tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
+priorF=ones(sum(somPos),1);
+%%% find likelihood of somatic variant
+if(sum(somPos)>0)
+    fDiff=nan(size(f,2),1);
+    for i=1:size(f,2)
+        if size(f,1)>1
+            fDiff(i)=geomean(pdist(f(:,i),'cityblock')+0.05);
+        else
+            fDiff(i)=geomean(pdist([0; f(:,i); 1],'cityblock')+0.05);
+        end
     end
+    if length(inputParam.priorF)>1
+        priorFDiff=geomean(pdist(inputParam.priorF,'cityblock')+0.05);
+    else
+        priorFDiff=geomean(pdist([0; inputParam.priorF; 1],'cityblock')+0.05);
+    end
+    for j=1:length(fDiff)
+        priorF(somIdx(:,1)==j)=betapdf(fDiff(j),inputParam.alphaF,(inputParam.alphaF-1)./priorFDiff-inputParam.alphaF+2)+inputParam.minLik;
+    end
+else
+    somLik=1;
+    priorF=1;
 end
-if (inputParam.NormalSample>0)
-    cloneLik(:,end,:)=0;
-    cloneLik(:,:,inputParam.NormalSample)=1;
-end
-[somLik,~]=max(prod(cloneLik,3),[],2);
-%for j=1:length(Tcell)
- %   priorF(:,j)=betapdf(f(j,somIdx),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2);
+    
 %end
-priorF=1;
+%priorF=1;
 
 %%% sum negative log likliehoods
 %nll=sum((-sum(log(somLik))-sum(log(hetlikMax))-sum(log(depthlikMax))-sum(log(priorCNAMax))-sum(log(priorMinAlleleMax))-sum(log(priorF))-nansum(log(priorCNAf)))./(length(somLik)+length(hetlikMax)+length(depthlikMax)+length(priorCNAMax)+length(priorMinAlleleMax)+length(priorF)+sum(~isnan(priorCNAf))));
-nll=sum(-mean(log(somLik))-mean(log(hetlikMax))-mean(log(depthlikMax))-mean(log(priorCNAMax))-mean(log(priorMinAlleleMax))-mean(log(priorF))-nanmean(log(priorCNAf)))
+%nll=sum((-sum(log(somLik))-sum(log(hetlikMax))-sum(log(depthlikMax))))./(length(somLik)+length(hetlikMax)+length(depthlikMax));
+
+%nll=-sum((log(priorF)+sum(log(somLik),2))./(inputParam.priorSomaticSNV*sum(E.EndPos-E.StartPos)))+nllCNA-log(p+realmin)./((sum(somPos)./totalPosCount)*inputParam.dbSNPposCount)+log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount);
+%sum((log(priorF)+sum(log(somLik),2)))./(inputParam.priorSomaticSNV*totalPosCount)
+%sum((log(priorF)+sum(log(somLik),2)))./size(somLik,2);
+%nllCNA;
+%log(p+realmin)./(inputParam.priorSomaticSNV*inputParam.dbSNPposCount)
+%log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount);
+%nll=-(sum((log(priorF)+sum(log(somLik),2)))./(inputParam.priorSomaticSNV*totalPosCount)+nllCNA+log(p+realmin)./(inputParam.priorSomaticSNV*inputParam.dbSNPposCount)+log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount));
+%nll=-(sum((log(priorF)+sum(log(somLik),2)))./(inputParam.priorSomaticSNV*totalPosCount)+nllCNA+log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount));
+nll=-(sum((log(priorF)+sum(log(somLik),2)))./size(somLik,1)+nllCNA+log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount));
 
 return;

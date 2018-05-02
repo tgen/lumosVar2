@@ -58,7 +58,7 @@ if(exist([inputParam.outMat],'file'))
         inputParam.priorF=priorF;
     end
 else
-    [T, E]=preprocessTumorOnly_v2(inputParam,paramFile);   
+    [T, E]=preprocessTumorOnly(inputParam,paramFile);   
     fid=fopen(inputParam.bamList);
     bamList=textscan(fid,'%s');
     sampleCount=length(bamList{1});
@@ -191,7 +191,7 @@ for i=1:size(Ecell,2)
     clear E;
 end
 
-segsMerged=mergeSegments_v2([segs bafSegs],exonRD,Tcell,hetPos,inputParam);
+segsMerged=mergeSegments([segs bafSegs],exonRD,Tcell,hetPos,inputParam);
 numChr=max(Ecell{1}.Chr);
 %%%Make sure segments extend to ends of chromosome
 for i=1:numChr
@@ -242,7 +242,7 @@ end
 %     [N{i}, M{i}, Ftable{i}, log2FC{i}, cnaIdx{i},nll{i}]=callCNAmulti_v2(hetPos,Tcell,exonRD,segsMerged,inputParam,[cInit(i,:)';wInit(:);f(:)],filtPer);
 % end
  dbPos=filtPos & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)>inputParam.maxSomPopFreq;
-[N, M, Ftable, log2FC, cnaIdx]=callCNAmulti_v3(hetPos,Tcell,exonRD,segsMerged,inputParam,[cInit(:);wInit(:);f(:)],dbPos,dbCounts);
+[N, M, Ftable, log2FC, cnaIdx]=callCNAmulti(hetPos,Tcell,exonRD,segsMerged,inputParam,[cInit(:);wInit(:);f(:)],dbPos,dbCounts);
 segsTable=array2table(segsMerged(:,1:3),'VariableNames',{'Chr','StartPos','EndPos'});
 segsTable.N=N;
 segsTable.M=M;

@@ -1,4 +1,4 @@
-function nll = nllCNAaddClone(hetPos,somPos,Tcell,exonRD,segsMerged,inputParam,CNAscale,W,fOld,fNew)
+function nll = nllCNAaddClone(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,CNAscale,W,fOld,fNew,dbCounts)
 %nllCNA - computes negative loglikliehood of copy number parameters
 %
 % Syntax: nll = nllCNA(dataHet,dataSom,exonRD,segs,inputParam,param)
@@ -48,13 +48,14 @@ end
 
 f=[fOld fNew(:)]./100;
 
-[N, M, Ftable, ~, cnaIdx, nllCNA]=callCNAmulti(hetPos,Tcell,exonRD,segsMerged,inputParam,[CNAscale(:); W(:); f(:)]);
+[N, M, Ftable, ~, cnaIdx, nllCNA]=callCNAmulti(hetPos,Tcell,exonRD,segsMerged,inputParam,[CNAscale(:); W(:); f(:)],dbPos,dbCounts);
 segsTable=array2table(segsMerged(:,1:3),'VariableNames',{'Chr','StartPos','EndPos'});
 segsTable.N=N;
 segsTable.M=M;
 segsTable.F=Ftable;
 segsTable.cnaIdx=cnaIdx;
 
+Tsom=cell(size(Tcell));
 for j=1:length(Tcell)
     T=Tcell{j}(somPos,:);
     idx=getPosInRegionSplit([T.Chr T.Pos],segsTable{:,1:3},inputParam.blockSize);
@@ -64,23 +65,68 @@ for j=1:length(Tcell)
     Tsom{j}=T;
 end
 
-[postComb, ~,pDataComb,clones,~]=jointSNV_v2(Tsom, f, W, inputParam);
+
+somLik=NaN(height(Tsom{1}),length(Tsom));
+somIdx=NaN(height(Tsom{1}),length(Tsom));
+[~, ~,pDataComb,clones,~]=jointSNV_v2(Tsom, f, W, inputParam);
 for j=1:length(Tsom)
-    [lia,locb]=ismember([Tsom{j}.Chr Tsom{j}.Pos],[postComb.Chr postComb.Pos],'rows');
-    somLik(:,j)=pDataComb{j}.Somatic(locb);
-    somIdx(:,j)=clones(locb);
+    %[~,locb]=ismember([Tsom{j}.Chr Tsom{j}.Pos],[postComb.Chr postComb.Pos],'rows');
+    somLik(:,j)=pDataComb{j}.Somatic+inputParam.minLik;
+    somIdx(:,j)=clones;
+end
+
+cnState=strcat(strsplit(sprintf('%d\n',Tsom{1}.NumCopies)),'_',strsplit(sprintf('%d\n',Tsom{1}.MinAlCopies)));
+cnState=cnState(1:end-1);
+
+if (height(Tsom{1})>0)
+   [~,~,chiP,~]=crosstab(somIdx(:,1),cnState);
+   chiP=min(chiP,1);
+else
+   chiP=1;
 end
 
 
+% for j=1:length(Tcell)
+%     T=Tcell{j}(dbPos,:);
+%     idx=getPosInRegionSplit([T.Chr T.Pos],segsTable{:,1:3},inputParam.blockSize);
+%     T.NumCopies=segsTable.N(idx);
+%     T.MinAlCopies=segsTable.M(idx);
+%     T.cnaF=segsTable.F(idx,j);
+%     Tdb{j}=T;
+% end
+% postComb=jointSNV_v2(Tdb, f, W, inputParam);
+% somDBpos=postComb.Somatic>inputParam.pSomaticThresh;
+totalPosCount=sum(exonRD{1}(:,3)-exonRD{1}(:,2));
+% [~,p]=fishertest([sum(somDBpos) inputParam.dbSNPposCount-sum(somDBpos); sum(somPos) totalPosCount-sum(somPos)],'tail','right');
+
+
+%for j=1:length(Tcell)
+
+tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
+priorF=ones(sum(somPos),1);
 %%% find likelihood of somatic variant
 if(sum(somPos)>0)
-    fMax=max(f,[],1);
-    priorF=betapdf(fMax(somIdx),inputParam.alphaF,(inputParam.alphaF-1)./inputParam.priorF-inputParam.alphaF+2)+inputParam.minLik;
+    fDiff=nan(size(f,2),1);
+    for i=1:size(f,2)
+        if size(f,1)>1
+            fDiff(i)=geomean(pdist(f(:,i),'cityblock')+0.05);
+        else
+            fDiff(i)=geomean(pdist([0; f(:,i); 1],'cityblock')+0.05);
+        end
+    end
+    if length(inputParam.priorF)>1
+        priorFDiff=geomean(pdist(inputParam.priorF,'cityblock')+0.05);
+    else
+        priorFDiff=geomean(pdist([0; inputParam.priorF; 1],'cityblock')+0.05);
+    end
+    for j=1:length(fDiff)
+        priorF(somIdx(:,1)==j)=betapdf(fDiff(j),inputParam.alphaF,(inputParam.alphaF-1)./priorFDiff-inputParam.alphaF+2)+inputParam.minLik;
+    end
 else
     somLik=1;
     priorF=1;
 end
-    
+
 %end
 %priorF=1;
 
@@ -88,5 +134,14 @@ end
 %nll=sum((-sum(log(somLik))-sum(log(hetlikMax))-sum(log(depthlikMax))-sum(log(priorCNAMax))-sum(log(priorMinAlleleMax))-sum(log(priorF))-nansum(log(priorCNAf)))./(length(somLik)+length(hetlikMax)+length(depthlikMax)+length(priorCNAMax)+length(priorMinAlleleMax)+length(priorF)+sum(~isnan(priorCNAf))));
 %nll=sum((-sum(log(somLik))-sum(log(hetlikMax))-sum(log(depthlikMax))))./(length(somLik)+length(hetlikMax)+length(depthlikMax));
 
-nll=sum(-sum(log(somLik)./(inputParam.priorSomaticSNV*sum(E.EndPos-E.StartPos)))-mean(log(priorF)))+nllCNA;
+%nll=-(sum((log(priorF)+sum(log(somLik),2)))./(inputParam.priorSomaticSNV*totalPosCount)+nllCNA+log(p+realmin)./(inputParam.priorSomaticSNV*inputParam.dbSNPposCount)+log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount));
+%sum((log(priorF)+sum(log(somLik),2)))./(inputParam.priorSomaticSNV*totalPosCount)
+%nllCNA
+%log(p+realmin)./(inputParam.priorSomaticSNV*inputParam.dbSNPposCount)
+%log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount)
+
+%nll=-(sum((log(priorF)+sum(log(somLik),2)))./(inputParam.priorSomaticSNV*totalPosCount)+nllCNA+log(p+realmin)./(inputParam.priorSomaticSNV*inputParam.dbSNPposCount)+log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount));
+%nll=-(sum((log(priorF)+sum(log(somLik),2)))./(inputParam.priorSomaticSNV*totalPosCount)+nllCNA+log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount));
+nll=-(sum((log(priorF)+sum(log(somLik),2)))./size(somLik,1)+nllCNA+log(chiP+realmin)./(inputParam.priorSomaticSNV*totalPosCount));
+
 return;
