@@ -2,7 +2,7 @@ function [F,pTrust,pArtifact]=qualDiscrim(T,E,inputParam)
 %qualDiscrim - finds probability that positions are trusted or artifacts
 %using quadratic discriminant analysis on a number of quality metrics
 %
-% Syntax:  [F,pTrust,pArtifact]=qualDiscrim(T,inputParam)
+% Syntax:  [F,pTrust,pArtifact]=qualDiscrim(T,E,inputParam)
 %
 % Inputs:
 %    T - table of position data with the following columns: 'Chr','Pos',
@@ -30,13 +30,13 @@ function [F,pTrust,pArtifact]=qualDiscrim(T,E,inputParam)
 % Subfunctions: none
 % MAT-files required: none
 %
-% See also: TumorOnlyWrapper, preproccessTumorOnly
+% See also: LumosVarMain, preproccessTumorOnly
 
 % Author: Rebecca F. Halperin, PhD
 % Translational Genomics Research Institute
 % email: rhalperin@tgen.org
 % Website: https://github.com/tgen
-% Last revision: 3-June-2016
+% Last revision: 5-May-2018
 
 %------------- BEGIN CODE --------------
 

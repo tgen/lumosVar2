@@ -1,29 +1,28 @@
 function writeCloneSummary(segsTable,exonRD,Tcell,fIn,cloneId,inputParam,Filter,somaticDetected,sampleFrac)
-%writeCloneSummary - writes summary of variant counts by clone
+%writeCloneSummary - writes summary tables and plots
 %
-% Syntax: writeCloneSummary(segsTable,E,T,pSomatic,posterior,f,W,cloneId,inputParam)
+% Syntax:  writeCloneSummary(segsTable,exonRD,Tcell,fIn,cloneId,inputParam,Filter,somaticDetected,sampleFrac)
 %
 % Inputs:
-%   segsTable: matrix of segment data with columns:
-%       1-'Chr',2-'StartPos',3-'EndPos',4-'segmentMean Tumor/Normal Log Ratio',
-%       5-'N',6-'M',7-'F',8-'W',9-'log2FC'
-%    E - table of exon data with the following columns: 'Chr','StartPos','EndPos',
-%       'TumorRD','NormalRD', 'MapQC', 'perReadPass', 'abFrac'
-%    T - table of position data with the following columns: 'Chr','Pos',
-%       'ReadDepth','ReadDepthPass','Ref','A','ACountF','ACountR','AmeanBQ',
-%       'AmeanMQ','AmeanPMM','AmeanReadPos','B','BCountF','BCountR','BmeanBQ',
-%       'BmeanMQ','BmeanPMM','BmeanReadPos','ApopAF','BpopAF','CosmicCount',
-%       'ControlRD','PosMapQC','perReadPass','abFrac'
-%   pSomatic: posterior probability somatic variant
-%   pTrust: posterior probability call should be trusted
-%   pArtifact: posterior probability artificat
-%   f: sample fraction of each clone
-%   W: w parameter for each clone
-%   cloneId: most likley clone assuming somatic
-%   inputParam: structure with all parameters   
+%   segsTable: table of segment data with variables: {'Chr','StartPos','EndPos',
+%       'N','M','F','cnaIdx'}
+%   exonRD: cell array of matrices of exon data with columns: 1-'Chr',2-'StartPos',3-'EndPos',
+%       4-'TumorRD',5-'NormalRD',6-'MapQC',7-'perReadPass',8-'abFrac'
+%   Tcell: cell array of tables with columns: {'Chr','Pos','ReadDepthPass'}
+%   fIn: sample fraction matrix
+%   cloneId: index of clonal variant group
+%   inputParam: structure of parameters
+%   Filter: cell array of variant calls
+%   somaticDetected: logical matrix indicating which samples somatic
+%       variants were detected in
+%   sampleFrac: estimated fraction of cells containing each variant
 %
 % Outputs:
-%    writes a csv file
+%    output file names/paths specified by inputParam.outName
+%    *.cloneSummary.tsv - table clonal variant group data
+%    *.cloneSummary.pdf - plots of clonal variant groups
+%    *.groupLinePlots.pdf - plots of sampleFractions of somatic variants in
+%    each group
 %
 % Other m-files required: none
 % Subfunctions: none
@@ -35,8 +34,10 @@ function writeCloneSummary(segsTable,exonRD,Tcell,fIn,cloneId,inputParam,Filter,
 % Translational Genomics Research Institute
 % email: rhalperin@tgen.org
 % Website: https://github.com/tgen
-% Last revision: 3-June-2016
+% Last revision: 9-May-2018
 %------------- BEGIN CODE --------------
+
+%%%fill in sample fractions for normal sample
 if inputParam.NormalSample>0
     f=[zeros(length(Tcell),inputParam.numClones) ones(length(Tcell),1)];
     tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
@@ -45,16 +46,13 @@ else
     f=[fIn ones(length(Tcell),1)];
 end
 
+%%%create table of variant counts by clonal group
 sampleNames=char(regexp(inputParam.sampleNames,',','split')');
 sampleNamesShort=cellstr(sampleNames(:,1:min(namelengthmax-2,size(sampleNames,2))));
 cloneTable=array2table([f'; NaN(1,size(f,1))],'VariableNames',strcat('SF_',regexprep(cellstr(sampleNamesShort),'-','_')));
 cloneTable{size(f,2),1:size(f,1)}=1-max(f(:,1:end-1),[],2)';
 cloneTable.Row=[cellstr(strcat('ClonalGroup_',num2str([1:size(f,2)-1]'))); 'Germline'; 'Pair'];
-
 T=Tcell{1};
-%rejectPos=max(P.artifact,[],2)>inputParam.pGoodThresh;
-%passPos=max(P.trust,[],2)>inputParam.pGoodThresh & T.RefComb>0 & T.Acomb>0 & T.Bcomb>0 & ~rejectPos;
-%%% count variants by clone
 for i=1:size(f,2)
     pass(i,:)=sum(cloneId(:,1)==i & strcmp(Filter,'SomaticPASS'));
     detect(i,:)=sum(somaticDetected(cloneId(:,1)==i & strcmp(Filter,'SomaticPASS'),:),1);
@@ -66,17 +64,13 @@ cloneTable.somaticDetected=[detect; sum(somaticDetected(strcmp(Filter,'SomaticPa
 cloneTable.somaticLowQC=[lowqc; sum(strcmp(Filter,'SomaticPairLowQC'))];
 cloneTable.somaticDB=[db; NaN];
 
-
 message=['made clone table']
 
-%%% find exon cloneId
-%E=Ecell{1};
+%%% find exon cloneId by exon
 idx=getPosInRegions([exonRD{1}(:,1) mean(exonRD{1}(:,2:3),2)],segsTable{:,1:3});
 exonCN(~isnan(idx),:)=[segsTable.N(idx(~isnan(idx))) segsTable.M(idx(~isnan(idx))) segsTable.F(idx(~isnan(idx)),1)];
 exonCloneId(~isnan(idx),:)=segsTable.cnaIdx(idx(~isnan(idx)));
 exonCloneId(exonCN(:,1)==2 & exonCN(:,2)==1,:)=0;
-
-
 message=['found exon clone id']
 
 %%% count CNV by clone
@@ -96,72 +90,48 @@ for i=1:size(f,2)
 end
 message=['made summary table']
 
+%%% write summary table
 writetable([cloneTable array2table([CNcount; NaN(1,size(CNcount,2))],'VariableNames',CNname)],[inputParam.outName '.cloneSummary.tsv'],'Delimiter','\t','WriteRowNames',1,'FileType','text');
-%if inputParam.NormalSample>0
+
+%%% summary plot of sample fractions (y) by sample (x) where line thickness
+%%% is proportional to the number of copy number alterations in clonal
+%%% variant groups and size of circle is proportional to the number of
+%%% small mutations in the clonal variant group
 colors=linspecer(size(f,2)-1);
-%else
-%    colors=linspecer(size(f,2));
-%end
 subplot(3,2,1);
 hold on;
 for i=1:size(colors,1)
     plot(f(:,i),'-','color',colors(i,:),'LineWidth',10*(sum(CNcount(i,:))+1)./sum(CNcount(:)));
-    %if rem(i,2)==0
-    %plot(f(:,i),'-o','MarkerSize',50*(cloneTable.somaticDetected(i,:)+1)./sum(cloneTable.somaticPass+1),'color',colors(i,:),'MarkerEdgeColor',[0 0 0],'MarkerFaceColor',colors(i,:),'LineWidth',10*(sum(CNcount(i,:))+1)./sum(CNcount(:)));
     scatter([1:size(f,1)],f(:,i),400*(cloneTable.somaticDetected(i,:)+1)./sum(cloneTable.somaticPass+1),'MarkerEdgeColor',[0 0 0],'MarkerFaceColor',colors(i,:));
-    %else
-    %plot(f(:,i),'-o','MarkerSize',50*(cloneTable.somaticDetected(i,:)+1)./sum(cloneTable.somaticPass+1),'color',colors(i,:),'MarkerEdgeColor',[1 1 1],'MarkerFaceColor',colors(i,:),'LineWidth',10*(sum(CNcount(i,:))+1)./sum(CNcount(:)));
-    %   scatter([1:size(f,1)],f(:,i),400*(cloneTable.somaticDetected(i,:)+1)./sum(cloneTable.somaticPass+1),'MarkerEdgeColor',[1 1 1],'MarkerFaceColor',colors(i,:));
-    %end
 end
 ylim([0 1]);
 set(gca,'XTick',1:size(f,1),'XTickLabel',sampleNames,'FontSize',8,'TickLabelInterpreter','none','XTickLabelRotation',10);
 ylabel('Clonal Sample Fraction');
 
-
-% if inputParam.NormalSample>0
-%     bIdx=Tcell{inputParam.NormalSample}.AcountsComb>=Tcell{inputParam.NormalSample}.BcountsComb;
-% else
-%     bIdx=T.ApopAFcomb>=T.BpopAFcomb;
-% end
-% 
-% for j=1:length(Tcell)
-%     T=Tcell{j};
-%     AF(bIdx,j)=T.BcountsComb(bIdx)./T.ReadDepthPass(bIdx);
-%     AF(~bIdx,j)=T.AcountsComb(~bIdx)./T.ReadDepthPass(~bIdx);
-%     matchIdx=f(j,cloneId(:,j))'==T.cnaF;
-%     sampleFrac(matchIdx,j)=AF(matchIdx,j).*(T.cnaF(matchIdx).*T.NumCopies(matchIdx)+2.*(1-T.cnaF(matchIdx)))./(T.NumCopies(matchIdx)-T.MinAlCopies(matchIdx));
-%     sampleFrac(~matchIdx,j)=AF(~matchIdx,j).*(T.cnaF(~matchIdx).*T.NumCopies(~matchIdx)+2.*(1-T.cnaF(~matchIdx)));
-% end
-
+%%% if there is more than one sample, lineplot of sample fraction vs
+%%% sample, where each line is a somatic variant and color indicates clonal
+%%% variant group
 if (size(sampleFrac,2)>1)
     subplot(3,2,3);
     hold on;
     for i=1:size(colors,1)
         plot(sampleFrac(strcmp(Filter,'SomaticPASS') & cloneId(:,1)==i,:)','Color',colors(i,:));
-        %plot(sampleFrac(strcmp(Filter,'SomaticPairPASS') & cloneId(:,1)==i,:)',':','Color',colors(i,:));
     end
-    %plot(sampleFrac(strcmp(Filter,'SomaticPairPASS'),:)','Color','k');
     ylim([0 1]);
     set(gca,'XTick',1:size(f,1),'XTickLabel',sampleNames,'FontSize',8,'TickLabelInterpreter','none','XTickLabelRotation',10);
     ylabel('Variant Sample Fraction');
 end
 
+%%%beeswarm plot of sample fractions by sample
 if(size(sampleFrac,2)>1)
     subplot(3,2,5);
 else
     subplot(3,2,3);
 end
-% plot(sampleFrac(strcmp(Filter,'SomaticPairPASS'),:)');
-% ylim([0 1]);
-% set(gca,'XTick',1:size(f,1),'XTickLabel',sampleNames,'FontSize',8,'TickLabelInterpreter','none','XTickLabelRotation',10);
-% ylabel('Variant Sample Fraction');
 cloneIdplot=cloneId(:,1);
 cloneIdplot(~strcmp(Filter,'SomaticPASS'))=NaN;
 cloneIdplot(strcmp(Filter,'SomaticPairPASS'))=0;
 [~,gName]=grp2idx(cloneIdplot);
-%gName
-%colors
 cIdx=str2double(gName);
 cIdx=cIdx(cIdx>0);
 somIdx=~isnan(cloneIdplot);
@@ -173,49 +143,44 @@ end
 set(gca,'XTick',1:size(f,1),'XTickLabel',sampleNames,'FontSize',8,'TickLabelInterpreter','none','XTickLabelRotation',10);
 ylabel('Variant Sample Fraction');
 
+%%%barplot of number of copy number altered exons by copy number state
 subplot(3,2,2)
 b=bar(CNcount','stacked');
 for i=1:size(colors,1)
     b(i).FaceColor=colors(i,:);
 end
-%if inputParam.NormalSample>0
 b(end).FaceColor=[0 0 0];
-%end
-
 set(gca,'XTick',1:length(CNname),'XTickLabel',CNname,'FontSize',8,'TickLabelInterpreter','none','XTickLabelRotation',90);
 axis tight;
 legend([cellstr(num2str([1:size(colors,1)]')); {'Germ'}]);
 xlabel('Copy Number State');
 ylabel('Number of Exons');
 
+%%%barplot of number of somatic variants detected by sample
 subplot(3,2,4)
 b=bar([cloneTable.somaticDetected'; zeros(1,height(cloneTable))],'stacked');
-%b=bar(cloneTable.somaticDetected','stacked');
-for i=1:size(colors,1);
+for i=1:size(colors,1)
     b(i).FaceColor=colors(i,:);
 end
 if inputParam.NormalSample>0
     b(end).FaceColor=[0 0 0];
 end
 set(gca,'XTick',1:size(sampleNames,1),'XTickLabel',sampleNames,'FontSize',8,'TickLabelInterpreter','none','XTickLabelRotation',10);
-%xlim([0.5 length(sampleNames)+0.5]);
 axis tight;
 xl=get(gca,'xlim');
 xlim([xl(1) xl(2)-1]);
-%legend(num2str([1:size(CNcount,1)]'));
 ylabel('Number of Somatic Variants Detected');
 
+%%%if more than one sample, barplot of the counts of common and unique
+%%%variants detected in combinations of samples
 if(size(sampleFrac,2)>1)
     subplot(3,2,6);
     detectCat=cellstr(num2str(somaticDetected));
     [gIdx,gName]=grp2idx(detectCat);
     cIdx=strcmp(Filter,'SomaticPASS');
-    %[tbl,~,~,labels]=crosstab(gIdx(cIdx),cloneId(cIdx,1));
     h2=histcounts2(gIdx(cIdx),cloneId(cIdx,1),1:length(gName)+1,1:max(cloneId(:,1))+1);
     h=histcounts(gIdx(strcmp(Filter,'SomaticPairPASS')),1:length(gName)+1);
     hcomb=[h2 h'];
-    %gPos=find(sum(hcomb')>0);
-    %[~,ord]=sort(sum(hcomb(gPos,:)'),'descend');
     [~,ord]=sort(sum(hcomb,2),'descend');
     b=bar(hcomb(ord,:),'stacked');
     for i=1:size(h2,2)
@@ -237,13 +202,14 @@ if(size(sampleFrac,2)>1)
     set(gca,'YTick',yt(yt>0),'FontSize',8,'XTick',[]);
     legend([cellstr(num2str([1:size(colors,1)]')); {'NA'}]);
 end
-
 set(gcf, 'PaperPositionMode', 'manual');
 set(gcf, 'PaperUnits', 'inches');
 set(gcf, 'PaperPosition', [1 1 7.5 10]);
 print(gcf,'-dpdf',[inputParam.outName '.cloneSummary.pdf'],'-r300');
 close(gcf);
 
+%%% if more than one sample, seperate line plots of each clonal variant
+%%% group where lines are colored by mean read depth
 if(size(sampleFrac,2)>1)
     RD=zeros(height(Tcell{1}),1);
     for i=1:length(Tcell)
@@ -257,8 +223,7 @@ if(size(sampleFrac,2)>1)
         subplot(ceil((size(colors,1)+2)/2),2,i);
         currIdx=strcmp(Filter,'SomaticPASS') & cloneId(:,1)==i;
         hold on;
-        %scatter([1:length(Tcell)]'*ones(1,sum(currIdx)),sampleFrac(currIdx,:)');
-        for j=1:max(RDbin)
+         for j=1:max(RDbin)
             plot(min(sampleFrac(currIdx & RDbin==j,:)',1),'-','Color',cmap(j,:));
         end
         ylim([0 1]);
@@ -267,7 +232,6 @@ if(size(sampleFrac,2)>1)
         title(['Variant Group ' num2str(i)]);
     end
     subplot(ceil((size(colors,1)+2)/2),2,i+1);
-    %plot(sampleFrac(strcmp(Filter,'SomaticPairPASS'),:)','Color','k');
     currIdx=strcmp(Filter,'SomaticPairPASS');
     hold on;
     for j=1:max(RDbin)
@@ -282,8 +246,7 @@ if(size(sampleFrac,2)>1)
     caxis([0 max(RDbin)]);
     colorbar('northoutside','XTick',0:2:max(RDbin),'XTickLabel',2.^[0:2:max(RDbin)]);
     title('Mean Read Depth');
-    axis off;
-    
+    axis off;  
     set(gcf, 'PaperPositionMode', 'manual');
     set(gcf, 'PaperUnits', 'inches');
     set(gcf, 'PaperPosition', [1 1 7.5 10]);

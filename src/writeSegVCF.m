@@ -1,22 +1,31 @@
 function segsTableCond=writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputParam)
-%writeSegVCF - writes VCF for copy number alterations
+%writeSegVCF - writes VCF for copy number alterations to file - name/path
+%specified by inputParam.outName, as well as table of data by exon
 %
-% Syntax: writeSegVCF(segsTable,inputParam)
+% Syntax: segsTableCond=writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputParam)
 %
 % Inputs:
 %   segsTable: matrix of segment data with columns:
 %       1-'Chr',2-'StartPos',3-'EndPos',4-'segmentMean Tumor/Normal Log Ratio',
 %       5-'N',6-'M',7-'F',8-'W',9-'log2FC'
-%  inputParam: structure with all parameters   
+%   exonRD: cell array oi matrices of exon data with columns: 1-'Chr',2-'StartPos',3-'EndPos',
+%       4-'TumorRD',5-'NormalRD',6-'MapQC',7-'perReadPass',8-'abFrac'
+%   CNAscale: centering parameter
+%   Tcell - cell array of tables with length equal to the number of bams,
+%       each table must have the following columns:  {'Chr','Pos', 'ReadDepthPass',
+%       'BCountsComb'}
+%   hetPos - vector of positions in of heterozygous positions 
+%   inputParam: structure with all parameters   
 %
 % Outputs:
-%    writes a VCF file
+%    segsTableCond - table of segments where adjacent segments assigned the
+%    same copy number state are merged
 %
 % Other m-files required: none
 % Subfunctions: none
 % MAT-files required: none
 %
-% See also: TumorOnlyWrapper, callCNA, fitCNA
+% See also: LumosVarMain, segmentData, mergeSegments, fitCNAmulti
 
 % Author: Rebecca F. Halperin, PhD
 % Translational Genomics Research Institute
@@ -25,6 +34,7 @@ function segsTableCond=writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputP
 % Last revision: 3-June-2016
 %------------- BEGIN CODE --------------
 
+%%%open output file
 fout=fopen([inputParam.outName '.lumosVarSeg.vcf'],'w');
 
 %%% print VCF header
@@ -46,12 +56,11 @@ fprintf(fout,['##INFO=<ID=END,Number=1,Type=String,Description="End of Variant">
 fprintf(fout,['##INFO=<ID=EXONCOUNT,Number=1,Type=Float,Description="Number of Exons in Segment">\n']);
 fprintf(fout,['##INFO=<ID=HETCOUNT,Number=1,Type=Float,Description="Number of Heterozygous Variants in Segment">\n']);
 fprintf(fout,['##INFO=<ID=CloneId,Number=1,Type=Integer,Description="CloneId">\n']);
-
-
 fprintf(fout,['##FORMAT=<ID=CNF,Number=1,Type=Float,Description="Fraction containg Copy Number Alteration">\n']);
 fprintf(fout,['##FORMAT=<ID=LOG2FC,Number=1,Type=Float,Description="log2 fold change">\n']);
 fprintf(fout,['##FORMAT=<ID=MEANBAF,Number=1,Type=Float,Description="mean B-allele frequency in segment">\n']);
 
+%%%combine adjacent segments with the same copy number state
 segsTableCond=segsTable(1,:);
 r=1;
 for i=2:size(segsTable,1)
@@ -65,6 +74,7 @@ for i=2:size(segsTable,1)
     end
 end
 
+%%% get mean values in segments
 for i=1:length(exonRD)
     meanTumorRDexon(:,i)=getMeanInRegions(exonRD{i}(:,1:2),exonRD{i}(:,4),segsTableCond{:,1:3});
     meanNormalRDexon(:,i)=getMeanInRegions(exonRD{i}(:,1:2),exonRD{i}(:,5),segsTableCond{:,1:3});
@@ -75,10 +85,10 @@ end
 for i=1:length(exonRD)
     log2FC(:,i)=log2((CNAscale(i)./2).*meanTumorRDexon(:,i)./(meanNormalRDexon(:,i)));
 end
-
 segsTableCond.log2FC=log2FC;
 segsTableCond.meanBAF=meanBAF;
 
+%%%get exon and het counts per segment
 idx=getPosInRegions(exonRD{1}(:,1:2),segsTableCond{:,1:3});
 exonCounts=hist(idx,1:size(segsTableCond,1));
 idxHet=getPosInRegions([Tcell{1}.Chr(hetPos) Tcell{1}.Pos(hetPos)],segsTableCond{:,1:3});
@@ -100,17 +110,16 @@ Info=strcat(Info,';SVTYPE=',type,';END=',num2str(segsTableCond.EndPos,'%-.0f'));
 Info=strcat(Info,';EXONCOUNT=',num2str(segsTableCond.exonCounts,'%-.0f'),';HETCOUNT=',num2str(segsTableCond.hetCounts,'%-.0f'));
 Info=strcat(Info,';CloneId=',num2str(segsTableCond.cnaIdx,'%-.0f'));
 
+%%% construct genotype fields
 for i=1:size(segsTableCond.F,2)
     formatStr(segsTableCond.N~=2 | segsTableCond.M~=1,i)=cellstr(strcat(num2str(segsTableCond.F(segsTableCond.N~=2 | segsTableCond.M~=1,i),'%-.3f'),':',num2str(segsTableCond.log2FC(segsTableCond.N~=2 | segsTableCond.M~=1,i),'%-.2f'),':',num2str(segsTableCond.meanBAF(segsTableCond.N~=2 | segsTableCond.M~=1,i),'%-.2f')));
     formatStr(segsTableCond.N==2 & segsTableCond.M==1,i)=cellstr(strcat('NA:',num2str(segsTableCond.log2FC(segsTableCond.N==2 & segsTableCond.M==1,i),'%-.2f'),':',num2str(segsTableCond.meanBAF(segsTableCond.N==2 & segsTableCond.M==1,i),'%-.2f')));
 end
-    
 formatFields=repmat({'CNF:LOG2FC:MEANBAF'},size(segsTableCond,1),1);
 
-%%% write output
+%%% write output vcf
 sexChr=regexp(inputParam.sexChr,',','split');
 chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
-
 outData=[chrList(segsTableCond.Chr) num2cell(segsTableCond.StartPos) num2cell(segsTableCond.EndPos) cellstr(char(ones(size(segsTableCond,1),1)*78)) strcat('<',regexprep(type,'DUPLOH','DUP'),'>') num2cell(abs(mean(segsTableCond.log2FC,2))) cellstr(char(ones(size(segsTableCond,1),1)*46)) Info formatFields formatStr];
 headers={'#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILT', 'INFO', 'FORMAT'};
 headers=[headers regexp(inputParam.sampleNames,',','split')];
@@ -122,7 +131,7 @@ for i=1:size(outData,1)
 end
 fclose(fout);
 
-
+%%%write exon table
 sampleNames=char(regexp(inputParam.sampleNames,',','split')');
 sampleNamesShort=cellstr(sampleNames(:,1:min(namelengthmax-10,size(sampleNames,2))));
 sampleNamesShort=regexprep(cellstr(sampleNamesShort),'-','_');
@@ -139,5 +148,4 @@ exonsOut.meanControlQC=-10*log10(exonRD{1}(:,6));
 exonsOut.N=segsTableCond.N(idx);
 exonsOut.M=segsTableCond.M(idx);
 exonsOut.cloneId=segsTableCond.cnaIdx(idx);
-
 writetable(exonsOut,[inputParam.outName '.exonData.tsv'],'FileType','text');

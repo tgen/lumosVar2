@@ -1,4 +1,4 @@
-function [F,pTrust,pArtifact]=qualDiscrimCalls_v2(T,E,homPos,inputParam)
+function [F,pTrust,pArtifact]=qualDiscrimCalls(T,E,homPos,inputParam)
 %qualDiscrim - finds probability that positions are trusted or artifacts
 %using quadratic discriminant analysis on a number of quality metrics
 %
@@ -12,6 +12,7 @@ function [F,pTrust,pArtifact]=qualDiscrimCalls_v2(T,E,homPos,inputParam)
 %       'ControlRD','PosMapQC','perReadPass','abFrac'
 %    E - table of exon datawith the following columns: 'Chr','StartPos','EndPos',
 %       'TumorRD','NormalRD', 'MapQC', 'perReadPass', 'abFrac'
+%    homPos - logical vector of positions that are called homzygous
 %   inputParam - data structure with the following fields: ReadLength, 
 %       minPerReadPASS, minABFrac, minPercentStrand, minMeanBQ, minMeanMQ, 
 %       maxPMM, minSeqEndDist, maxStrandDiff, maxBQdiff, maxMQdiff, maxPMMdiff,
@@ -30,7 +31,7 @@ function [F,pTrust,pArtifact]=qualDiscrimCalls_v2(T,E,homPos,inputParam)
 % Subfunctions: none
 % MAT-files required: none
 %
-% See also: TumorOnlyWrapper, preproccessTumorOnly
+% See also: LumosVarMain, getCounts, jointSNV
 
 % Author: Rebecca F. Halperin, PhD
 % Translational Genomics Research Institute
@@ -46,16 +47,16 @@ T.BmeanMQ(T.BCountF+T.BCountR==0)=NaN;
 T.BmeanPMM(T.BCountF+T.BCountR==0)=NaN;
 T.BmeanReadPos(T.BCountF+T.BCountR==0)=NaN;
 
+%%%determine whether homozygous positions are A or B
 aIdx=homPos & T.ACountF+T.ACountR >= T.BCountF+T.BCountR;
 bIdx=homPos & T.ACountF+T.ACountR < T.BCountF+T.BCountR;
+
 %%%Create Quality Metrics Table
 F=table();
 F.TumorPerPassReads=(T.ReadDepthPass+1)./(T.ReadDepth+1);
 F.normalPerReadPass=T.perReadPass;
 F.normalPerReadPass(~isfinite(T.perReadPass))=inputParam.minPerReadPASS;
 F.ABfrac=(T.AcountsComb+T.BcountsComb+1)./(T.ReadDepthPass+1);
-%F.ABfrac(T.ReadDepthPass==0)=0;
-%F.normalABfrac=max(T.abFrac,0);
 F.normalABfrac=T.abFrac;
 F.normalABfrac(~isfinite(T.abFrac))=inputParam.minABFrac;
 F.minPerStrand=NaN(size(F,1),1);
@@ -166,14 +167,14 @@ groupSNV=[ones(sum(sum(goodPos,2)==16 & ~indelPos & ~homPos),1); zeros(sum(sum(b
 discrSNV=fitcdiscr(trainingSNV,groupSNV,'DiscrimType', 'pseudoQuadratic');
 [~,pTrust(~indelPos & ~homPos,:)] = predict(discrSNV,sampleSNV);
 
-%%%classify SNVs as variants vs artifacts
+%%%classify homozygous positions as variants vs artifacts
 sampleSNV=F{~indelPos & homPos,:};
 trainingSNV=[F{sum(goodPos,2)>12 & sum(badPos,2)==0 & ~indelPos & homPos,:}; F{sum(badPos,2)>2 & ~indelPos & homPos,:}];
 groupSNV=[ones(sum(sum(goodPos,2)>12 & sum(badPos,2)==0 & ~indelPos & homPos),1); zeros(sum(sum(badPos,2)>2 & ~indelPos & homPos),1)];
 discrSNV=fitcdiscr(trainingSNV,groupSNV,'DiscrimType', 'pseudoQuadratic');
 [~,pArtifact(~indelPos & homPos,:)] = predict(discrSNV,sampleSNV);
 
-%%%classify SNVs as trusted vs low quality positions
+%%%classify homozygous positions as trusted vs low quality positions
 sampleSNV=F{~indelPos & homPos,:};
 trainingSNV=[F{sum(goodPos,2)==16 & ~indelPos & homPos,:}; F{sum(badPos,2)>0 & ~indelPos & homPos,:}];
 groupSNV=[ones(sum(sum(goodPos,2)==16 & ~indelPos & homPos),1); zeros(sum(sum(badPos,2)>0 & ~indelPos & homPos),1)];
@@ -201,7 +202,6 @@ pArtifact(indelPos & ~finitePos,:)=0;
 
 F.goodPosSum=sum(goodPos,2);
 F.badPosSum=sum(badPos,2);
-
 F.Properties.VariableDescriptions(17)={'Number of PASS criteria met'};
 F.Properties.VariableDescriptions(18)={'Number of REJECT criteria met'};
 return;

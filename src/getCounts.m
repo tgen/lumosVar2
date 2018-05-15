@@ -1,17 +1,56 @@
 function [countsAll]=getCounts(Tcell, inputParam)
+%getCounts - finds two alleles with highest counts across all samples 
+% Syntax:  countsAll=getCounts(paramFile)
+%
+% Inputs:
+%    Tcell - cell array of tables with length equal to the number of bams,
+%       each table must have the following columns:  {'Chr','Pos','ReadDepth',
+%       'ReadDepthPass','Ref','A','ACountF','ACountR','AmeanBQ','AmeanMQ',
+%       'AmeanPMM','AmeanReadPos','B','BCountF','BCountR','BmeanBQ','BmeanMQ',
+%       'BmeanPMM','BmeanReadPos','ApopAF','BpopAF','CosmicCount','ControlRD',
+%        'PosMapQC','perReadPass','abFrac'};
+%    inputParam - data structure with fields from paramFile   
+%
+% Outputs:
+%   countsAll - table with the following variables:
+%     'Chr' - chromosome
+%     'Pos' - positition on chr
+%     'Ref' - reference allele
+%     'A' - allele the most counts across all samples
+%     'B' - allele the second most counts across all samples
+%     'ApopAF' - population allele frequency of A allele 
+%     'BpopAF' - population allele frequency of B allele 
+%     'cosmicCount' - maximum cosmic count observed at position
+%     'Acounts' - matrix with one column per sample with read counts for A
+%     'Bcounts' - matrix with one column per sample with read counts for A
+%
+%
+% Other m-files required: none
+% Other requirements: none
+% Subfunctions: none
+% MAT-files required: none
+%
+% See also: LumosVarMain
 
+% Author: Rebecca F. Halperin, PhD
+% Translational Genomics Research Institute
+% email: rhalperin@tgen.org
+% Website: https://github.com/tgen
+% Last revision: 4-May-2018
 
+%------------- BEGIN CODE --------------
+
+%%%find unique positions
 posList=[];
 for i=1:size(Tcell,2)
     T=Tcell{i};
     posList=[posList; T.Chr T.Pos];
 end
-
 posList=unique(posList,'rows');
 
+%%%read data from Tcell into matrices
 Amat=NaN(size(posList,1),size(Tcell,2));
 Bmat=NaN(size(posList,1),size(Tcell,2));
-
 for i=1:size(Tcell,2)
     T=Tcell{i};
     [lia,locb]=ismember([T.Chr T.Pos],posList,'rows');
@@ -24,20 +63,15 @@ for i=1:size(Tcell,2)
     RDmat(locb,i)=T.ReadDepthPass;
     RefOrig(locb,i)=T.Ref;
     cosmic(locb,i)=T.CosmicCount;
-%    cnaF(locb,i)=T.cnaF;
-%    N(locb,i)=T.NumCopies;
-%    M(locb,i)=T.MinAlCopies;
-%    Wmat(locb,i)=T.W;
     BmeanBQ(locb,i)=T.BmeanBQ;
     AmeanBQ(locb,i)=T.AmeanBQ;
     mapQC(locb,i)=T.PosMapQC;
 end
 
+%%%%set values when A and B are the same across samples
 Ref=zeros(size(Amat));
 Ref(min(RefOrig,[],2)==max(RefOrig,[],2),:)=RefOrig(min(RefOrig,[],2)==max(RefOrig,[],2),:);
-
 for i=1:size(BmeanBQ,2)
-%    Wmat(Wmat(:,i)==0,i)=mode(Wmat(Wmat(:,i)~=0,i));
     BmeanBQ(BmeanBQ(:,i)==0,i)=inputParam.defaultBQ;
     AmeanBQ(AmeanBQ(:,i)==0,i)=inputParam.defaultBQ;
 end
@@ -56,6 +90,7 @@ Bcounts(min(Bmat,[],2)-max(Bmat,[],2)==0,:)=BcountsOrig(min(Bmat,[],2)-max(Bmat,
 BpopAF=zeros(size(Amat));
 BpopAF(min(Bmat,[],2)-max(Bmat,[],2)==0,:)=BpopAForig(min(Bmat,[],2)-max(Bmat,[],2)==0,:);
 
+%%% find values for A and B when they are different across samples
 pos=find(isnan(sum([A B Amat Bmat],2)));
 for i=1:size(pos)
     %posList(pos(i),:)
