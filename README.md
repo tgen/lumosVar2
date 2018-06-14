@@ -41,7 +41,7 @@ gvmPath: GVMPATH        ###path to folder containing gvm executable
 outfile: OUTFILE        ###path and name of output
 ```
 
-- In order to correctly handle the sex chromosomes, the sex of the individuals in the bams list must be given as input.  We have provided a helper script to determine sex from the bams if they are not known.  [guessSex.py](scripts/guessSex.py)  This script takes the same yaml file as input as the normal metrics, but only the following fields in the "input files" section are needed.
+- In order to correctly handle the sex chromosomes, the sex of the individuals in the bams list must be given as input.  We have provided a helper [script](scripts/guessSex.py) to determine sex from the bams if they are not known.  This script takes the same yaml file as input as the normal metrics, but only the following fields in the "input files" section are needed.
 >python guessSex.py controlsConfig.yaml
 
 The output will be written to BAMLIST.guessSex.txt.  The last line of the output contains the sexList for the yaml file
