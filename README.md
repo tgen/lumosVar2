@@ -2,10 +2,15 @@
 Calls somatic SNVs, indels, and allelic copy number jointly across multiple samples from the same patient.  These can be standard tumor/normal pair, longitudinal samples, primary/met, etc.  Can also be used for tumor only calling, ideally with a high tumor content and a low tumor content sample.
 
 PREREQUISITES
-samtools and htslib (tested with 1.2, 1.3, and 1.4)
+bcftools and htslib (tested with 1.2-1.8)
 http://www.htslib.org/download/
 Matlab Runtime (MCR 9.0)
 http://www.mathworks.com/products/compiler/mcr/
+libYAML
+https://pyyaml.org/wiki/LibYAML
+GSL - GNU Scientific Library
+https://www.gnu.org/software/gsl/ 
+
 
 BAM PREPERATION 
 Bams should be created using bwa-mem

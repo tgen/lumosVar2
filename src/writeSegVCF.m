@@ -134,7 +134,7 @@ fclose(fout);
 %%%write exon table
 sampleNames=char(regexp(inputParam.sampleNames,',','split')');
 sampleNamesShort=cellstr(sampleNames(:,1:min(namelengthmax-10,size(sampleNames,2))));
-sampleNamesShort=regexprep(cellstr(sampleNamesShort),'-','_');
+sampleNamesShort=regexprep(cellstr(sampleNamesShort),'-|\.','_');
 exonsOut=table();
 exonsOut.Chr=exonRD{1}(:,1);
 exonsOut.StartPos=exonRD{1}(:,2);

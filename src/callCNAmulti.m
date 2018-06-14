@@ -221,7 +221,7 @@ if inputParam.NormalSample<1
                     T.W=W(j)*ones(height(T),1);
                     Tdb{j}=T;
                 end
-                postComb=jointSNV_v2(Tdb, f(tIdx,1:end-1), W, inputParam);
+                postComb=jointSNV(Tdb, f(tIdx,1:end-1), W, inputParam);
                 somDBpos=postComb.Somatic>inputParam.pSomaticThresh;
                 [lia,locb]=ismember([Tcell{1}.Chr Tcell{1}.Pos],[postComb.Chr postComb.Pos],'rows');
                 hetPosDB(lia,i,k,m)=postComb.Het(locb(lia))>inputParam.pGermlineThresh;

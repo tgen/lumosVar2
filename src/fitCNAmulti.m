@@ -1,4 +1,4 @@
-function [segsTable, W, f, CNAscale, nll, t]=fitCNAmulti_v3(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,fInit,cInit,wInit,dbCounts)
+function [segsTable, W, f, CNAscale, nll, t]=fitCNAmulti(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,fInit,cInit,wInit,dbCounts)
 %fitCNAmulti - uses EM to fit copy number parameters and estimate copy number
 %
 % Syntax: [segsTable, W, f, CNAscale, nll, t]=fitCNAmulti(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,fInit,cInit,wInit,dbCounts)

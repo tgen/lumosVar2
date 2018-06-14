@@ -48,8 +48,8 @@ end
 
 %%%create table of variant counts by clonal group
 sampleNames=char(regexp(inputParam.sampleNames,',','split')');
-sampleNamesShort=cellstr(sampleNames(:,1:min(namelengthmax-2,size(sampleNames,2))));
-cloneTable=array2table([f'; NaN(1,size(f,1))],'VariableNames',strcat('SF_',regexprep(cellstr(sampleNamesShort),'-','_')));
+sampleNamesShort=cellstr(sampleNames(:,1:min(namelengthmax-3,size(sampleNames,2))));
+cloneTable=array2table([f'; NaN(1,size(f,1))],'VariableNames',strcat('SF_',regexprep(cellstr(sampleNamesShort),'-|\.','_')));
 cloneTable{size(f,2),1:size(f,1)}=1-max(f(:,1:end-1),[],2)';
 cloneTable.Row=[cellstr(strcat('ClonalGroup_',num2str([1:size(f,2)-1]'))); 'Germline'; 'Pair'];
 T=Tcell{1};

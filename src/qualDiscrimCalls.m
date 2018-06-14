@@ -168,18 +168,22 @@ discrSNV=fitcdiscr(trainingSNV,groupSNV,'DiscrimType', 'pseudoQuadratic');
 [~,pTrust(~indelPos & ~homPos,:)] = predict(discrSNV,sampleSNV);
 
 %%%classify homozygous positions as variants vs artifacts
-sampleSNV=F{~indelPos & homPos,:};
-trainingSNV=[F{sum(goodPos,2)>12 & sum(badPos,2)==0 & ~indelPos & homPos,:}; F{sum(badPos,2)>2 & ~indelPos & homPos,:}];
-groupSNV=[ones(sum(sum(goodPos,2)>12 & sum(badPos,2)==0 & ~indelPos & homPos),1); zeros(sum(sum(badPos,2)>2 & ~indelPos & homPos),1)];
-discrSNV=fitcdiscr(trainingSNV,groupSNV,'DiscrimType', 'pseudoQuadratic');
-[~,pArtifact(~indelPos & homPos,:)] = predict(discrSNV,sampleSNV);
+if(sum(homPos)>0)
+	sampleSNV=F{~indelPos & homPos,:};
+	trainingSNV=[F{sum(goodPos,2)>12 & sum(badPos,2)==0 & ~indelPos & homPos,:}; F{sum(badPos,2)>2 & ~indelPos & homPos,:}];
+	groupSNV=[ones(sum(sum(goodPos,2)>12 & sum(badPos,2)==0 & ~indelPos & homPos),1); zeros(sum(sum(badPos,2)>2 & ~indelPos & homPos),1)];
+	discrSNV=fitcdiscr(trainingSNV,groupSNV,'DiscrimType', 'pseudoQuadratic');
+	[~,pArtifact(~indelPos & homPos,:)] = predict(discrSNV,sampleSNV);
+end
 
 %%%classify homozygous positions as trusted vs low quality positions
-sampleSNV=F{~indelPos & homPos,:};
-trainingSNV=[F{sum(goodPos,2)==16 & ~indelPos & homPos,:}; F{sum(badPos,2)>0 & ~indelPos & homPos,:}];
-groupSNV=[ones(sum(sum(goodPos,2)==16 & ~indelPos & homPos),1); zeros(sum(sum(badPos,2)>0 & ~indelPos & homPos),1)];
-discrSNV=fitcdiscr(trainingSNV,groupSNV,'DiscrimType', 'pseudoQuadratic');
-[~,pTrust(~indelPos & homPos,:)] = predict(discrSNV,sampleSNV);
+if(sum(homPos)>0)
+	sampleSNV=F{~indelPos & homPos,:};
+	trainingSNV=[F{sum(goodPos,2)==16 & ~indelPos & homPos,:}; F{sum(badPos,2)>0 & ~indelPos & homPos,:}];
+	groupSNV=[ones(sum(sum(goodPos,2)==16 & ~indelPos & homPos),1); zeros(sum(sum(badPos,2)>0 & ~indelPos & homPos),1)];
+	discrSNV=fitcdiscr(trainingSNV,groupSNV,'DiscrimType', 'pseudoQuadratic');
+	[~,pTrust(~indelPos & homPos,:)] = predict(discrSNV,sampleSNV);
+end
 
 %%%classify indels as variants vs artifacts
 finitePos=sum(isfinite(F{:,:}),2)==16;
@@ -199,6 +203,9 @@ discrIndel=fitcdiscr(trainingIndel(:,[1:10 12:16]),groupIndel,'DiscrimType', 'ps
 
 pTrust(indelPos & ~finitePos,:)=0;
 pArtifact(indelPos & ~finitePos,:)=0;
+
+pTrust=real(pTrust);
+pArtifact=real(pArtifact);
 
 F.goodPosSum=sum(goodPos,2);
 F.badPosSum=sum(badPos,2);

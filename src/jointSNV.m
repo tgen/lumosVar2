@@ -1,4 +1,4 @@
-function [postComb, pDataSum, pDataComb,cloneId,prior,alleleId]=jointSNV_v2(Tcell, fIn, W, inputParam)
+function [postComb, pDataSum, pDataComb,cloneId,prior,alleleId]=jointSNV(Tcell, fIn, W, inputParam)
 %jointSNV - find joint probability that variants are somatic, germline
 %heterozygous or homozygous across samples
 % Syntax:  [postComb, pDataSum, pDataComb,cloneId,prior,alleleId]=jointSNV(Tcell, exonRD, fIn, W, inputParam)

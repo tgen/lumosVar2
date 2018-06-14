@@ -72,7 +72,7 @@ for j=1:length(Tcell)
 end
 somLik=NaN(height(Tsom{1}),length(Tsom));
 somIdx=NaN(height(Tsom{1}),length(Tsom));
-[~, ~,pDataComb,clones,~]=jointSNV_v2(Tsom, f, W, inputParam);
+[~, ~,pDataComb,clones,~]=jointSNV(Tsom, f, W, inputParam);
 for j=1:length(Tsom)
     somLik(:,j)=pDataComb{j}.Somatic+inputParam.minLik;
     somIdx(:,j)=clones;
