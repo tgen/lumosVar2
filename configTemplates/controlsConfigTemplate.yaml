@@ -1,28 +1,31 @@
+###input files
+bamList:   BAMLIST      ###path to file contining pathe to bams
+regionsFile: BEDFILE    ###path to bed file defining regions targeted in exome
+refGenome: REFGENOME    ###path to reference genome that was used to align bams
+snpVCFpath: VCFPATH     ###path to vcfs containg popuulation frequencies (one for each chromosme),
+                        ###including part of filename before chromosome number
+snpVCFname: VCFNAME     ###filename/extension of population vcf following chromosome number
 
-#workingDirectory: /home/rhalperin/scripts/TumorOnlyAnalysis/
-regionsFile: BEDFILE                                                                            ####File defing regions to analyze
-bamList: BAMLIST                                                                                ####Path to file containng paths of control bam files
-sexList: SEXLIST                                                                                ####comma seperated list of one letter abbreviation of sex coreesponding to eahc bam in the BAMLIST
-samPath: /home/rhalperin/bin/samtools-1.2/                                                      ####path to directory containing samtools executable
+###user inputs
+sexList: SEXLIST        ###comma deliminated list of sex for each bam in the bamlist in the same order
+gvmPath: GVMPATH        ###path to folder containing gvm executable
+outfile: OUTFILE        ###path and name of output
+
+###organism specific parameters
+###values below are set for human
+autosomes: "1:22"                                                                                 ####range of numbers for autsomal chromosmes 1:maxAutosome
+sexChr: X,Y                                                                                     #### commma sperated lsit of sex chromosmes
+F: 2,0                                                                                          #### number of copies of sex chr for individuals of sex F
+M: 1,1
+
+###advanced parameters - most users should keep default belows below
 mpileupC: 50                                                                                    ####mpileupC paramaeter
-refGenome: /home/tgenref/pecan/refgenome/hs37d5/hs37d5_plusRibo_plusOncoViruses_plusERCC.fa     ####indexed reference genome in fasta format
-snpVCFpath: /home/rhalperin/reference/ALL.chr                                                   ####path to vcfs containg popuulation frequencies (one for each chromosme)
-snpVCFname: .phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz                   ####filename/extension of population vcf following chromosome number
-tabixPath: /home/rhalperin/bin/htslib-1.2.1/                                                    ####path to directory containing tabix and bgzip
-pvFreq: 7.14E-5                                                                                 ####expected frequency of private SNPs
-pvFreqIndel: 1.43E-5                                                                            ####expected frequency of private indels
-#minBCount: 5                                                                                    
-blockSize: 1000                                                                                 ####size of region to analyze at once - effects memory usage
-outfile: OUTFILE                                                                                ####prefix of output file names
-minBQ: 10                                                                                       ####minimum base quality to count base
-maxBQ: 40                                                                                       ####bases with BQ greater than max are set to maxBQ
+pvFreq: 1E-5                                                                                 ####expected frequency of private SNPs
+pvFreqIndel: 1E-6                                                                            ####expected frequency of private indels
 minMQ: 10                                                                                       ####minimum mapping quality to count read
 defaultBQ: 30                                                                                   ####BQ used for indels
-defaultMQ: 40                   
+defaultMQ: 40
 BQoffset: 33                                                                                    ####used for tranlation ascii to scores
 MQoffset: 33                                                                                    ####used for tranlation ascii to score
 priorMapError: 0.03                                                                             ####pripr probabiliiyt genotype cannot be determined at postion
-autosomes: 1:22                                                                                 ####range of numbers for autsomal chromosmes 1:maxAutosome
-sexChr: X,Y                                                                                     #### commma sperated lsit of sex chromosmes
-F: 2,0                                                                                          #### number of copies of sex chr for individuals of sex F
-M: 1,1                                                                                          #### number of copies of sex chr for individuals of sex M
+                                                                                       #### number of copies of sex chr for individuals of sex M
