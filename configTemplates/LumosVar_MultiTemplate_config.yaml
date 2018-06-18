@@ -54,8 +54,8 @@ minHetAF: 0.45                            ### minimum AF to select hets for cent
 maxW: 500 
 minW: 50                                  ### mimimum value of W parameter (effects sharpness of allele frequency distribution)
 minLik: 1E-10                             ### added to likelihoods to avoid taking log of zero
-minBQ: 10                                 ### minium base quality to count base
-minMQ: 10                                 ### minium mapping quality to count read
+minBQ: 10                                 ### minimum base quality to count base
+minMQ: 10                                 ### minimum mapping quality to count read
 maxBQ: 40                                 ### base quality greater than maxBQ are set to maxBQ
 BQoffset: 33                              ### subtracted from ascii value to get base quality
 MQoffset: 33                              ### subtracted from ascii value to get mapping quality
