@@ -7,15 +7,22 @@ Calls somatic SNVs, indels, and allelic copy number jointly across multiple samp
 http://www.htslib.org/download/
 - Matlab Runtime (MCR 9.0)
 http://www.mathworks.com/products/compiler/mcr/
-- libYAML
-https://pyyaml.org/wiki/LibYAML
+- pyyaml and libYAML
+https://pyyaml.org/wiki/PyYAMLDocumentation
 - GSL - GNU Scientific Library
-https://www.gnu.org/software/gsl/ 
+https://www.gnu.org/software/gsl/
+
 
 ### Bam preperation
 - Bams should be created using bwa-mem
 http://bio-bwa.sourceforge.net/
-- Bams should be indexed by samtools 
+- Bams should be indexed by samtools
+
+### SNP VCFs
+-VCFs can be downloaded from 1000 genomes, Exac, or similar population genotyping projects
+-VCFs must have the population allele frequency as "AF" in the INFO field
+-There must be one VCF per chromsome
+-VCFs must be bgzipped and tabix indexed 
 
 
 ## Overview
