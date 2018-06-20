@@ -31,7 +31,7 @@ Running lumosVar involves two main steps
 bamList:   BAMLIST      ###path to file contining paths to bams
 regionsFile: BEDFILE    ###path to bed file defining regions targeted in exome
 refGenome: REFGENOME    ###path to reference genome that was used to align bams
-snpVCFpath: VCFPATH     ###path to vcfs containg popuulation frequencies (one for each chromosme),
+snpVCFpath: VCFPATH     ###path to vcfs containg population frequencies (one for each chromosome),
                         ###including part of filename before chromosome number
 snpVCFname: VCFNAME     ###filename/extension of population vcf following chromosome number
 

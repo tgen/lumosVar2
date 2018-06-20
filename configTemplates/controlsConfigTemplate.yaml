@@ -1,8 +1,8 @@
 ###input files
-bamList:   BAMLIST      ###path to file contining pathe to bams
+bamList:   BAMLIST      ###path to file contining path to bams
 regionsFile: BEDFILE    ###path to bed file defining regions targeted in exome
 refGenome: REFGENOME    ###path to reference genome that was used to align bams
-snpVCFpath: VCFPATH     ###path to vcfs containg popuulation frequencies (one for each chromosme),
+snpVCFpath: VCFPATH     ###path to vcfs containg popuulation frequencies (one for each chromosome),
                         ###including part of filename before chromosome number
 snpVCFname: VCFNAME     ###filename/extension of population vcf following chromosome number
 
@@ -13,19 +13,19 @@ outfile: OUTFILE        ###path and name of output
 
 ###organism specific parameters
 ###values below are set for human
-autosomes: "1:22"                                                                                 ####range of numbers for autsomal chromosmes 1:maxAutosome
-sexChr: X,Y                                                                                     #### commma sperated lsit of sex chromosmes
+autosomes: "1:22"                                                                                 ####range of numbers for autosomal chromosmes 1:maxAutosome
+sexChr: X,Y                                                                                     #### comma separated list of sex chromosomes
 F: 2,0                                                                                          #### number of copies of sex chr for individuals of sex F
 M: 1,1
 
 ###advanced parameters - most users should keep default belows below
-mpileupC: 50                                                                                    ####mpileupC paramaeter
+mpileupC: 50                                                                                    ####mpileupC parameter
 pvFreq: 1E-5                                                                                 ####expected frequency of private SNPs
 pvFreqIndel: 1E-6                                                                            ####expected frequency of private indels
 minMQ: 10                                                                                       ####minimum mapping quality to count read
 defaultBQ: 30                                                                                   ####BQ used for indels
 defaultMQ: 40
-BQoffset: 33                                                                                    ####used for tranlation ascii to scores
-MQoffset: 33                                                                                    ####used for tranlation ascii to score
-priorMapError: 0.03                                                                             ####pripr probabiliiyt genotype cannot be determined at postion
+BQoffset: 33                                                                                    ####used for translation ascii to scores
+MQoffset: 33                                                                                    ####used for translation ascii to score
+priorMapError: 0.03                                                                             ####prior probability genotype cannot be determined at postion
                                                                                        #### number of copies of sex chr for individuals of sex M
