@@ -19,10 +19,10 @@ http://bio-bwa.sourceforge.net/
 - Bams should be indexed by samtools
 
 ### SNP VCFs
--VCFs can be downloaded from 1000 genomes, Exac, or similar population genotyping projects
--VCFs must have the population allele frequency as "AF" in the INFO field
--There must be one VCF per chromsome
--VCFs must be bgzipped and tabix indexed 
+- VCFs can be downloaded from 1000 genomes, Exac, or similar population genotyping projects
+- VCFs must have the population allele frequency as "AF" in the INFO field
+- There must be one VCF per chromsome
+- VCFs must be bgzipped and tabix indexed 
 
 
 ## Overview
