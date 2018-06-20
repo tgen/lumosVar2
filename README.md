@@ -53,5 +53,5 @@ outfile: OUTFILE        ###path and name of output
 
 The output will be written to \<BAMLIST\>.guessSex.txt.  The last line of the output contains the sexList for the yaml file
 
-- Normal metrics is run using the [runNormalMetrics.py](scripts/runNormalMetrics.py)
->python runNormalMetrics.py controlsConfig.yaml
+- Normal metrics is run using the [runNormalMetrics.py](scripts/runNormalMetrics.py).  It takes two input arguments, the yaml and the chromosome.  It needs to be run separately on each chromosome.
+>python runNormalMetrics.py controlsConfig.yaml 21
