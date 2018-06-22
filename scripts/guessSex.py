@@ -128,6 +128,8 @@ if __name__ == "__main__":
   while True:
     lineA = stats[0].readline().decode("utf8").rstrip()
     lineS = stats[1].readline().decode("utf8").rstrip()
+    print("autosome stats:" + lineA)
+    print("sexChr stats:" + lineS)
     if lineA == '':
       break
     dataA = lineA.split("\t")
