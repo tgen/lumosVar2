@@ -85,4 +85,12 @@ workingDirectory: WORK  ###poth to folder containing files in the "work" directo
 NormalSample: NINDEX    ###position in bamList of normal sample, 0 indicates tumor only
 priorF: PRIORF          ###vector of expected tumor fractions with one value per bam
                         ###for example [0.1;0.7] for a pair of bams with low and high expected tumor content
+numCPU: CORES           ### number of parallel processors
 ```
+
+To run lumosVar
+```
+./lumosVarMain lumosVarConfig.yaml
+```
+
+##LumosVar Output
