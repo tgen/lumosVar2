@@ -65,9 +65,6 @@ if __name__ == "__main__":
   autosomes, sexs = chr_lists(config["autosomes"], config["sexChr"])
   chrs = autosomes + sexs
 
-  sexlist = config["sexList"].split(",")
-  nsample = len(sexlist)
-
   mlist = list(map(int, config["M"].split(",")))
   flist = list(map(int, config["F"].split(",")))
   
