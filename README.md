@@ -93,4 +93,14 @@ To run lumosVar
 ./lumosVarMain lumosVarConfig.yaml
 ```
 
-##LumosVar Output
+## LumosVar Output
+- .lumosVarSNV.vcf - somatic and germline SNV/indel calls
+- .lumosVarSeg.vcf - copy number calls by segment
+- .exonData.tsv - copy number calls by regions in bed file
+- .cloneSummary.tsv - summary of clonal variant groups
+- .cloneSummary.pdf - graphical summary of clonal variant groups
+- .groupLinePlots.pdf - line plots by clonal variant group
+- .vafPlot.pdf - plots of variant allele fractions
+- .cnaPlot.pdf - plot of copy number states
+- \<SAMPLENAME\>.qualMetrics.tsv - quality metrics for candidate variant position
+- .mat - matlab workspace export
