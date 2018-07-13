@@ -1,6 +1,11 @@
 # LumosVar2
 Calls somatic SNVs, indels, and allelic copy number jointly across multiple samples from the same patient.  These can be standard tumor/normal pair, longitudinal samples, primary/met, etc.  Can also be used for tumor only calling, ideally with a high tumor content and a low tumor content sample.
 
+### Citation
+Joint analysis of matched tumor samples with varying tumor contents improves somatic variant calling in the absence of a germline sample
+Rebecca F Halperin, Winnie S Liang, Sidharth Kulkarni, Erica E. Tassone, Jonathan Adkins, Daniel Enriquez, Nhan L Tran, Nicole C Hank, James Newell, Chinnappa Kodira, Ronald Korn, Michael E Berens, Seungchan Kim, Sara A Byron
+bioRxiv 364943; doi: https://doi.org/10.1101/364943
+
 ## Prerequisites
 ### System Requirements
 - Linux OS (tested on Centos 7 and Ubuntu 17)
@@ -14,7 +19,6 @@ http://www.mathworks.com/products/compiler/mcr/
 https://pyyaml.org/wiki/PyYAMLDocumentation
 - GSL - GNU Scientific Library
 https://www.gnu.org/software/gsl/
-
 
 ### Bam preperation
 - Bams should be created using bwa-mem
@@ -34,6 +38,9 @@ Running lumosVar involves two main steps
 1. normalMetrics: analyzes a set of unmatched controls to find average read depths and position quality metrics
    - IMPORTANT - unmatched controls must be generated using the same exome capture as the tumors
 2. lumosVarMain: call somatic, germline, and copy number variants
+
+### Example dataset
+http://tools.tgen.org/Files/lumosVar
 
 ### Notes on pileup engine
 - lumosVar uses a custom pileup engine https://github.com/tgen/gvm
