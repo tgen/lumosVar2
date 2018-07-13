@@ -1,33 +1,34 @@
 #### Input Files
-bamList: BAMLIST
-regionsFile: BED
-snpVCFpath: /home/rhalperin/reference/VCF/ExAC.r1.sites.vep.chr
-snpVCFname: .vcf.gz
-#snpVCFpath: /home/rhalperin/reference/ALL.chr
-#snpVCFname: .phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz
-NormalBase: NORMAL
-cosmicVCF: /home/rhalperin/reference/VCF/CosmicCodingMuts_plusTERT.sorted.vcf.gz
-refGenome: /home/tgenref/pecan/refgenome/hs37d5/hs37d5_plusRibo_plusOncoViruses_plusERCC.fa
-autosomes: 1:22
-sexChr: X,Y
-X: [1;2]
-Y: [1;0]
+bamList: BAMLIST	###path to file contining paths to bams
+regionsFile: BED	###path to bed file defining regions targeted in exome
+snpVCFpath: VCFPATH	###path to vcfs containg population frequencies (one for each chromosome),
+                        ###including part of filename before chromosome number
+snpVCFname: VCFNAME	###filename/extension of population vcf following chromosome number
+NormalBase: NMETRICS	###path and filename of output form NormalMetrics step before chr number	
+cosmicVCF: COSMICVCF	###path to cancer mutation count VCF
+refGenome: REFGENOME	###path to reference genome that was used to align bams
 
-#### Output Name
-outName: OUTNAME
-outMat: OUTMAT
+#### User Inputs
+outName: OUTNAME	###path and filename base for output files
+outMat: OUTMAT		###path and filename for "mat" file (matlab data) export
+gvmPath: GVMPATH        ###path to folder containing gvm executable
+workingDirectory: WORK	###poth to folder containing files in the "work" directory in the github repo
+NormalSample: NINDEX    ###position in bamList of normal sample, 0 indicates tumor only
+priorF: PRIORF          ###vector of expected tumor fractions with one value per bam
+			###for example [0.1;0.7] for a pair of bams with low and high expected tumor content
+numCPU: CORE            ### number of parallel processors
 
-#### Dependency Paths
-samPath: /home/rhalperin/bin/samtools-1.2/
-tabixPath: /home/rhalperin/bin/htslib-1.2.1/
-workingDirectory: /home/rhalperin/multiSampleCaller/work
+###organism specific parameters
+###values below are set for human
+autosomes: 1:22		####range of numbers for autosomal chromosmes 1:maxAutosome
+sexChr: X,Y             #### comma separated list of sex chromosomes
+F: 2,0                  #### number of copies of sex chr for individuals of sex F
+M: 1,1			#### number of copies of sex chr for individuals of sex M
 
-#### Model Parameters
-NormalSample: 0                           ### position in bamList of normal sample, 0 indicates tumor only
+###advanced parameters - most users should keep default belows below
 minStartDiff: 0.1                         ### determines number of clonal fraction starting points tested, lower favors more starting points
 addCloneWeight: 5                         ### determines size of change in nll to add a clone, higher favors more clones
 iterNoImp: 3
-priorF: PRIORF                            ### expected clonal fraction
 alphaF: 1.5                               ### effects shape of prior distribution of clonal fraction
 minBCount: 5                              ### minimum bases supporting alternate allele to examine position
 blockSize: 1000                           ### size of region to parse at a time
