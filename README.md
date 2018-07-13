@@ -1,7 +1,10 @@
-# multiSampleCaller
+# LumosVar2
 Calls somatic SNVs, indels, and allelic copy number jointly across multiple samples from the same patient.  These can be standard tumor/normal pair, longitudinal samples, primary/met, etc.  Can also be used for tumor only calling, ideally with a high tumor content and a low tumor content sample.
 
 ## Prerequisites
+### System Requirements
+- Linux OS (tested on Centos 7 and Ubuntu 17)
+
 ### Dependencies
 - bcftools and htslib (tested with 1.2-1.8)
 http://www.htslib.org/download/
@@ -18,18 +21,23 @@ https://www.gnu.org/software/gsl/
 http://bio-bwa.sourceforge.net/
 - Bams should be indexed by samtools
 
-### SNP VCFs
-- VCFs can be downloaded from 1000 genomes, Exac, or similar population genotyping projects
-- VCFs must have the population allele frequency as "AF" in the INFO field
-- There must be one VCF per chromsome
+### VCFs
+- SNP VCFs can be downloaded from 1000 genomes, Exac, or similar population genotyping projects
+- SNP VCFs must have the population allele frequency as "AF" in the INFO field
+- Cosmic VCFs can be downloaded from cosmic or other cancer mutation database
+- Cosmic VCFs must have "CNT" in the info field indicating count of samples having mutation
+- There must be one VCF per chromsome for both SNP and COSMIC VCFs
 - VCFs must be bgzipped and tabix indexed 
-
 
 ## Overview
 Running lumosVar involves two main steps
 1. normalMetrics: analyzes a set of unmatched controls to find average read depths and position quality metrics
    - IMPORTANT - unmatched controls must be generated using the same exome capture as the tumors
 2. lumosVarMain: call somatic, germline, and copy number variants
+
+### Notes on pileup engine
+- lumosVar uses a custom pileup engine https://github.com/tgen/gvm
+- precompiled binary is provided for the pileup engine [gvm](bin/gvm) so building is not required
 
 ## Normal Metrics 
 - Inputs to normal metrics are defined in a yaml file, see [template](configTemplates/controlsConfigTemplate.yaml).  You will need to edit:
@@ -55,3 +63,44 @@ The output will be written to \<BAMLIST\>.guessSex.txt.  The last line of the ou
 
 - Normal metrics is run using the [runNormalMetrics.py](scripts/runNormalMetrics.py).  It takes two input arguments, the yaml and the chromosome.  It needs to be run separately on each chromosome.
 >python runNormalMetrics.py controlsConfig.yaml 21
+
+## LumosVar Main
+- Inputs to lumosVar are defined in a yaml file, see [template](configTemplates/lumosVarMainConfigTemplate.yaml).  You will need to edit:
+```
+#### Input Files
+bamList: BAMLIST        ###path to file contining paths to bams
+regionsFile: BED        ###path to bed file defining regions targeted in exome
+snpVCFpath: VCFPATH     ###path to vcfs containg population frequencies (one for each chromosome),
+                        ###including part of filename before chromosome number
+snpVCFname: VCFNAME     ###filename/extension of population vcf following chromosome number
+NormalBase: NMETRICS    ###path and filename of output form NormalMetrics step before chr number
+cosmicVCF: COSMICVCF    ###path to cancer mutation count VCF
+refGenome: REFGENOME    ###path to reference genome that was used to align bams
+
+#### User Inputs
+outName: OUTNAME        ###path and filename base for output files
+outMat: OUTMAT          ###path and filename for "mat" file (matlab data) export
+gvmPath: GVMPATH        ###path to folder containing gvm executable
+workingDirectory: WORK  ###poth to folder containing files in the "work" directory in the github repo
+NormalSample: NINDEX    ###position in bamList of normal sample, 0 indicates tumor only
+priorF: PRIORF          ###vector of expected tumor fractions with one value per bam
+                        ###for example [0.1;0.7] for a pair of bams with low and high expected tumor content
+numCPU: CORES           ### number of parallel processors
+```
+
+To run lumosVar
+```
+./lumosVarMain lumosVarConfig.yaml
+```
+
+## LumosVar Output
+- .lumosVarSNV.vcf - somatic and germline SNV/indel calls
+- .lumosVarSeg.vcf - copy number calls by segment
+- .exonData.tsv - copy number calls by regions in bed file
+- .cloneSummary.tsv - summary of clonal variant groups
+- .cloneSummary.pdf - graphical summary of clonal variant groups
+- .groupLinePlots.pdf - line plots by clonal variant group
+- .vafPlot.pdf - plots of variant allele fractions
+- .cnaPlot.pdf - plot of copy number states
+- \<SAMPLENAME\>.qualMetrics.tsv - quality metrics for candidate variant position
+- .mat - matlab workspace export
