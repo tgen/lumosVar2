@@ -2,9 +2,7 @@
 Calls somatic SNVs, indels, and allelic copy number jointly across multiple samples from the same patient.  These can be standard tumor/normal pair, longitudinal samples, primary/met, etc.  Can also be used for tumor only calling, ideally with a high tumor content and a low tumor content sample.
 
 ### Citation
-Joint analysis of matched tumor samples with varying tumor contents improves somatic variant calling in the absence of a germline sample
-Rebecca F Halperin, Winnie S Liang, Sidharth Kulkarni, Erica E. Tassone, Jonathan Adkins, Daniel Enriquez, Nhan L Tran, Nicole C Hank, James Newell, Chinnappa Kodira, Ronald Korn, Michael E Berens, Seungchan Kim, Sara A Byron
-bioRxiv 364943; doi: https://doi.org/10.1101/364943
+Joint analysis of matched tumor samples with varying tumor contents improves somatic variant calling in the absence of a germline sample.  bioRxiv 364943; doi: https://doi.org/10.1101/364943
 
 ## Prerequisites
 ### System Requirements
