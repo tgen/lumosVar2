@@ -1,5 +1,5 @@
 # LumosVar2
-Calls somatic SNVs, indels, and allelic copy number jointly across multiple samples from the same patient.  These can be standard tumor/normal pair, longitudinal samples, primary/met, etc.  Can also be used for tumor only calling, ideally with a high tumor content and a low tumor content sample.
+Calls somatic SNVs, indels, and allelic copy number jointly across multiple samples from the same patient.  These can be standard tumor/normal pair, longitudinal samples, primary/met, etc.  Can also be used for tumor only calling with one or more tumor samples, ideally with a high tumor content and a low tumor content sample.
 
 ### Citation
 Joint analysis of matched tumor samples with varying tumor contents improves somatic variant calling in the absence of a germline sample.  bioRxiv 364943; doi: https://doi.org/10.1101/364943
