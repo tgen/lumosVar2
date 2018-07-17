@@ -1,4 +1,4 @@
-function [F,pQual]=qualDiscrimAutoCut(T,E,inputParam,homPos)
+function [F,pQual]=qualDiscrimAutoCut(T,E,homPos,inputParam)
 %qualDiscrim - finds probability that positions are trusted or artifacts
 %using quadratic discriminant analysis on a number of quality metrics
 %

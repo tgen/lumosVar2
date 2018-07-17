@@ -50,9 +50,9 @@ for i=1:length(Tcell)
    altCount(max([P.Somatic P.SomaticPair],[],2)<0.5 & P.Hom(:,i)>P.Het(:,i),i)=T.AcountsComb(max([P.Somatic P.SomaticPair],[],2)<0.5 & P.Hom(:,i)>P.Het(:,i));
 end
 %%%calculate trust and artifact scores weighting by alt counts
-trustScore=1-prod((1-min(P.trust,1)+realmin).^altCount,2).^(1./sum(altCount,2));
-artifactScore=prod((max(P.artifact,0)+realmin).^altCount,2).^(1./sum(altCount,2));
-passPos=trustScore>inputParam.pGoodThresh & artifactScore<inputParam.pGoodThresh;
+trustScore=prod((max(P.trust,0)+realmin).^altCount,2).^(1./sum(altCount,2));
+%artifactScore=prod((max(P.artifact,0)+realmin).^altCount,2).^(1./sum(altCount,2));
+passPos=trustScore>inputParam.pGoodThresh;
 
 %%%determine variant calls
 Filter=cell(size(passPos));
@@ -75,4 +75,4 @@ if inputParam.NormalSample>0
 end
 idxSom=strncmp(Filter,'Somatic',7);
 Filter(idxSom & passPos & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)>inputParam.maxSomPopFreq,:)={'SomaticDBsnp'};
-Filter(artifactScore>inputParam.pGoodThresh,:)={'REJECT'};
+Filter(1-trustScore>inputParam.pGoodThresh,:)={'REJECT'};

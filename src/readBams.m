@@ -93,8 +93,14 @@ for i=1:length(chrList)
 end
 
 %%%% create position data table
-ColHeaders={'Chr','Pos','ReadDepth','ReadDepthPass','Ref','A','ACountF','ACountR','AmeanBQ','AmeanMQ','AmeanPMM','AmeanReadPos','B','BCountF','BCountR','BmeanBQ','BmeanMQ','BmeanPMM','BmeanReadPos','ApopAF','BpopAF','CosmicCount','ControlRD','PosMapQC','perReadPass','abFrac'};
-matLen=cellfun(@numel,AllData)./27;
+ColHeaders={'Chr','Pos','ReadDepth','ReadDepthPass','Ref', ...
+            'A','ACountF','ACountR','AmeanBQ','AmeanMQ', ...
+            'AmeanPMM','AmeanReadPos','AmeanSC','AmeanIS','AmeanRO', ...
+            'B','BCountF','BCountR','BmeanBQ','BmeanMQ', ...
+            'BmeanPMM','BmeanReadPos','BmeanSC','BmeanIS', 'BmeanRO', ...
+            'ApopAF','BpopAF', 'CosmicCount','ControlRD','PosMapQC','perReadPass','abFrac'}
+matLen=int64(cellfun(@numel,AllData)./(length(ColHeaders) + 1));
+message = matLen
 dataMat=zeros(sum(matLen),length(ColHeaders)+1);
 currIdx=1;
 for i=1:length(AllData)
@@ -102,7 +108,7 @@ for i=1:length(AllData)
     currIdx=currIdx+matLen(i);
 end
 if isempty(dataMat)
-    T={};                           
+    T={};
 else
     ids=unique(dataMat(:,1));
     for i=1:length(ids)
@@ -125,5 +131,3 @@ for i=1:size(exonRD,3)
     E{i}=array2table(exonRD(:,:,i),'VariableNames',exonColHeaders);
 end
 
-%message='finished combining exon data'
-%return

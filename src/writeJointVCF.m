@@ -1,4 +1,4 @@
-function sampleFrac=writeJointVCF(Tcell,P,fIn,cloneId,alleleId,Filter,somaticDetected,trustScore,artifactScore,inputParam)
+function sampleFrac=writeJointVCF(Tcell,P,fIn,cloneId,alleleId,Filter,somaticDetected,trustScore,inputParam)
 %writeJointVCF - writes snv/indel VCF for joint lumosVar calls, outputs
 %table of sample fractions
 %
@@ -68,7 +68,6 @@ end
 fprintf(fout,['##INFO=<ID=A,Number=1,Type=String,Description="Major Allele Base">\n']);
 fprintf(fout,['##INFO=<ID=B,Number=1,Type=String,Description="Minor Allele Base">\n']);
 fprintf(fout,['##INFO=<ID=JPT,Number=1,Type=Float,Description="Phred Scaled Joint Posterior Probability the Call can be Trusted">\n']);
-fprintf(fout,['##INFO=<ID=JPA,Number=1,Type=Float,Description="Phred Scaled Joint Posterior Probability the Position is an Artifact">\n']);
 fprintf(fout,['##INFO=<ID=JPS,Number=1,Type=Float,Description="Joint Posterior Probability of Somatic Mutation">\n']);
 fprintf(fout,['##INFO=<ID=JPGAB,Number=1,Type=Float,Description="Joint Posterior Probability of No Somatic Mutation and Position is Germline AB">\n']);
 fprintf(fout,['##INFO=<ID=JPGAA,Number=1,Type=Float,Description="Joint Posterior Probability of No Somatic Mutation and Position is Germline AA">\n']);
@@ -97,7 +96,6 @@ fprintf(fout,['##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allele Depths"
 fprintf(fout,['##FORMAT=<ID=FT,Number=.,Type=String,Description="Filters">\n']);
 fprintf(fout,['##FORMAT=<ID=PPS,Number=1,Type=Float,Description="Phred Scaled Posterior Probability Position is Somatic Based on Paired Analysis with Control">\n']);
 fprintf(fout,['##FORMAT=<ID=PT,Number=1,Type=Float,Description="Phred Scaled Posterior Probability Position is Trusted">\n']);
-fprintf(fout,['##FORMAT=<ID=PA,Number=1,Type=Float,Description="Phred Scaled Posterior Probability Position is Artifact">\n']);
 fprintf(fout,['##FORMAT=<ID=PLS,Number=1,Type=Float,Description="Phred Scaled Likelihood Somatic">\n']);
 fprintf(fout,['##FORMAT=<ID=PL,Number=G,Type=Float,Description="Phred Scaled Likelihood of Germline Genotypes">\n']);
 fprintf(fout,['##FORMAT=<ID=PLND,Number=1,Type=Float,Description="Phred Scaled Likelihood of NonDiploid">\n']);
@@ -129,10 +127,10 @@ svLen(longInsPos)=str2double(regexprep(AltNT(longInsPos),'L',''));
 AltNT(longInsPos)={'<INS>'};
 
 %%%calculate quality scores
-Qual=-10*log10(1-geomean(max(min([trustScore 1-artifactScore max([P.Het P.Hom P.Somatic P.NonDip],[],2)],1-inputParam.minLik),inputParam.minLik),2));
+Qual=-10*log10(1-geomean(max(min([trustScore max([P.Het P.Hom P.Somatic P.NonDip],[],2)],1-inputParam.minLik),inputParam.minLik),2));
 
 %%%construct info field
-Info=cellstr(strcat('JPT=',strsplit(sprintf('%-.1f\n',real(-10*log10(1-trustScore))))',';JPA=',strsplit(sprintf('%-.1f\n',real(-10*log10(1-artifactScore))))',';JPS=',strsplit(sprintf('%-.5f\n',P.Somatic(:,1)))',';JPGAB=',strsplit(sprintf('%-.5f\n',P.Het(:,1)))',';JPGAA=',strsplit(sprintf('%-.5f\n',P.Hom(:,1)))',';JPND=',strsplit(sprintf('%-.5f\n',P.NonDip(:,1)))'));
+Info=cellstr(strcat('JPT=',strsplit(sprintf('%-.1f\n',real(-10*log10(1-trustScore))))',';JPS=',strsplit(sprintf('%-.5f\n',P.Somatic(:,1)))',';JPGAB=',strsplit(sprintf('%-.5f\n',P.Het(:,1)))',';JPGAA=',strsplit(sprintf('%-.5f\n',P.Hom(:,1)))',';JPND=',strsplit(sprintf('%-.5f\n',P.NonDip(:,1)))'));
 Info=strcat(Info,';A=',[int2ntIndels(T.Acomb);{''}],';B=',[int2ntIndels(T.Bcomb); {''}]);
 Info=strcat(Info,';ApopAF=',strsplit(sprintf('%-.5f\n',T.ApopAFcomb))',';BpopAF=',strsplit(sprintf('%-.5f\n',T.BpopAFcomb))',';CosmicCount=',strsplit(sprintf('%-.0f\n',T.CosmicCount))');
 Info=strcat(Info,';CloneId=',strsplit(sprintf('%d\n',cloneId(:,1)))');
@@ -238,7 +236,7 @@ for i=1:length(Tcell)
     formatStr([~aIdx & ~bIdx; true],n)=strcat(formatStr([~aIdx & ~bIdx; true],n),':NA,',strsplit(sprintf('%-.0f\n',T.AcountsComb(~aIdx & ~bIdx)))',',',strsplit(sprintf('%-.0f\n',T.BcountsComb(~aIdx & ~bIdx)))');
     filtStr=repmat({'REJECT'},height(T),1);
     filtStr(P.trust(:,i)>=inputParam.pGoodThresh)={'PASS'};
-    filtStr(P.trust(:,i)<inputParam.pGoodThresh & P.artifact(:,i)<inputParam.pGoodThresh)={'LowQC'};
+    filtStr(1-P.trust(:,i)>=inputParam.pGoodThresh)={'LowQC'};
     if inputParam.NormalSample<1
         filtStr(somaticDetected(:,i)==1)=strcat(filtStr(somaticDetected(:,i)==1),';SomaticDetected');
         filtStr(P.Somatic(:,i)>0.5 & ~somaticDetected(:,i))=strcat(filtStr(P.Somatic(:,i)>0.5 & ~somaticDetected(:,i)),';SomaticNotDetected');
@@ -248,7 +246,7 @@ for i=1:length(Tcell)
         filtStr(P.Somatic(:,i)>0.5 & ~somaticDetected(:,i))=strcat(filtStr(P.Somatic(:,i)>0.5 & ~somaticDetected(:,i)),';SomaticNotDetected');
         formatStr(:,n)=strcat(formatStr(:,n),':',[filtStr; {''}],':',strsplit(sprintf('%-.3f\n',P.SomaticPair(:,i)))');
     end
-    formatStr(:,n)=strcat(formatStr(:,n),':',strsplit(sprintf('%-.0f\n',-10*log10(1-P.trust(:,i))))',':',strsplit(sprintf('%-.0f\n',-10*log10(1-P.artifact(:,i))))',':',strsplit(sprintf('%-.0f\n',P.DataSomatic(:,i)))');
+    formatStr(:,n)=strcat(formatStr(:,n),':',strsplit(sprintf('%-.0f\n',-10*log10(1-P.trust(:,i))))',':',strsplit(sprintf('%-.0f\n',P.DataSomatic(:,i)))');
     formatStr([aIdx; true],n)=strcat(formatStr([aIdx; true],n),':',strsplit(sprintf('%-.0f\n',-10*log10(P.DataHom(aIdx,i))))',',',strsplit(sprintf('%-.0f\n',-10*log10(P.DataHet(aIdx,i))))',',NA');
     formatStr([bIdx; true],n)=strcat(formatStr([bIdx; true],n),':NA,',strsplit(sprintf('%-.0f\n',-10*log10(P.DataHet(bIdx,i))))',',',strsplit(sprintf('%-.0f\n',-10*log10(P.DataHom(bIdx,i))))');
     formatStr(~aIdx & ~bIdx,n)=strcat(formatStr(~aIdx & ~bIdx,n),':.');
