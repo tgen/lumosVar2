@@ -1,4 +1,4 @@
-function output=lumosVarMain(paramFile,numCPU,varargin)
+function output=lumosVarMain(paramFile,numCPU)
 %TumorOnlyWrapper - Entry function for tumor only caller
 %uses a bayesian framework to call somatic variants and germline variants
 %from tumor only exome sequencing
@@ -35,7 +35,10 @@ inputParam=readInputs(paramFile);
 cd(inputParam.workingDirectory);
 
 %%%% Initial parallel pool
-inputParam.numCPU=str2num(numCPU);
+
+if nargin==2
+    inputParam.numCPU=str2num(numCPU);
+end
 pool=gcp('nocreate');
 if isempty(pool)
     delete(gcp('nocreate'));
