@@ -81,8 +81,11 @@ end
 
 %%%% get chromosomes to examine
 sexChr=regexp(inputParam.sexChr,',','split');
-chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
-
+if cellfun('length',(regexp('',',','split')))==0
+    chrList=cellstr(num2str(inputParam.autosomes','%-d'));
+else
+    chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
+end
 %%%% find positions within bed file that have a population allele frequency
 %%%% greater than maxSomPopFreq
 parfor i=1:length(chrList)
@@ -179,8 +182,8 @@ end
 segsMerged=mergeSegments([segs bafSegs],exonRD,Tcell,hetPos,inputParam);
 
 %%%Make sure segments extend to ends of chromosome
-numChr=max(Ecell{1}.Chr);
-for i=1:numChr
+chrNum=unique(Ecell{1}.Chr);
+for i=chrNum
     idx1=find(segsMerged(:,1)==i,1,'first');
     idx2=find(segsMerged(:,1)==i,1,'last');
     if(isempty(idx1))

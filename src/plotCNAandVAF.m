@@ -44,18 +44,18 @@ else
 end
 
 %%% transform chromosome coord to linear coord
-maxChr=max(segsTable.Chr);
+chrNum=unique(segsTable.Chr);
 T=Tcell{1};
-for i=1:maxChr
-    chrLen(i)=max(segsTable{segsTable.Chr==i,3})+1E7;
+for i=1:length(chrNum)
+    chrLen(i)=max(segsTable{segsTable.Chr==chrNum(i),3})+1E7;
 end
-chrOffset=[0; cumsum(chrLen(1:maxChr-1))'];
-for i=1:maxChr
-    segCoord(segsTable.Chr==i,1)=(segsTable{segsTable.Chr==i,2}+chrOffset(i))/1E6;
-    segCoord(segsTable.Chr==i,2)=(segsTable{segsTable.Chr==i,3}+chrOffset(i))/1E6;
-    exonCoord(exonRD{1}(:,1)==i,1)=(exonRD{1}(exonRD{1}(:,1)==i,2)+chrOffset(i))/1E6;
-    exonCoord(exonRD{1}(:,1)==i,2)=(exonRD{1}(exonRD{1}(:,1)==i,3)+chrOffset(i))/1E6;
-    Tcoord(T.Chr==i,1)=(T.Pos(T.Chr==i)+chrOffset(i))/1E6;
+chrOffset=[0; cumsum(chrLen(1:end-1))'];
+for i=1:length(chrNum)
+    segCoord(segsTable.Chr==chrNum(i),1)=(segsTable{segsTable.Chr==chrNum(i),2}+chrOffset(i))/1E6;
+    segCoord(segsTable.Chr==chrNum(i),2)=(segsTable{segsTable.Chr==chrNum(i),3}+chrOffset(i))/1E6;
+    exonCoord(exonRD{1}(:,1)==chrNum(i),1)=(exonRD{1}(exonRD{1}(:,1)==chrNum(i),2)+chrOffset(i))/1E6;
+    exonCoord(exonRD{1}(:,1)==chrNum(i),2)=(exonRD{1}(exonRD{1}(:,1)==chrNum(i),3)+chrOffset(i))/1E6;
+    Tcoord(T.Chr==chrNum(i),1)=(T.Pos(T.Chr==chrNum(i))+chrOffset(i))/1E6;
 end
 
 %%%get chromosomes
@@ -71,12 +71,12 @@ end
 %%% plot exon log2FC
 for j=1:length(Tcell)
     subplot(length(Tcell)+1,5,[j*5-4 j*5-1]);
-    for i=1:2:maxChr
+    for i=chrNum(1:2:end)
         idx=exonRD{j}(:,1)==i;
         scatter(mean(exonCoord(idx,:),2),log2FC(idx,j),1,'.','MarkerFaceColor',[0.5 0.5 0.5],'MarkerEdgeColor',[0.5 0.5 0.5])
         hold on;
     end
-    for i=2:2:maxChr
+    for i=chrNum(2:2:end)
         idx=exonRD{j}(:,1)==i;
         scatter(mean(exonCoord(idx,:),2),log2FC(idx,j),1,'.','MarkerFaceColor',[0.8235    0.7059    0.5490],'MarkerEdgeColor',[0.8235    0.7059    0.5490])
         hold on;
@@ -151,11 +151,11 @@ for j=1:length(Tcell)
     aIdx=T.ApopAFcomb<T.BpopAFcomb;
     AF(bIdx)=(T.BCountF(bIdx)+T.BCountR(bIdx))./T.ReadDepthPass(bIdx);
     AF(aIdx)=(T.ACountF(aIdx)+T.ACountR(aIdx))./T.ReadDepthPass(aIdx);
-    for i=1:2:maxChr
+    for i=chrNum(1:2:end)
         scatter(Tcoord(hetPos & T.Chr==i),AF(hetPos & T.Chr==i),1,'.','MarkerFaceColor',[0.5 0.5 0.5],'MarkerEdgeColor',[0.5 0.5 0.5])
         hold on;
     end
-    for i=2:2:maxChr
+    for i=chrNum(2:2:end)
         scatter(Tcoord(hetPos & T.Chr==i),AF(hetPos & T.Chr==i),1,'.','MarkerFaceColor',[0.8235    0.7059    0.5490],'MarkerEdgeColor',[0.8235    0.7059    0.5490])
     end
 end

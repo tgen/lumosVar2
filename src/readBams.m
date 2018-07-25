@@ -31,7 +31,11 @@ function [T, E]=readBams(inputParam,paramFile)
 %[status,out]=system('printenv')
 
 sexChr=regexp(inputParam.sexChr,',','split');
-chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr']
+if cellfun('length',(regexp('',',','split')))==0
+    chrList=cellstr(num2str(inputParam.autosomes','%-d'));
+else
+    chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
+end
 
 regTable=readtable(inputParam.regionsFile,'FileType','text','Delimiter','\t','ReadVariableNames',false);
 [lia,locb]=ismember(regTable{:,1},chrList);

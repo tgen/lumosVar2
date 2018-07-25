@@ -173,7 +173,7 @@ ylabel('Number of Somatic Variants Detected');
 
 %%%if more than one sample, barplot of the counts of common and unique
 %%%variants detected in combinations of samples
-if(size(sampleFrac,2)>1)
+if(size(sampleFrac,2)>1 & sum(strcmp(Filter,'SomaticPASS')|strcmp(Filter,'SomaticPairPASS'))>0)
     subplot(3,2,6);
     detectCat=cellstr(num2str(somaticDetected));
     [gIdx,gName]=grp2idx(detectCat);

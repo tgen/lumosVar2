@@ -142,15 +142,21 @@ end
 %%%find germline priors
 germPrior=inputParam.priorGermCNV*ones(size(Nseg,1),2,2);
 sexChr=regexp(inputParam.sexChr,',','split');
-chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
-for i=1:length(sexChr)
-    chrIdx=find(strcmp(sexChr(i),chrList));
-    lia=ismember(Nseg(:,end,1),inputParam.(sexChr{i}));
-    germPrior(chrIdx==segsMerged(:,1) & lia & Nseg(:,end,1)-Mseg(:,end,1,1)<=1,1,1)=0.5;
-    germPrior(chrIdx==segsMerged(:,1) & lia & Nseg(:,end,1)-Mseg(:,end,1,2)<=1,1,2)=0.5;
-    lia=ismember(Nseg(:,end,2),inputParam.(sexChr{i}));
-    germPrior(chrIdx==segsMerged(:,1) & lia & Nseg(:,end,2)-Mseg(:,end,2,1)<=1,2,1)=0.5;
-    germPrior(chrIdx==segsMerged(:,1) & lia & Nseg(:,end,2)-Mseg(:,end,2,2)<=1,2,2)=0.5;
+if cellfun('length',(regexp('',',','split')))==0
+    chrList=cellstr(num2str(inputParam.autosomes','%-d'));
+else
+    chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
+end
+if cellfun('length',(regexp('',',','split')))>0
+    for i=1:length(sexChr)
+        chrIdx=find(strcmp(sexChr(i),chrList));
+        lia=ismember(Nseg(:,end,1),inputParam.(sexChr{i}));
+        germPrior(chrIdx==segsMerged(:,1) & lia & Nseg(:,end,1)-Mseg(:,end,1,1)<=1,1,1)=0.5;
+        germPrior(chrIdx==segsMerged(:,1) & lia & Nseg(:,end,1)-Mseg(:,end,1,2)<=1,1,2)=0.5;
+        lia=ismember(Nseg(:,end,2),inputParam.(sexChr{i}));
+        germPrior(chrIdx==segsMerged(:,1) & lia & Nseg(:,end,2)-Mseg(:,end,2,1)<=1,2,1)=0.5;
+        germPrior(chrIdx==segsMerged(:,1) & lia & Nseg(:,end,2)-Mseg(:,end,2,2)<=1,2,2)=0.5;
+    end
 end
     
 

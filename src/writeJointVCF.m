@@ -257,8 +257,10 @@ for i=1:length(Tcell)
     else
         formatStr(:,n)=strcat(formatStr(:,n),':NA');
     end
-    formatStr([strncmp(Filter,'Somatic',7); true],n)=strcat(formatStr([strncmp(Filter,'Somatic',7); true],n),':',strsplit(sprintf('%-.3f\n',sampleFrac(strncmp(Filter,'Somatic',7),i)))');
-    formatStr(~strncmp(Filter,'Somatic',7),n)=strcat(formatStr(~strncmp(Filter,'Somatic',7),n),':NA');
+    if(sum(strncmp(Filter,'Somatic',7))>0)
+        formatStr([strncmp(Filter,'Somatic',7); true],n)=strcat(formatStr([strncmp(Filter,'Somatic',7); true],n),':',strsplit(sprintf('%-.3f\n',sampleFrac(strncmp(Filter,'Somatic',7),i)))');
+        formatStr(~strncmp(Filter,'Somatic',7),n)=strcat(formatStr(~strncmp(Filter,'Somatic',7),n),':NA');
+    end
     formatStr(T.NumCopies==2 & T.MinAlCopies==1,n)=strcat(formatStr(T.NumCopies==2 & T.MinAlCopies==1,n),':NA');
     formatStr([T.NumCopies~=2 | T.MinAlCopies~=1; true],n)=strcat(formatStr([T.NumCopies~=2 | T.MinAlCopies~=1; true],n),':',strsplit(sprintf('%-.3f\n',T.cnaF(T.NumCopies~=2 | T.MinAlCopies~=1)))');
     n=n+1;
@@ -267,11 +269,18 @@ formatStr=formatStr(1:height(T),:);
 
 
 formatFields=repmat({'GT:DP:AD:FT:PPS:PT:PA:PLS:PL:PLND:VSF:CNF'},size(P,1),1);
-sexChr=regexp(inputParam.sexChr,',','split');
-chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
 
+sexChr=regexp(inputParam.sexChr,',','split');
+if cellfun('length',(regexp('',',','split')))==0
+    chrList=cellstr(num2str(inputParam.autosomes','%-d'));
+else
+    chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
+end
+
+chrNum=unique(T.Chr);
+[lia,locb]=ismember(T.Chr,chrNum);
 %%% print output
-outData=[chrList(T.Chr) num2cell(T.Pos) cellstr(char(ones(size(T.Pos))*46)) cellstr(RefNT) squeeze(AltNT) num2cell(Qual) Filter Info formatFields formatStr];
+outData=[chrList(locb) num2cell(T.Pos) cellstr(char(ones(size(T.Pos))*46)) cellstr(RefNT) squeeze(AltNT) num2cell(Qual) Filter Info formatFields formatStr];
 headers={'#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT'};
 if inputParam.NormalSample<1
     headers=[headers 'InferredGermline' regexp(inputParam.sampleNames,',','split')];
