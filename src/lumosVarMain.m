@@ -137,12 +137,11 @@ for i=1:size(Tcell,2)
     idx2=T.ApopAF+T.BpopAF>1 & T.ApopAF>=T.BpopAF;
     T.ApopAF(idx2)=1-T.BpopAF(idx2)-3*inputParam.pvFreqIndel;
     Tcell{i}=T;
-    [~,postTrust,postArtifact]=qualDiscrimCalls(T,E,zeros(height(T),1),inputParam);
-    P.trust(:,i)=postTrust(:,2);
-    P.artifact(:,i)=postArtifact(:,1);
+    [~,postQual]=qualDiscrimAutoCut(T,E,false(height(T),1),inputParam);
+    P.trust(:,i)=postQual(:,2);
     clear T E;
 end
-filtPos=max(P.trust,[],2)>inputParam.pGoodThresh & max(P.artifact,[],2)<inputParam.pGoodThresh;
+filtPos=geomean(P.trust,2)>inputParam.pGoodThresh;
 message=['initial quality filtering at: ' char(datetime('now'))]
 
 %%%Find likely het positions
@@ -206,7 +205,7 @@ inputParam.numClones=size(f,2);
 %%%Call Copy Number
 for i=1:length(Tcell)
     diploidPos=(Tcell{i}.BCountF+Tcell{i}.BCountR)./Tcell{i}.ReadDepthPass>inputParam.minHetAF;
-    cInit(i,:)=median(2*Tcell{i}.ControlRD(diploidPos & hetPos)./Tcell{i}.ReadDepthPass(diploidPos & hetPos));
+    cInit(i,:)=nanmedian(2*Tcell{i}.ControlRD(diploidPos & hetPos)./Tcell{i}.ReadDepthPass(diploidPos & hetPos));
     wInit(i,:)=nanmedian(exonRD{i}(:,4));
 end
 dbPos=filtPos & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)>inputParam.maxSomPopFreq;
@@ -289,9 +288,8 @@ while(true)
         E=Ecell{j};
         homPos=P.Hom(:,j)>0.5  & P.SomaticPair(:,j)<0.5 | (max([P.Somatic P.SomaticPair],[],2)>0.5 & (max(P.DataSomatic(:,j),P.DataNonDip(:,j))<=P.DataHom(:,j) | (T.BcountsComb==0 & T.A==T.RefComb))) | (P.Somatic(:,j)>0.5 & inputParam.NormalSample==j);
         P.homPos(:,j)=homPos;
-        [F{j},postTrust,postArtifact]=qualDiscrimCalls(T,E,homPos,inputParam);
-        P.trust(:,j)=postTrust(:,2);
-        P.artifact(:,j)=postArtifact(:,1);
+        [F{j},postQual]=qualDiscrimAutoCut(T,E,homPos,inputParam);
+        P.trust(:,j)=postQual(:,2);
         clear T E;
     end
     %%% classify variants based on type probabilites and quality scores
@@ -333,7 +331,7 @@ ord=[ord size(f,2)+1];
 
 save([inputParam.outMat],'-v7.3');
 %%% classify variants based on type probabilities and quality scores
-[Filter,~,somaticDetected,trustScore,artifactScore]=callVariants(Tcell,P,inputParam);
+[Filter,~,somaticDetected,trustScore]=callVariants(Tcell,P,inputParam);
 
 %%%Get correct alleleIds for "SomaticPair" variants
 [~,mIdx]=max(P.SomaticPair,[],2);
@@ -345,7 +343,7 @@ if sum(pairPos)>0
 end
 
 %%%write output files
-sampleFrac=writeJointVCF(Tcell,P,fSort,cloneIdSort,alleleId,Filter,somaticDetected,trustScore,artifactScore,inputParam);
+sampleFrac=writeJointVCF(Tcell,P,fSort,cloneIdSort,alleleId,Filter,somaticDetected,trustScore,inputParam);
 segsTableCond=writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputParam);
 save([inputParam.outMat],'-v7.3');
 writeCloneSummary(segsTable,exonRD,Tcell,fSort,cloneIdSort,inputParam,Filter,somaticDetected,sampleFrac);
