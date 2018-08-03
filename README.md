@@ -17,6 +17,7 @@ http://www.mathworks.com/products/compiler/mcr/
 https://pyyaml.org/wiki/PyYAMLDocumentation
 - GSL - GNU Scientific Library
 https://www.gnu.org/software/gsl/
+*A note to TGen dback users, dependencies may be loaded on dback by sourcing [setup.sh](scripts/setup.sh)*
 
 ### Bam preperation
 - Bams should be created using bwa-mem
@@ -60,6 +61,7 @@ sexList: SEXLIST        ###comma deliminated list of sex for each bam in the bam
 gvmPath: GVMPATH        ###path to folder containing gvm executable
 outfile: OUTFILE        ###path and name of output
 ```
+- The bamList file should contain absolute paths to the unmatched control bams with one per line.
 
 - In order to correctly handle the sex chromosomes, the sex of the individuals in the bams list must be given as input.  We have provided a helper [script](scripts/guessSex.py) to determine sex from the bams if they are not known.  This script takes the same yaml file as input as the normal metrics, but only the following fields in the "input files" section are needed.
 >python guessSex.py controlsConfig.yaml
@@ -92,6 +94,13 @@ priorF: PRIORF          ###vector of expected tumor fractions with one value per
                         ###for example [0.1;0.7] for a pair of bams with low and high expected tumor content
 numCPU: CORES           ### number of parallel processors
 ```
+- The bamList file should contain absolue paths to the tumor bams with one per line.  All of the bams should come from the same patient.
+
+It is important that the length of priorF matches the number of bams in the bam list.  We recommend the following values for priorF:
+- solid tumor - 0.7
+- purified tumor or cell line - 0.99
+- tumor adjacent normal tissue - 0.1
+- normal tissue unlikely to have tumor contamination - 0.01 (you may also set NormalSample to the indicate postion of your normal sample in your bam list file to run in matched normal mode)  
 
 To run lumosVar
 ```

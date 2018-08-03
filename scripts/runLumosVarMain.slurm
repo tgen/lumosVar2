@@ -3,14 +3,9 @@
 #SBATCH -J lumosVarMain
 #SBATCH -t 14-00:00:0
 #SBATCH --mail-type=all
-#SBATCH --mail-user=rhalperin@tgen.org
 #SBATCH -o lumosVarMain.o%j
 
-module load MCR/9.0
-#module load samtools/1.3.1
-#export PATH=/home/rhalperin/bin/samtools-1.5/bin:$PATH
-#export PERL5LIB=$PERL5LIB:/home/rhalperin/perl5lib/lib/
-source /home/rhalperin/multiSampleCaller/gvm/setup.sh
+source scripts/setup.sh
 
 TMPDIR=/scratch/rhalperin/TMP_$RANDOM
 mkdir $TMPDIR
