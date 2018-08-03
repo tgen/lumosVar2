@@ -17,6 +17,7 @@ http://www.mathworks.com/products/compiler/mcr/
 https://pyyaml.org/wiki/PyYAMLDocumentation
 - GSL - GNU Scientific Library
 https://www.gnu.org/software/gsl/
+
 *A note to TGen dback users, dependencies may be loaded on dback by sourcing [setup.sh](scripts/setup.sh)*
 
 ### Bam preperation
@@ -97,10 +98,10 @@ numCPU: CORES           ### number of parallel processors
 - The bamList file should contain absolue paths to the tumor bams with one per line.  All of the bams should come from the same patient.
 
 It is important that the length of priorF matches the number of bams in the bam list.  We recommend the following values for priorF:
-- solid tumor - 0.7
-- purified tumor or cell line - 0.99
-- tumor adjacent normal tissue - 0.1
-- normal tissue unlikely to have tumor contamination - 0.01 (you may also set NormalSample to the indicate postion of your normal sample in your bam list file to run in matched normal mode)  
+- solid tumor: 0.7
+- purified tumor or cell line: 0.99
+- tumor adjacent normal tissue: 0.1
+- normal tissue unlikely to have tumor contamination: 0.01 (you may also set NormalSample to the indicate postion of your normal sample in your bam list file to run in matched normal mode)  
 
 To run lumosVar
 ```
