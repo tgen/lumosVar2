@@ -33,7 +33,7 @@ function [segs,bafSegs]=segmentData(exonRD,hetData,cnaAlpha)
 %------------- BEGIN CODE --------------
 
 %%%run segmentation by Chr
-chrList=unique(exonRD(:,1));
+chrList=unique(exonRD(:,1))'
 parfor i=chrList
     clustsegs{i}=cghcbs([exonRD(exonRD(:,1)==i,1) exonRD(exonRD(:,1)==i,2) log((exonRD(exonRD(:,1)==i,4)+1)./(exonRD(exonRD(:,1)==i,5)+1))],'Alpha',cnaAlpha);
     bafclustsegs{i}=cghcbs([hetData.Chr(hetData.Chr==i) hetData.Pos(hetData.Chr==i)  hetData.BcountsComb(hetData.Chr==i)./hetData.ReadDepthPass(hetData.Chr==i)],'Alpha',cnaAlpha);
