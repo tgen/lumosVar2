@@ -183,7 +183,8 @@ segsMerged=mergeSegments([segs bafSegs],exonRD,Tcell,hetPos,inputParam);
 
 %%%Make sure segments extend to ends of chromosome
 chrNum=unique(Ecell{1}.Chr);
-for i=chrNum
+for j=1:length(chrNum)
+    i=chrNum(j);
     idx1=find(segsMerged(:,1)==i,1,'first');
     idx2=find(segsMerged(:,1)==i,1,'last');
     if(isempty(idx1))
