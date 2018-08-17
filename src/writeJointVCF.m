@@ -271,7 +271,7 @@ formatStr=formatStr(1:height(T),:);
 formatFields=repmat({'GT:DP:AD:FT:PPS:PT:PA:PLS:PL:PLND:VSF:CNF'},size(P,1),1);
 
 sexChr=regexp(inputParam.sexChr,',','split');
-if cellfun('length',(regexp('',',','split')))==0
+if cellfun('length',(regexp(sexChr,',','split')))==0
     chrList=cellstr(num2str(inputParam.autosomes','%-d'));
 else
     chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
