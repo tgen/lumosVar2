@@ -60,7 +60,12 @@ end
 
 %%%get chromosomes
 sexChr=regexp(inputParam.sexChr,',','split');
-chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
+if cellfun('length',(regexp(sexChr,',','split')))==0
+    chrList=cellstr(num2str(inputParam.autosomes','%-d'));
+else
+    chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
+end
+
 
 %%% calculate log2FC
 for i=1:length(Tcell)

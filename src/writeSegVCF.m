@@ -120,7 +120,7 @@ formatFields=repmat({'CNF:LOG2FC:MEANBAF'},size(segsTableCond,1),1);
 %%% write output vcf
 
 sexChr=regexp(inputParam.sexChr,',','split');
-if cellfun('length',(regexp('',',','split')))==0
+if max(cellfun('length',(regexp(sexChr,',','split'))))==0
     chrList=cellstr(num2str(inputParam.autosomes','%-d'));
 else
     chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
