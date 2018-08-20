@@ -76,12 +76,14 @@ end
 %%% plot exon log2FC
 for j=1:length(Tcell)
     subplot(length(Tcell)+1,5,[j*5-4 j*5-1]);
-    for i=chrNum(1:2:end)
+    for k=1:2:length(chrNum)
+	i=chrNum(k);
         idx=exonRD{j}(:,1)==i;
         scatter(mean(exonCoord(idx,:),2),log2FC(idx,j),1,'.','MarkerFaceColor',[0.5 0.5 0.5],'MarkerEdgeColor',[0.5 0.5 0.5])
         hold on;
     end
-    for i=chrNum(2:2:end)
+    for k=2:2:length(chrNum)
+        i=chrNum(k);
         idx=exonRD{j}(:,1)==i;
         scatter(mean(exonCoord(idx,:),2),log2FC(idx,j),1,'.','MarkerFaceColor',[0.8235    0.7059    0.5490],'MarkerEdgeColor',[0.8235    0.7059    0.5490])
         hold on;
@@ -156,11 +158,13 @@ for j=1:length(Tcell)
     aIdx=T.ApopAFcomb<T.BpopAFcomb;
     AF(bIdx)=(T.BCountF(bIdx)+T.BCountR(bIdx))./T.ReadDepthPass(bIdx);
     AF(aIdx)=(T.ACountF(aIdx)+T.ACountR(aIdx))./T.ReadDepthPass(aIdx);
-    for i=chrNum(1:2:end)
+    for k=1:2:length(chrNum)
+        i=chrNum(k);
         scatter(Tcoord(hetPos & T.Chr==i),AF(hetPos & T.Chr==i),1,'.','MarkerFaceColor',[0.5 0.5 0.5],'MarkerEdgeColor',[0.5 0.5 0.5])
         hold on;
     end
-    for i=chrNum(2:2:end)
+    for k=2:2:length(chrNum)
+        i=chrNum(k);
         scatter(Tcoord(hetPos & T.Chr==i),AF(hetPos & T.Chr==i),1,'.','MarkerFaceColor',[0.8235    0.7059    0.5490],'MarkerEdgeColor',[0.8235    0.7059    0.5490])
     end
 end
