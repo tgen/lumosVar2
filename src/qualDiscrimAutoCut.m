@@ -143,10 +143,10 @@ F.Properties.VariableDescriptions={'Percent of Reads in Tumor Passing Quality Th
     'Phred scaled postion quality score from Normals', ...
     'mean position quality score in exon','','','','','','',''};
 
-%[~,lb_good_nh]=isoutlier(F{~homPos &F.posMapQC>30,:},'ThresholdFactor',inputParam.outThreshGood);
-lb_good_nh=nanmedian(F{~homPos &F.posMapQC>30,:})-inputParam.outThreshGood*mad(F{~homPos &F.posMapQC>30,:},1)*1.4862;
-%[~,lb_good_h]=isoutlier(F{homPos &F.posMapQC>30,:},'ThresholdFactor',inputParam.outThreshGood);
-lb_good_h=nanmedian(F{homPos &F.posMapQC>30,:})-inputParam.outThreshGood*mad(F{homPos &F.posMapQC>30,:},1)*1.4862;
+[~,lb_good_nh]=isoutlier(F{~homPos &F.posMapQC>30,:},'mean','ThresholdFactor',inputParam.outThreshGood);
+%lb_good_nh=nanmedian(F{~homPos &F.posMapQC>30,:})-inputParam.outThreshGood*mad(F{~homPos &F.posMapQC>30,:},1)*1.4862;
+[~,lb_good_h]=isoutlier(F{homPos &F.posMapQC>30,:},'mean','ThresholdFactor',inputParam.outThreshGood);
+%lb_good_h=nanmedian(F{homPos &F.posMapQC>30,:})-inputParam.outThreshGood*mad(F{homPos &F.posMapQC>30,:},1)*1.4862;
 
 
 goodPos=zeros(size(F));
@@ -155,10 +155,10 @@ goodPos(homPos,:)=F{homPos,:}>=ones(sum(homPos),1)*lb_good_h;
 %sum(goodPos(~homPos,:))./sum(~homPos)
 %histogram(sum(goodPos,2))
 
-%[~,lb_bad_nh]=isoutlier(F{~homPos &F.posMapQC>30,:},'ThresholdFactor',inputParam.outThreshBad);
-%[~,lb_bad_h]=isoutlier(F{homPos &F.posMapQC>30,:},'ThresholdFactor',inputParam.outThreshBad);
-lb_bad_nh=nanmedian(F{~homPos &F.posMapQC>30,:})-inputParam.outThreshBad*mad(F{~homPos &F.posMapQC>30,:},1)*1.4862;
-lb_bad_h=nanmedian(F{homPos &F.posMapQC>30,:})-inputParam.outThreshBad*mad(F{homPos &F.posMapQC>30,:},1)*1.4862;
+[~,lb_bad_nh]=isoutlier(F{~homPos &F.posMapQC>30,:},'mean','ThresholdFactor',inputParam.outThreshBad);
+[~,lb_bad_h]=isoutlier(F{homPos &F.posMapQC>30,:},'mean','ThresholdFactor',inputParam.outThreshBad);
+%lb_bad_nh=nanmedian(F{~homPos &F.posMapQC>30,:})-inputParam.outThreshBad*mad(F{~homPos &F.posMapQC>30,:},1)*1.4862;
+%lb_bad_h=nanmedian(F{homPos &F.posMapQC>30,:})-inputParam.outThreshBad*mad(F{homPos &F.posMapQC>30,:},1)*1.4862;
 
 
 badPos=zeros(size(F));
