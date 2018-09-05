@@ -33,7 +33,9 @@ pos=cellfun('isempty',strfind(indelStr,'e')) & cellfun('isempty',strfind(indelSt
 indelChar=char(indelStr');
 ntChar='';
 for i=1:size(indelChar,2)
-    ntChar(~isspace(indelChar(:,i)) & pos',i)=int2nt(str2double(cellstr((indelChar(~isspace(indelChar(:,i)) & pos',i)))));
+    if(sum(~isspace(indelChar(:,i)) & pos'>0))
+        ntChar(~isspace(indelChar(:,i)) & pos',i)=int2nt(str2double(cellstr((indelChar(~isspace(indelChar(:,i)) & pos',i)))));
+    end
 end
 
 %%%get nt values
