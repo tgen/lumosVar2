@@ -67,7 +67,7 @@ parfor chrIdx=1:length(chrList)
     else
         ferror=fopen([inputParam.outName '_' chrList{chrIdx} '.log.txt'],'w');
     end
-    [status,out]=system([inputParam.gvmPath ' -X --conf ' paramFile ' --chr ' chrList{chrIdx}]);
+    [status,out]=system([inputParam.gvmPath ' -x --conf ' paramFile ' --chr ' chrList{chrIdx}]);
     fprintf(ferror,'%s\n',out);
     if(status==0)
         fprintf(ferror,'%s\n',['gvm completed on ' chrList{chrIdx}]);
