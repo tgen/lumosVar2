@@ -70,7 +70,8 @@ else
     sampleCount=length(bamList{1});
     fclose(fid);
     for i=1:sampleCount
-        folders=regexp(bamList{1}{i},'/','split');
+        paths=regexp(bamList{1}{i},',','split');
+        folders=regexp(paths{1},'/','split');
         names=regexprep(folders{end},'\.bam$','');
         sampleNames{i}=names;
         message=['sample ' num2str(i) ': ' sampleNames{i} ' from ' bamList{1}{i}]
