@@ -51,6 +51,10 @@ T.BmeanReadPos(T.BCountF+T.BCountR==0)=NaN;
 aIdx=homPos & T.ACountF+T.ACountR >= T.BCountF+T.BCountR;
 bIdx=homPos & T.ACountF+T.ACountR < T.BCountF+T.BCountR;
 
+readLength=max([T.AmeanReadPos; T.BmeanReadPos]);
+inputParam.minSeqEndDist=readLength*(inputParam.minSeqEndDist./inputParam.ReadLength);
+inputParam.ReadLength=readLength;
+
 %%%Create Quality Metrics Table
 F=table();
 F.TumorPerPassReads=(T.ReadDepthPass+1)./(T.ReadDepth+1);
