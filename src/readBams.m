@@ -29,6 +29,8 @@ function [T, E]=readBams(inputParam,paramFile)
 %------------- BEGIN CODE --------------
 
 %[status,out]=system('printenv')
+%profile('-memory','on');
+%profile on;
 
 sexChr=regexp(inputParam.sexChr,',','split');
 if max(cellfun('length',(regexp(inputParam.sexChr,',','split'))))==0
@@ -95,6 +97,9 @@ for i=1:length(chrList)
     outExonFile=[inputParam.outName '_' chrList{i} '_exon.txt'];
     AllExonData{i}=reshape(dlmread(outExonFile),[],8,sampleCount);
 end
+%profile off;
+%profsave;
+%profile resume;
 
 %%%% create position data table
 ColHeaders={'Chr','Pos','ReadDepth','ReadDepthPass','Ref','A','ACountF','ACountR','AmeanBQ','AmeanMQ','AmeanPMM','AmeanReadPos','B','BCountF','BCountR','BmeanBQ','BmeanMQ','BmeanPMM','BmeanReadPos','ApopAF','BpopAF','CosmicCount','ControlRD','PosMapQC','perReadPass','abFrac'};
@@ -105,6 +110,11 @@ for i=1:length(AllData)
     dataMat(currIdx:currIdx+matLen(i)-1,:)=AllData{i};
     currIdx=currIdx+matLen(i);
 end
+clear AllData;
+%profile off;
+%profsave;
+%profile resume;
+pack;
 if isempty(dataMat)
     T={};                           
 else
@@ -113,8 +123,11 @@ else
         T{i}=array2table(dataMat(dataMat(:,1)==ids(i),2:end),'VariableNames',ColHeaders);
     end
 end
-clear dataMat AllData;
+clear dataMat;
 message='finished combining tumor data'
+%profile off;
+%profsave;
+%profile resume;
 
 %%% create exon data table
 exonColHeaders={'Chr','StartPos','EndPos','TumorRD','NormalRD', 'MapQC', 'perReadPass', 'abFrac'};
@@ -129,5 +142,8 @@ for i=1:size(exonRD,3)
     E{i}=array2table(exonRD(:,:,i),'VariableNames',exonColHeaders);
 end
 
+%profile off;
+%profsave;
+%profile resume;
 %message='finished combining exon data'
 %return
