@@ -131,6 +131,10 @@ if __name__ == "__main__":
       break
     dataA = lineA.split("\t")
     dataS = lineS.split("\t")
+    print("numHomA: " + str(int(dataA[1]+int(dataA[2])))
+    print("numHomS: " + str(int(dataS[1]+int(dataS[2])))
+    print("numHetA: " + str(int(dataA[3])))
+    print("numHetS: " + str(int(dataS[3])))
     hetA=int(dataA[3])/(int(dataA[1])+int(dataA[2]))
     hetS=int(dataS[3])/(int(dataS[1])+int(dataS[2]))
     if hetS/hetA > 0.5:
