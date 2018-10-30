@@ -1,4 +1,4 @@
-function [F,pQual]=qualDiscrimAutoCut(T,E,homPos,inputParam)
+function [F,pQual]=qualDiscrimAutoCut(T,E,homPos,commonHet,inputParam)
 %qualDiscrim - finds probability that positions are trusted or artifacts
 %using quadratic discriminant analysis on a number of quality metrics
 %
@@ -92,8 +92,10 @@ F.PMMdiff=-10*log10(max(abs(T.AmeanPMM-T.BmeanPMM),1E-5));
 F.PMMdiff(homPos)=0;
 F.ReadPosDiff=-max(abs((T.AmeanReadPos-T.BmeanReadPos)),0);
 F.ReadPosDiff(homPos)=0;
-F.posMapQC=-10*log10(T.PosMapQC+1E-6);
-F.posMapQC(T.PosMapQC<0)=60;
+%F.posMapQC=-10*log10(T.PosMapQC+1E-6);
+T.PosMapQC(T.PosMapQC<0)=0;
+F.posMapQC=-10*log10(T.PosMapQC+10.^(max(T.AmeanMQ)/-10));
+%F.posMapQC(T.PosMapQC<0)=60;
 F.posMapQC(isnan(T.PosMapQC))=0;
 idx=getPosInRegionSplit([T.Chr T.Pos],[E.Chr E.StartPos E.EndPos+1],inputParam.blockSize);
 F.exonMapQC=zeros(height(F),1);
@@ -145,9 +147,15 @@ F.Properties.VariableDescriptions={'Percent of Reads in Tumor Passing Quality Th
     'Phred scaled postion quality score from Normals', ...
     'mean position quality score in exon','','','','','','',''};
 
-[~,lb_good_nh]=isoutlier(F{~homPos &F.posMapQC>30,:},'mean','ThresholdFactor',inputParam.outThreshGood);
+
+[TPR,PPV,Thresh] = perfcurve(commonHet,F.posMapQC,1,'XCrit','TPR','YCrit','PPV');
+F1=harmmean([TPR PPV],2);
+%plot(Thresh,F1);
+[~,idx]=max(F1);
+
+[~,lb_good_nh]=isoutlier(F{~homPos &F.posMapQC>Thresh(idx),:},'mean','ThresholdFactor',inputParam.outThreshGood);
 %lb_good_nh=nanmedian(F{~homPos &F.posMapQC>30,:})-inputParam.outThreshGood*mad(F{~homPos &F.posMapQC>30,:},1)*1.4862;
-[~,lb_good_h]=isoutlier(F{homPos &F.posMapQC>30,:},'mean','ThresholdFactor',inputParam.outThreshGood);
+[~,lb_good_h]=isoutlier(F{homPos &F.posMapQC>Thresh(idx),:},'mean','ThresholdFactor',inputParam.outThreshGood);
 %lb_good_h=nanmedian(F{homPos &F.posMapQC>30,:})-inputParam.outThreshGood*mad(F{homPos &F.posMapQC>30,:},1)*1.4862;
 
 
@@ -157,8 +165,8 @@ goodPos(homPos,:)=F{homPos,:}>=ones(sum(homPos),1)*lb_good_h;
 %sum(goodPos(~homPos,:))./sum(~homPos)
 %histogram(sum(goodPos,2))
 
-[~,lb_bad_nh]=isoutlier(F{~homPos &F.posMapQC>30,:},'mean','ThresholdFactor',inputParam.outThreshBad);
-[~,lb_bad_h]=isoutlier(F{homPos &F.posMapQC>30,:},'mean','ThresholdFactor',inputParam.outThreshBad);
+[~,lb_bad_nh]=isoutlier(F{~homPos &F.posMapQC>Thresh(idx),:},'mean','ThresholdFactor',inputParam.outThreshBad);
+[~,lb_bad_h]=isoutlier(F{homPos &F.posMapQC>Thresh(idx),:},'mean','ThresholdFactor',inputParam.outThreshBad);
 %lb_bad_nh=nanmedian(F{~homPos &F.posMapQC>30,:})-inputParam.outThreshBad*mad(F{~homPos &F.posMapQC>30,:},1)*1.4862;
 %lb_bad_h=nanmedian(F{homPos &F.posMapQC>30,:})-inputParam.outThreshBad*mad(F{homPos &F.posMapQC>30,:},1)*1.4862;
 
