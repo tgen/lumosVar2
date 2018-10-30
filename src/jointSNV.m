@@ -109,7 +109,7 @@ else
     aIdx=ApopAF<BpopAF;
 end
 indelPos=A>4 | B>4 | Ref >4 | A<0 | B<0 | Ref <0;
-priorNonDip=max(mapQC,[],2)+inputParam.minLik;
+priorNonDip=min(max(max(mapQC,[],2),inputParam.minLik),0.5);
 priorHom=(ApopAF.^2).*(1-priorNonDip);
 priorSomatic(indelPos & aIdx,:)=((BpopAF(indelPos & aIdx).^2).*(cosmic(indelPos & aIdx)+1).*inputParam.priorSomaticIndel).*(1-priorNonDip(indelPos & aIdx));
 priorSomatic(indelPos & bIdx,:)=((ApopAF(indelPos & bIdx).^2).*(cosmic(indelPos & bIdx)+1).*inputParam.priorSomaticIndel).*(1-priorNonDip(indelPos & bIdx));
