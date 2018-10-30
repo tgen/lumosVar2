@@ -125,6 +125,13 @@ for j=1:length(Tcell)
     Tcell{j}.CosmicCount=countsAll.cosmicCount(locb);
 end
 
+tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
+if inputParam.NormalSample>0
+    commonHet=(min([Tcell{inputParam.NormalSample}.ApopAFcomb Tcell{inputParam.NormalSample}.BpopAFcomb],[],2)>inputParam.minHetPopFreq) & Tcell{inputParam.NormalSample}.BCountF+Tcell{inputParam.NormalSample}.BCountR>=inputParam.minBCount;
+else
+    commonHet=min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)>inputParam.minHetPopFreq;
+end    
+
 %%%Initial Quality Filtering
 P=table();
 P.trust=nan(height(Tcell{1}),length(Tcell));
@@ -137,20 +144,15 @@ for i=1:size(Tcell,2)
     idx2=T.ApopAF+T.BpopAF>1 & T.ApopAF>=T.BpopAF;
     T.ApopAF(idx2)=1-T.BpopAF(idx2)-3*inputParam.pvFreqIndel;
     Tcell{i}=T;
-    [~,postQual]=qualDiscrimAutoCut(T,E,false(height(T),1),inputParam);
-    P.trust(:,i)=postQual(:,2);
+    [~,postQual]=qualDiscrimAutoCut(T,E,false(height(T),1),commonHet,inputParam);
+    P.trust(:,i)=real(postQual(:,2));
     clear T E;
 end
 filtPos=geomean(P.trust,2)>inputParam.pGoodThresh;
 message=['initial quality filtering at: ' char(datetime('now'))]
 
 %%%Find likely het positions
-tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
-if inputParam.NormalSample>0
-    commonHet=(min([Tcell{inputParam.NormalSample}.ApopAFcomb Tcell{inputParam.NormalSample}.BpopAFcomb],[],2)>inputParam.minHetPopFreq) & Tcell{inputParam.NormalSample}.BCountF+Tcell{inputParam.NormalSample}.BCountR>=inputParam.minBCount;
-else
-    commonHet=min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)>inputParam.minHetPopFreq;
-end    
+
 hetPos=commonHet & filtPos;
 message=['preliminary variant classification at: ' char(datetime('now'))]
 
@@ -288,7 +290,7 @@ while(true)
         E=Ecell{j};
         homPos=P.Hom(:,j)>0.5  & P.SomaticPair(:,j)<0.5 | (max([P.Somatic P.SomaticPair],[],2)>0.5 & (max(P.DataSomatic(:,j),P.DataNonDip(:,j))<=P.DataHom(:,j) | (T.BcountsComb==0 & T.A==T.RefComb))) | (P.Somatic(:,j)>0.5 & inputParam.NormalSample==j);
         P.homPos(:,j)=homPos;
-        [F{j},postQual]=qualDiscrimAutoCut(T,E,homPos,inputParam);
+        [F{j},postQual]=qualDiscrimAutoCut(T,E,homPos,commonHet,inputParam);
         P.trust(:,j)=postQual(:,2);
         clear T E;
     end
