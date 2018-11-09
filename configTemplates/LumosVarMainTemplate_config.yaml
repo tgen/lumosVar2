@@ -1,8 +1,7 @@
 #### Input Files
 bamList: BAMLIST	###path to file contining paths to bams
 regionsFile: BED	###path to bed file defining regions targeted in exome
-snpVCFpath: VCFPATH	###path to vcfs containg population frequencies (one for each chromosome),
-                        ###including part of filename before chromosome number
+snpVCFpath: VCFPATH	###path to vcfs containg population frequencies (one for each chromosome), including part of filename before chromosome number
 snpVCFname: VCFNAME	###filename/extension of population vcf following chromosome number
 NormalBase: NMETRICS	###path and filename of output form NormalMetrics step before chr number	
 cosmicVCF: COSMICVCF	###path to cancer mutation count VCF
