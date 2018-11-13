@@ -194,8 +194,12 @@ finitePos=sum(isfinite(F{:,:}),2)==16;
 sampleIndel=F{indelPos & finitePos,:};
 trainingIndel=[F{sum(goodPos(:,[1:10 12:16]),2)==15 & indelPos & finitePos,:}; F{sum(badPos(:,[1:10 12:16]),2)>0 & indelPos & finitePos,:}];
 groupIndel=[ones(sum(sum(goodPos(:,[1:10 12:16]),2)==15 & indelPos & finitePos),1); zeros(sum(sum(badPos(:,[1:10 12:16]),2)>0 & indelPos & finitePos),1)];
-discrIndel=fitcdiscr(trainingIndel(:,[1:10 12:16]),groupIndel,'DiscrimType', 'pseudoQuadratic');
-[~,pTrust(indelPos & finitePos,:)] = predict(discrIndel,sampleIndel(:,[1:10 12:16]));
+if(sum(groupIndel)>1)
+    discrIndel=fitcdiscr(trainingIndel(:,[1:10 12:16]),groupIndel,'DiscrimType', 'pseudoQuadratic');
+    [~,pTrust(indelPos & finitePos,:)] = predict(discrIndel,sampleIndel(:,[1:10 12:16]));
+else
+    pTrust(indelPos & finitePos,:) = [ones(sum(indelPos & finitePos),1) zeros(sum(indelPos & finitePos),1)];
+end
 
 %%%classify indels as trusted vs low quality positions
 finitePos=sum(isfinite(F{:,:}),2)==16;
