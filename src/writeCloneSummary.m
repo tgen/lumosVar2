@@ -101,7 +101,7 @@ colors=linspecer(size(f,2)-1);
 subplot(3,2,1);
 hold on;
 for i=1:size(colors,1)
-    plot(f(:,i),'-','color',colors(i,:),'LineWidth',10*(sum(CNcount(i,:))+1)./sum(CNcount(:)));
+    plot(f(:,i),'-','color',colors(i,:),'LineWidth',10*(sum(CNcount(i,:))+1)./(sum(CNcount(:))+1));
     scatter([1:size(f,1)],f(:,i),400*(cloneTable.somaticDetected(i,:)+1)./sum(cloneTable.somaticPass+1),'MarkerEdgeColor',[0 0 0],'MarkerFaceColor',colors(i,:));
 end
 ylim([0 1]);
