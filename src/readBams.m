@@ -1,4 +1,4 @@
-function [T, E]=readBams(inputParam,paramFile)
+function [posTable, Ecell,inputParam]=readBams(inputParam,paramFile)
 %preprocessTumorOnly - creates data structures for tumor only calling
 %calls parsePileupData.packed.pl to parse samtools output
 %
@@ -38,6 +38,7 @@ if max(cellfun('length',(regexp(inputParam.sexChr,',','split'))))==0
 else
     chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
 end
+inputParam.chrList=chrList;
 
 regTable=readtable(inputParam.regionsFile,'FileType','text','Delimiter','\t','ReadVariableNames',false);
 [lia,locb]=ismember(regTable{:,1},chrList);
@@ -51,9 +52,11 @@ fid=fopen(inputParam.bamList);
 bamList=textscan(fid,'%s');
 sampleCount=length(bamList{1});
 fclose(fid);
+inputParam.sampleCount=sampleCount;
 
 %%% process by chromosome
 failList=[];
+%for chrIdx=1:length(chrList)
 parfor chrIdx=1:length(chrList)
     outPosFile=[inputParam.outName '_' chrList{chrIdx} '_pos.txt'];
     outExonFile=[inputParam.outName '_' chrList{chrIdx} '_exon.txt'];
@@ -73,7 +76,8 @@ parfor chrIdx=1:length(chrList)
     else
         ferror=fopen([inputParam.outName '_' chrList{chrIdx} '.log.txt'],'w');
     end
-    [status,out]=system([inputParam.gvmPath ' --conf ' paramFile ' --chr ' chrList{chrIdx}]);
+    [inputParam.gvmPath ' -x --conf ' paramFile ' --chr ' chrList{chrIdx}]
+    [status,out]=system([inputParam.gvmPath ' -x --conf ' paramFile ' --chr ' chrList{chrIdx}]);
     fprintf(ferror,'%s\n',out);
     if(status==0)
         fprintf(ferror,'%s\n',['gvm completed on ' chrList{chrIdx}]);
@@ -89,47 +93,41 @@ else
     message='finished processing chromosomes'
 end
 
-for i=1:length(chrList)
-    outPosFile=[inputParam.outName '_' chrList{i} '_pos.txt'];
-    if(system(['[ -s ' outPosFile ' ]'])==0)    
-        AllData{i}=dlmread(outPosFile);
+ColHeaders={'Sample', 'Chr','Pos','ReadDepth','ReadDepthPass','Ref', ...
+            'A','ACountF','ACountR','AmeanBQ','AmeanMQ', ...
+            'AmeanPMM','AmeanReadPos','AmeanSC','AmeanIS','AmeanRO', ...
+            'B','BCountF','BCountR','BmeanBQ','BmeanMQ', ...
+            'BmeanPMM','BmeanReadPos','BmeanSC','BmeanIS', 'BmeanRO', ...
+            'ApopAF','BpopAF', 'CosmicCount','ControlRD','PosMapQC','perReadPass','abFrac','exonIdx'};
+ColHeaders_rep=strcat(reshape(repmat(ColHeaders,sampleCount,1)',[],1),'_',num2str(reshape(ones(34,1)*[1:sampleCount],[],1)))
+%ColHeaders={'Sample','Chr','Pos','ReadDepth','ReadDepthPass','Ref','A','ACountF','ACountR','AmeanBQ','AmeanMQ','AmeanPMM','AmeanReadPos','B','BCountF','BCountR','BmeanBQ','BmeanMQ','BmeanPMM','BmeanReadPos','ApopAF','BpopAF','CosmicCount','ControlRD','PosMapQC','perReadPass','abFrac'};
+if isfield(inputParam,'useTall')
+    ds=datastore([inputParam.outName '*_pos.txt'],'NumHeaderLines',0,'ReadVariableNames',1,'MultipleDelimitersAsOne',1);
+    posTable=tall(ds);
+else
+    posFiles=struct2table(dir([inputParam.outName '*_pos.txt']))
+    for i=1:height(posFiles)
+	currFile=strjoin([posFiles{i,'folder'}  posFiles{i,'name'}],'/')
+	posTable{i}=readtable(currFile,'ReadVariableNames',1,'MultipleDelimsAsOne',1,'HeaderLines',0);
     end
+    posTable=vertcat(posTable{:});
+end
+% 
+% for i=1:sampleCount
+%     Tcell{i}=posTable(posTable.Sample==i,:);
+% end
+
+
+for i=1:length(chrList)
+    %outPosFile=[inputParam.outName '_' chrList{i} '_pos.txt'];
+    %if(system(['[ -s ' outPosFile ' ]'])==0)
+    %    AllData{i}=dlmread(outPosFile);
+    %end
     outExonFile=[inputParam.outName '_' chrList{i} '_exon.txt'];
     AllExonData{i}=reshape(dlmread(outExonFile),[],8,sampleCount);
 end
-%profile off;
-%profsave;
-%profile resume;
 
-%%%% create position data table
-ColHeaders={'Chr','Pos','ReadDepth','ReadDepthPass','Ref','A','ACountF','ACountR','AmeanBQ','AmeanMQ','AmeanPMM','AmeanReadPos','B','BCountF','BCountR','BmeanBQ','BmeanMQ','BmeanPMM','BmeanReadPos','ApopAF','BpopAF','CosmicCount','ControlRD','PosMapQC','perReadPass','abFrac'};
-matLen=cellfun(@numel,AllData)./27;
-dataMat=zeros(sum(matLen),length(ColHeaders)+1);
-currIdx=1;
-for i=1:length(AllData)
-    dataMat(currIdx:currIdx+matLen(i)-1,:)=AllData{i};
-    currIdx=currIdx+matLen(i);
-end
-clear AllData;
-%profile off;
-%profsave;
-%profile resume;
-pack;
-if isempty(dataMat)
-    T={};                           
-else
-    ids=unique(dataMat(:,1));
-    for i=1:length(ids)
-        T{i}=array2table(dataMat(dataMat(:,1)==ids(i),2:end),'VariableNames',ColHeaders);
-    end
-end
-clear dataMat;
-message='finished combining tumor data'
-%profile off;
-%profsave;
-%profile resume;
 
-%%% create exon data table
 exonColHeaders={'Chr','StartPos','EndPos','TumorRD','NormalRD', 'MapQC', 'perReadPass', 'abFrac'};
 exonMatLen=cellfun(@numel,AllExonData)./(8*sampleCount);
 exonRD=zeros(sum(exonMatLen),sum(length(exonColHeaders)),sampleCount);
@@ -139,11 +137,5 @@ for i=1:length(AllExonData)
     currIdx=currIdx+exonMatLen(i);
 end
 for i=1:size(exonRD,3)
-    E{i}=array2table(exonRD(:,:,i),'VariableNames',exonColHeaders);
+    Ecell{i}=array2table(exonRD(:,:,i),'VariableNames',exonColHeaders);
 end
-
-%profile off;
-%profsave;
-%profile resume;
-%message='finished combining exon data'
-%return

@@ -1,8 +1,8 @@
-function nll = nllCNAaddClone(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,CNAscale,W,fOld,fNew,dbCounts)
+function nll = nllCNAaddClone(hetData,somData,dbData,exonRD,segsMerged,inputParam,CNAscale,W,fOld,fNew,dbCounts)
 % nllCNAaddClone - finds the negative log likelihood of the data given the
 %               parameters
 %
-% Syntax: nll = nllCNAaddClone(hetPos,somPos,dbPos,Tcell,exonRD,segsMerged,inputParam,CNAscale,W,fOld,fNew,dbCounts)
+% Syntax: nll = nllCNAaddClone(hetData,somData,dbData,exonRD,segsMerged,inputParam,CNAscale,W,fOld,fNew,dbCounts)
 %
 % Inputs:
 %   hetPos: logical vector indicating heterozygous positions
@@ -45,14 +45,14 @@ E=table();
 E.Chr=exonRD{1}(:,1);
 E.StartPos=exonRD{1}(:,2);
 E.EndPos=exonRD{1}(:,3);
-for i=1:length(Tcell)
+for i=1:inputParam.sampleCount
     E.TumorRD(:,i)=exonRD{i}(:,4);
     E.NormalRD(:,i)=exonRD{i}(:,5);
 end
 f=[fOld fNew(:)]./100;
 
 %%%get copy number calls
-[N, M, Ftable, ~, cnaIdx, nllCNA]=callCNAmulti(hetPos,Tcell,exonRD,segsMerged,inputParam,[CNAscale(:); W(:); f(:)],dbPos,dbCounts);
+[N, M, Ftable, ~, cnaIdx, nllCNA]=callCNAmulti(hetData,exonRD,segsMerged,inputParam,[CNAscale(:); W(:); f(:)],dbData,dbCounts);
 segsTable=array2table(segsMerged(:,1:3),'VariableNames',{'Chr','StartPos','EndPos'});
 segsTable.N=N;
 segsTable.M=M;
@@ -60,27 +60,19 @@ segsTable.F=Ftable;
 segsTable.cnaIdx=cnaIdx;
 
 %%%find somatic variant likelihoods
-Tsom=cell(size(Tcell));
-for j=1:length(Tcell)
-    T=Tcell{j}(somPos,:);
-    idx=getPosInRegionSplit([T.Chr T.Pos],segsTable{:,1:3},inputParam.blockSize);
-    T.NumCopies=segsTable.N(idx);
-    T.MinAlCopies=segsTable.M(idx);
-    T.cnaF=segsTable.F(idx,j);
-    Tsom{j}=T;
+somData.N=segsTable.N(somData.idxSeg);
+somData.M=segsTable.M(somData.idxSeg);
+for j=1:inputParam.sampleCount
+    somData.(strcat('cnaF_',num2str(i)))=segsTable.F(somData.idxSeg,j);
 end
-somLik=NaN(height(Tsom{1}),length(Tsom));
-somIdx=NaN(height(Tsom{1}),length(Tsom));
-[~, ~,pDataComb,clones,~]=jointSNV(Tsom, f, W, inputParam);
-for j=1:length(Tsom)
-    somLik(:,j)=pDataComb{j}.Somatic+inputParam.minLik;
-    somIdx(:,j)=clones;
-end
+somLik=NaN(height(somData),inputParam.sampleCount);
+somIdx=NaN(height(somData),inputParam.sampleCount);
+[~, ~, somIdx,~,~,somLik]=jointSNV(somData, f, W, inputParam);
 
 %%%find association between copy number states and clones
-cnState=strcat(strsplit(sprintf('%d\n',Tsom{1}.NumCopies)),'_',strsplit(sprintf('%d\n',Tsom{1}.MinAlCopies)));
+cnState=strcat(strsplit(sprintf('%d\n',somData.N)),'_',strsplit(sprintf('%d\n',somData.M)));
 cnState=cnState(1:end-1);
-if (height(Tsom{1})>0)
+if (height(somData)>0)
    [~,~,chiP,~]=crosstab(somIdx(:,1),cnState);
    chiP=min(chiP,1);
 else
@@ -89,9 +81,9 @@ end
 
 %%%find priors of clonal variant groups
 totalPosCount=sum(exonRD{1}(:,3)-exonRD{1}(:,2));
-tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
-priorF=ones(sum(somPos),1);
-if(sum(somPos)>0)
+tIdx=setdiff(1:inputParam.sampleCount,inputParam.NormalSample);
+priorF=ones(height(somData),1);
+if(height(somData)>0)
     fDiff=nan(size(f,2),1);
     for i=1:size(f,2)
         if size(f,1)>1

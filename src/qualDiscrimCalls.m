@@ -41,6 +41,8 @@ function [F,pTrust,pArtifact]=qualDiscrimCalls(T,E,homPos,inputParam)
 
 %------------- BEGIN CODE --------------
 
+%numVar=gather(height(T));
+
 %%%set quality metrics of positions with no B allele to NaN
 T.BmeanBQ(T.BCountF+T.BCountR==0)=NaN;
 T.BmeanMQ(T.BCountF+T.BCountR==0)=NaN;
@@ -56,51 +58,48 @@ inputParam.minSeqEndDist=readLength*(inputParam.minSeqEndDist./inputParam.ReadLe
 inputParam.ReadLength=readLength;
 
 %%%Create Quality Metrics Table
-F=table();
+F=T(:,2:3);
 F.TumorPerPassReads=(T.ReadDepthPass+1)./(T.ReadDepth+1);
 F.normalPerReadPass=T.perReadPass;
 F.normalPerReadPass(~isfinite(T.perReadPass))=inputParam.minPerReadPASS;
 F.ABfrac=(T.AcountsComb+T.BcountsComb+1)./(T.ReadDepthPass+1);
 F.normalABfrac=T.abFrac;
 F.normalABfrac(~isfinite(T.abFrac))=inputParam.minABFrac;
-F.minPerStrand=NaN(size(F,1),1);
-F.minPerStrand(~homPos)=min([T.ACountF(~homPos)./(T.ACountF(~homPos)+T.ACountR(~homPos)) T.ACountR(~homPos)./(T.ACountF(~homPos)+T.ACountR(~homPos)) T.BCountF(~homPos)./(T.BCountF(~homPos)+T.BCountR(~homPos)) T.BCountR(~homPos)./(T.BCountF(~homPos)+T.BCountR(~homPos)) 0.5*ones(sum(~homPos),1)],[],2);
-F.minPerStrand(aIdx)=min([T.ACountF(aIdx)./(T.ACountF(aIdx)+T.ACountR(aIdx)) T.ACountR(aIdx)./(T.ACountF(aIdx)+T.ACountR(aIdx)) 0.5*ones(sum(aIdx),1)],[],2);
-F.minPerStrand(bIdx)=min([T.BCountF(bIdx)./(T.BCountF(bIdx)+T.BCountR(bIdx)) T.BCountR(bIdx)./(T.BCountF(bIdx)+T.BCountR(bIdx)) 0.5*ones(sum(bIdx),1)],[],2);
-F.minBQ=NaN(size(F,1),1);
-F.minBQ(~homPos)=min([T.AmeanBQ(~homPos) T.BmeanBQ(~homPos)],[],2);
+F.minPerStrand=min(min([T.ACountF./(T.ACountF+T.ACountR) T.ACountR./(T.ACountF+T.ACountR) T.BCountF./(T.BCountF+T.BCountR) T.BCountR./(T.BCountF+T.BCountR)],[],2),0.5);
+%T.minPerStrand(~homPos)=min(min([T.ACountF(~homPos)./(T.ACountF(~homPos)+T.ACountR(~homPos)) T.ACountR(~homPos)./(T.ACountF(~homPos)+T.ACountR(~homPos)) T.BCountF(~homPos)./(T.BCountF(~homPos)+T.BCountR(~homPos)) T.BCountR(~homPos)./(T.BCountF(~homPos)+T.BCountR(~homPos))],[],2),0.5);
+F.minPerStrand(aIdx)=min(min([T.ACountF(aIdx)./(T.ACountF(aIdx)+T.ACountR(aIdx)) T.ACountR(aIdx)./(T.ACountF(aIdx)+T.ACountR(aIdx))],[],2),0.5);
+F.minPerStrand(bIdx)=min(min([T.BCountF(bIdx)./(T.BCountF(bIdx)+T.BCountR(bIdx)) T.BCountR(bIdx)./(T.BCountF(bIdx)+T.BCountR(bIdx))],[],2),0.5);
+F.minBQ=min([T.AmeanBQ T.BmeanBQ],[],2);
 F.minBQ(aIdx)=T.AmeanBQ(aIdx);
 F.minBQ(bIdx)=T.BmeanBQ(bIdx);
-F.minMQ=NaN(size(F,1),1);
-F.minMQ(~homPos)=min([T.AmeanMQ(~homPos) T.BmeanMQ(~homPos)],[],2);
+F.minMQ=min([T.AmeanMQ T.BmeanMQ],[],2);
 F.minMQ(aIdx)=T.AmeanMQ(aIdx);
 F.minMQ(bIdx)=T.BmeanMQ(bIdx);
-F.maxPMM=NaN(size(F,1),1);
-F.maxPMM(~homPos)=max([T.AmeanPMM(~homPos) T.BmeanPMM(~homPos)],[],2);
+F.maxPMM=max([T.AmeanPMM T.BmeanPMM],[],2);
 F.maxPMM(aIdx)=T.AmeanPMM(aIdx);
 F.maxPMM(bIdx)=T.BmeanPMM(bIdx);
-F.seqEndDist=NaN(size(F,1),1);
-F.seqEndDist(~homPos)=min([T.AmeanReadPos(~homPos) inputParam.ReadLength-T.AmeanReadPos(~homPos) T.BmeanReadPos(~homPos) inputParam.ReadLength-T.BmeanReadPos(~homPos)],[],2);   
+F.seqEndDist=min([T.AmeanReadPos inputParam.ReadLength-T.AmeanReadPos T.BmeanReadPos inputParam.ReadLength-T.BmeanReadPos],[],2);   
 F.seqEndDist(aIdx)=min([T.AmeanReadPos(aIdx) inputParam.ReadLength-T.AmeanReadPos(aIdx)],[],2);   
 F.seqEndDist(bIdx)=min([T.BmeanReadPos(bIdx) inputParam.ReadLength-T.BmeanReadPos(bIdx)],[],2);
-F.strandDiff=zeros(size(F,1),1);
-F.strandDiff(~homPos)=max(abs(T.ACountF(~homPos)./(T.ACountF(~homPos)+T.ACountR(~homPos))-T.BCountF(~homPos)./(T.BCountF(~homPos)+T.BCountR(~homPos))),0);
-F.BQdiff=zeros(size(F,1),1);
-F.BQdiff(~homPos)=max(abs(T.AmeanBQ(~homPos)-T.BmeanBQ(~homPos)),0);
-F.MQdiff=zeros(size(F,1),1);
-F.MQdiff(~homPos)=max(abs(T.AmeanMQ(~homPos)-T.BmeanMQ(~homPos)),0);
-F.PMMdiff=zeros(size(F,1),1);
-F.PMMdiff(~homPos)=max(abs(T.AmeanPMM(~homPos)-T.BmeanPMM(~homPos)),0);
-F.ReadPosDiff=zeros(size(F,1),1);
-F.ReadPosDiff(~homPos)=max(abs((T.AmeanReadPos(~homPos)-T.BmeanReadPos(~homPos))),0);
+F.strandDiff=max(abs(T.ACountF./(T.ACountF+T.ACountR)-T.BCountF./(T.BCountF+T.BCountR)),0);
+F.strandDiff(homPos)=0;
+F.BQdiff=max(abs(T.AmeanBQ-T.BmeanBQ),0);
+F.BQdiff(homPos)=0;
+F.MQdiff=max(abs(T.AmeanMQ-T.BmeanMQ),0);
+F.MQdiff(homPos)=0;
+F.PMMdiff=max(abs(T.AmeanPMM-T.BmeanPMM),0);
+F.PMMdiff(homPos)=0;
+F.ReadPosDiff=max(abs((T.AmeanReadPos-T.BmeanReadPos)),0);
+F.ReadPosDiff(homPos)=0;
 F.posMapQC=-10*log10(T.PosMapQC+1E-6);
 F.posMapQC(T.PosMapQC<0)=0;
 F.posMapQC(~isfinite(T.PosMapQC))=inputParam.minPosQual;
-idx=getPosInRegionSplit([T.Chr T.Pos],[E.Chr E.StartPos E.EndPos+1],inputParam.blockSize);
-E.MapQC(E.MapQC<0)=1-1E6;
-F.exonMapQC=zeros(height(F),1);
-F.exonMapQC(~isnan(idx))=-10*log10(E.MapQC(idx(~isnan(idx)))+1E-6);
-F.Properties.VariableDescriptions={'Percent of Reads in Tumor Passing Quality Thresh', ...
+%idx=getPosInRegionSplit([T.Chr T.Pos],[E.Chr E.StartPos E.EndPos+1],inputParam.blockSize);
+F.exonMapQC=F.posMapQC;
+% E.MapQC(E.MapQC<0)=1-1E6;
+% F.exonMapQC=zeros(numVar,1);
+% F.exonMapQC(~isnan(idx))=-10*log10(E.MapQC(idx(~isnan(idx)))+1E-6);
+F.Properties.VariableDescriptions={'Chr','Pos','Percent of Reads in Tumor Passing Quality Thresh', ...
     'Percent of Reads in Normals Passing Quality Thresh', ...
     'Fraction of QC Reads in Tumor Supporting A or B Allele', ...
     'Fraction of QC Reads in Normals Supporting A or B Allele', ...
@@ -121,98 +120,59 @@ F.Properties.VariableDescriptions={'Percent of Reads in Tumor Passing Quality Th
 indelPos=T.A>4 | T.B>4;
 
 %%%find positions that pass strict quality thresholds
-goodPos(:,1)=F.TumorPerPassReads>inputParam.minPerReadPASS;
-goodPos(:,2)=F.normalPerReadPass>inputParam.minPerReadPASS;
-goodPos(:,3)=F.ABfrac>inputParam.minABFrac;
-goodPos(:,4)=F.normalABfrac>inputParam.minABFrac;
-goodPos(:,5)=F.minPerStrand>inputParam.minPercentStrand;
-goodPos(:,6)=F.minBQ>inputParam.minMeanBQ;
-goodPos(:,7)=F.minMQ>inputParam.minMeanMQ;
-goodPos(:,8)=F.maxPMM<inputParam.maxPMM;
-goodPos(:,9)=F.seqEndDist>inputParam.minSeqEndDist;
-goodPos(:,10)=F.strandDiff<inputParam.maxStrandDiff;
-goodPos(:,11)=F.BQdiff<inputParam.maxBQdiff;
-goodPos(:,12)=F.MQdiff<inputParam.maxMQdiff;
-goodPos(:,13)=F.PMMdiff<inputParam.maxPMMdiff;
-goodPos(:,14)=F.ReadPosDiff<inputParam.maxReadPosDiff;
-goodPos(:,15)=F.posMapQC>inputParam.minPosQual;
-goodPos(:,16)=F.exonMapQC>inputParam.minExonQual;
+F.goodPos=F.TumorPerPassReads>inputParam.minPerReadPASS;
+F.goodPos=[F.goodPos F.normalPerReadPass>inputParam.minPerReadPASS];
+F.goodPos=[F.goodPos F.ABfrac>inputParam.minABFrac];
+F.goodPos=[F.goodPos F.normalABfrac>inputParam.minABFrac];
+F.goodPos=[F.goodPos F.minPerStrand>inputParam.minPercentStrand];
+F.goodPos=[F.goodPos F.minBQ>inputParam.minMeanBQ];
+F.goodPos=[F.goodPos F.minMQ>inputParam.minMeanMQ];
+F.goodPos=[F.goodPos F.maxPMM<inputParam.maxPMM];
+F.goodPos=[F.goodPos F.seqEndDist>inputParam.minSeqEndDist];
+F.goodPos=[F.goodPos F.strandDiff<inputParam.maxStrandDiff];
+F.goodPos=[F.goodPos F.BQdiff<inputParam.maxBQdiff];
+F.goodPos=[F.goodPos F.MQdiff<inputParam.maxMQdiff];
+F.goodPos=[F.goodPos F.PMMdiff<inputParam.maxPMMdiff];
+F.goodPos=[F.goodPos F.ReadPosDiff<inputParam.maxReadPosDiff];
+F.goodPos=[F.goodPos F.posMapQC>inputParam.minPosQual];
+F.goodPos=[F.goodPos F.exonMapQC>inputParam.minExonQual];
 
 
 %%%find positions that fail minimal quality thresholds
-badPos(:,1)=F.TumorPerPassReads<inputParam.perPassReadReject;
-badPos(:,2)=F.normalPerReadPass<inputParam.perPassReadReject;
-badPos(:,3)=F.ABfrac<inputParam.ABfracReject;
-badPos(:,4)=F.normalABfrac<inputParam.ABfracReject;
-badPos(:,5)=F.minPerStrand<inputParam.perStrandReject;
-badPos(:,6)=F.minBQ<inputParam.meanBQReject;
-badPos(:,7)=F.minMQ<inputParam.meanMQReject;
-badPos(:,8)=F.maxPMM>inputParam.PMMReject;
-badPos(:,9)=F.seqEndDist<inputParam.seqEndDistReject;
-badPos(:,10)=F.strandDiff>inputParam.strandDiffReject;
-badPos(:,11)=F.BQdiff>inputParam.BQdiffReject;
-badPos(:,12)=F.MQdiff>inputParam.MQdiffReject;
-badPos(:,13)=F.PMMdiff>inputParam.PMMdiffReject;
-badPos(:,14)=F.ReadPosDiff>inputParam.ReadPosDiffReject;
-badPos(:,15)=F.posMapQC<inputParam.posQualReject;
-badPos(:,16)=F.exonMapQC<inputParam.exonQualReject;
+F.badPos=F.TumorPerPassReads<inputParam.perPassReadReject;
+F.badPos=[F.badPos F.normalPerReadPass<inputParam.perPassReadReject];
+F.badPos=[F.badPos F.ABfrac<inputParam.ABfracReject];
+F.badPos=[F.badPos F.normalABfrac<inputParam.ABfracReject];
+F.badPos=[F.badPos F.minPerStrand<inputParam.perStrandReject];
+F.badPos=[F.badPos F.minBQ<inputParam.meanBQReject];
+F.badPos=[F.badPos F.minMQ<inputParam.meanMQReject];
+F.badPos=[F.badPos F.maxPMM>inputParam.PMMReject];
+F.badPos=[F.badPos F.seqEndDist<inputParam.seqEndDistReject];
+F.badPos=[F.badPos F.strandDiff>inputParam.strandDiffReject];
+F.badPos=[F.badPos F.BQdiff>inputParam.BQdiffReject];
+F.badPos=[F.badPos F.MQdiff>inputParam.MQdiffReject];
+F.badPos=[F.badPos F.PMMdiff>inputParam.PMMdiffReject];
+F.badPos=[F.badPos F.ReadPosDiff>inputParam.ReadPosDiffReject];
+F.badPos=[F.badPos F.posMapQC<inputParam.posQualReject];
+F.badPos=[F.badPos F.exonMapQC<inputParam.exonQualReject];
 
 %%%classify SNVs as variants vs artifacts
-sampleSNV=F{~indelPos & ~homPos,:};
-trainingSNV=[F{sum(goodPos,2)>12 & sum(badPos,2)==0 & ~indelPos & ~homPos,:}; F{sum(badPos,2)>2 & ~indelPos & ~homPos,:}];
-groupSNV=[ones(sum(sum(goodPos,2)>12 & sum(badPos,2)==0 & ~indelPos & ~homPos),1); zeros(sum(sum(badPos,2)>2 & ~indelPos & ~homPos),1)];
-discrSNV=fitcdiscr(trainingSNV,groupSNV,'DiscrimType', 'pseudoQuadratic');
-[~,pArtifact(~indelPos & ~homPos,:)] = predict(discrSNV,sampleSNV);
+F.trainSNVvar=sum(F.goodPos,2)>12 & sum(F.badPos,2)==0 & ~indelPos & ~homPos;
+F.trainSNVart=sum(F.badPos,2)>2 & ~indelPos & ~homPos;
+F.trainSNV1=F.trainSNVart | F.trainSNVvar;
+trainSNV1=[F(F.trainSNV1,2:18) F(F.trainSNV1,"trainSNVvar")];
+%groupSNV1=F.trainSNVvar(F.trainSNV1);
+sampleSNV=F{:,2:18};
+% trainingSNV=[F{sum(F.goodPos,2)>12 & sum(F.badPos,2)==0 & ~indelPos & ~homPos,2:18}; F{sum(F.badPos,2)>2 & ~indelPos & ~homPos,2:18}];
+% groupSNV=[true(gather(sum(sum(goodPos,2)>12 & sum(badPos,2)==0 & ~indelPos & ~homPos)),1); false(gather(sum(sum(badPos,2)>2 & ~indelPos & ~homPos)),1)];
+discrSNV=fitcdiscr(trainSNV1,'trainSNVvar','DiscrimType', 'pseudoQuadratic');
+[~,pArtifact] = predict(discrSNV,sampleSNV);
 
-%%%classify SNVs as trusted vs low quality positions
-sampleSNV=F{~indelPos & ~homPos,:};
-trainingSNV=[F{sum(goodPos,2)==16 & ~indelPos & ~homPos,:}; F{sum(badPos,2)>0 & ~indelPos & ~homPos,:}];
-groupSNV=[ones(sum(sum(goodPos,2)==16 & ~indelPos & ~homPos),1); zeros(sum(sum(badPos,2)>0 & ~indelPos & ~homPos),1)];
-discrSNV=fitcdiscr(trainingSNV,groupSNV,'DiscrimType', 'pseudoQuadratic');
-[~,pTrust(~indelPos & ~homPos,:)] = predict(discrSNV,sampleSNV);
+F.trainSNVpass=sum(F.goodPos,2)==16 & ~indelPos & ~homPos;
+F.trainSNVlqc=sum(F.badPos,2)>0 & ~indelPos & ~homPos
+F.trainSNV2=F.trainSNVpass | F.trainSNVlqc;
+trainSNV2=[F(F.trainSNV2,2:18) F(F.trainSNV2,"trainSNVvar")];
+discrSNV2=fitcdiscr(trainSNV2,'trainSNVvar','DiscrimType', 'pseudoQuadratic');
+[~,pTrust] = predict(discrSNV2,sampleSNV);
 
-%%%classify homozygous positions as variants vs artifacts
-if(sum(homPos)>0)
-	sampleSNV=F{~indelPos & homPos,:};
-	trainingSNV=[F{sum(goodPos,2)>12 & sum(badPos,2)==0 & ~indelPos & homPos,:}; F{sum(badPos,2)>2 & ~indelPos & homPos,:}];
-	groupSNV=[ones(sum(sum(goodPos,2)>12 & sum(badPos,2)==0 & ~indelPos & homPos),1); zeros(sum(sum(badPos,2)>2 & ~indelPos & homPos),1)];
-	discrSNV=fitcdiscr(trainingSNV,groupSNV,'DiscrimType', 'pseudoQuadratic');
-	[~,pArtifact(~indelPos & homPos,:)] = predict(discrSNV,sampleSNV);
-end
-
-%%%classify homozygous positions as trusted vs low quality positions
-if(sum(homPos)>0)
-	sampleSNV=F{~indelPos & homPos,:};
-	trainingSNV=[F{sum(goodPos,2)==16 & ~indelPos & homPos,:}; F{sum(badPos,2)>0 & ~indelPos & homPos,:}];
-	groupSNV=[ones(sum(sum(goodPos,2)==16 & ~indelPos & homPos),1); zeros(sum(sum(badPos,2)>0 & ~indelPos & homPos),1)];
-	discrSNV=fitcdiscr(trainingSNV,groupSNV,'DiscrimType', 'pseudoQuadratic');
-	[~,pTrust(~indelPos & homPos,:)] = predict(discrSNV,sampleSNV);
-end
-
-%%%classify indels as variants vs artifacts
-finitePos=sum(isfinite(F{:,:}),2)==16;
-sampleIndel=F{indelPos & finitePos,:};
-trainingIndel=[F{sum(goodPos(:,[1:10 12:16]),2)==15 & indelPos & finitePos,:}; F{sum(badPos(:,[1:10 12:16]),2)>0 & indelPos & finitePos,:}];
-groupIndel=[ones(sum(sum(goodPos(:,[1:10 12:16]),2)==15 & indelPos & finitePos),1); zeros(sum(sum(badPos(:,[1:10 12:16]),2)>0 & indelPos & finitePos),1)];
-discrIndel=fitcdiscr(trainingIndel(:,[1:10 12:16]),groupIndel,'DiscrimType', 'pseudoQuadratic');
-[~,pTrust(indelPos & finitePos,:)] = predict(discrIndel,sampleIndel(:,[1:10 12:16]));
-
-%%%classify indels as trusted vs low quality positions
-finitePos=sum(isfinite(F{:,:}),2)==16;
-sampleIndel=F{indelPos & finitePos,:};
-trainingIndel=[F{sum(goodPos(:,[1:10 12:16]),2)>11 & sum(badPos,2)==0 &indelPos & finitePos,:}; F{sum(badPos(:,[1:10 12:16]),2)>2 & indelPos & finitePos,:}];
-groupIndel=[ones(sum(sum(goodPos(:,[1:10 12:16]),2)>11 & sum(badPos,2)==0 &indelPos & finitePos),1); zeros(sum(sum(badPos(:,[1:10 12:16]),2)>2 & indelPos & finitePos),1)];
-discrIndel=fitcdiscr(trainingIndel(:,[1:10 12:16]),groupIndel,'DiscrimType', 'pseudoQuadratic');
-[~,pArtifact(indelPos & finitePos,:)] = predict(discrIndel,sampleIndel(:,[1:10 12:16]));
-
-pTrust(indelPos & ~finitePos,:)=0;
-pArtifact(indelPos & ~finitePos,:)=0;
-
-pTrust=real(pTrust);
-pArtifact=real(pArtifact);
-
-F.goodPosSum=sum(goodPos,2);
-F.badPosSum=sum(badPos,2);
-F.Properties.VariableDescriptions(17)={'Number of PASS criteria met'};
-F.Properties.VariableDescriptions(18)={'Number of REJECT criteria met'};
 return;

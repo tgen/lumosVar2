@@ -39,11 +39,11 @@ function writeCloneSummary(segsTable,exonRD,Tcell,fIn,cloneId,inputParam,Filter,
 
 %%%fill in sample fractions for normal sample
 if inputParam.NormalSample>0
-    f=[zeros(length(Tcell),inputParam.numClones) ones(length(Tcell),1)];
-    tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
+    f=[zeros(inputParam.sampleCount,inputParam.numClones) ones(inputParam.sampleCount,1)];
+    tIdx=setdiff(1:inputParam.sampleCount,inputParam.NormalSample);
     f(tIdx,1:end-1)=[fIn];
 else
-    f=[fIn ones(length(Tcell),1)];
+    f=[fIn ones(inputParam.sampleCount,1)];
 end
 
 %%%create table of variant counts by clonal group
@@ -101,7 +101,7 @@ colors=linspecer(size(f,2)-1);
 subplot(3,2,1);
 hold on;
 for i=1:size(colors,1)
-    plot(f(:,i),'-','color',colors(i,:),'LineWidth',10*(sum(CNcount(i,:))+1)./sum(CNcount(:)));
+    plot(f(:,i),'-','color',colors(i,:),'LineWidth',10*(sum(CNcount(i,:))+1)./(sum(CNcount(:))+1));
     scatter([1:size(f,1)],f(:,i),400*(cloneTable.somaticDetected(i,:)+1)./sum(cloneTable.somaticPass+1),'MarkerEdgeColor',[0 0 0],'MarkerFaceColor',colors(i,:));
 end
 ylim([0 1]);
@@ -212,10 +212,10 @@ close(gcf);
 %%% group where lines are colored by mean read depth
 if(size(sampleFrac,2)>1)
     RD=zeros(height(Tcell{1}),1);
-    for i=1:length(Tcell)
+    for i=1:inputParam.sampleCount
         RD=RD+Tcell{i}.ReadDepthPass;
     end
-    RD=RD./length(Tcell);
+    RD=RD./inputParam.sampleCount;
     RDbin=ceil(log2(RD+1));
     cmap=jet(max(RDbin));
     

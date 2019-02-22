@@ -46,11 +46,12 @@ for i=1:size(Tcell,2)
     T=Tcell{i};
     posList=[posList; T.Chr T.Pos];
 end
-posList=unique(posList,'rows');
+posList=gather(unique(posList,'rows'));
 
 %%%read data from Tcell into matrices
-Amat=NaN(size(posList,1),size(Tcell,2));
-Bmat=NaN(size(posList,1),size(Tcell,2));
+numVar=size(posList,1);
+%Amat=NaN(numVar,size(Tcell,2));
+%Bmat=NaN(numVar,size(Tcell,2));
 for i=1:size(Tcell,2)
     T=Tcell{i};
     [lia,locb]=ismember([T.Chr T.Pos],posList,'rows');

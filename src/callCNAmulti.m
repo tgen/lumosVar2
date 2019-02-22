@@ -1,4 +1,4 @@
-function [NsegMax, MsegMax, Fout, log2FC, cnaIdx, nll] = callCNAmulti(hetPos,Tcell,exonRD,segsMerged,inputParam,param,dbPos,dbCounts)
+function [NsegMax, MsegMax, Fout, log2FC, cnaIdx, nll] = callCNAmulti(hetData,exonRD,segsMerged,inputParam,param,dbData,dbCounts)
 %callCNA - determine most likley copy number state for each segment
 %
 % Syntax: [NsegMax, MsegMax, Fout, log2FC, cnaIdx, nll] = callCNAmulti(hetPos,Tcell,exonRD,segsMerged,inputParam,param,dbPos,dbCounts)
@@ -45,38 +45,38 @@ function [NsegMax, MsegMax, Fout, log2FC, cnaIdx, nll] = callCNAmulti(hetPos,Tce
 
 %%% read inputs
 D=table();
-D.Chr=Tcell{1}.Chr(hetPos);
-D.Pos=Tcell{1}.Pos(hetPos);
+D.Chr=hetData{1}.Chr;
+D.Pos=hetData{1}.Pos;
 E=table();
 E.Chr=exonRD{1}(:,1);
 E.StartPos=exonRD{1}(:,2);
 E.EndPos=exonRD{1}(:,3);
-for i=1:length(Tcell)
-    D.ExpReadCount(:,i)=Tcell{i}.ControlRD(hetPos);
-    D.TotalReadCount(:,i)=max(Tcell{i}.ReadDepthPass(hetPos),Tcell{i}.AcountsComb(hetPos)+Tcell{i}.BcountsComb(hetPos));
-    D.MinorReadCount(:,i)=Tcell{i}.BcountsComb(hetPos);
+for i=1:inputParam.sampleCount
+    D.ExpReadCount(:,i)=hetData{i}.ControlRD;
+    D.TotalReadCount(:,i)=max(hetData{i}.ReadDepthPass,hetData{i}.AcountsComb+hetData{i}.BcountsComb);
+    D.MinorReadCount(:,i)=hetData{i}.BcountsComb;
     E.TumorRD(:,i)=exonRD{i}(:,4);
     E.NormalRD(:,i)=exonRD{i}(:,5);
 end
-CNAscale=param(1:length(Tcell));
-W=param(length(Tcell)+1:2*length(Tcell));
-tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
+CNAscale=param(1:inputParam.sampleCount);
+W=param(inputParam.sampleCount+1:2*inputParam.sampleCount);
+tIdx=setdiff(1:inputParam.sampleCount,inputParam.NormalSample);
 if inputParam.NormalSample>0
-    f=[zeros(length(Tcell),inputParam.numClones) ones(length(Tcell),1)];
-    f(tIdx,1:end-1)=reshape(param(2*length(Tcell)+1:end),[],inputParam.numClones);
+    f=[zeros(inputParam.sampleCount,inputParam.numClones) ones(inputParam.sampleCount,1)];
+    f(tIdx,1:end-1)=reshape(param(2*inputParam.sampleCount+1:end),[],inputParam.numClones);
 else
-    f=[reshape(param(2*length(Tcell)+1:end),[],inputParam.numClones) ones(length(Tcell),1)];
+    f=[reshape(param(2*inputParam.sampleCount+1:end),[],inputParam.numClones) ones(inputParam.sampleCount,1)];
 end
 if ~isfield(inputParam,'contamIdx')
     inputParam.contamIdx=[];
 end
 
 %%% find means accross segments
-meanTumorRDexon=NaN(size(segsMerged,1),length(Tcell));
-meanNormalRDexon=NaN(size(segsMerged,1),length(Tcell));
-meanTumorRD=NaN(size(segsMerged,1),length(Tcell));
-meanMinorRD=NaN(size(segsMerged,1),length(Tcell));
-for i=1:length(Tcell)
+meanTumorRDexon=NaN(size(segsMerged,1),inputParam.sampleCount);
+meanNormalRDexon=NaN(size(segsMerged,1),inputParam.sampleCount);
+meanTumorRD=NaN(size(segsMerged,1),inputParam.sampleCount);
+meanMinorRD=NaN(size(segsMerged,1),inputParam.sampleCount);
+for i=1:inputParam.sampleCount
     meanTumorRDexon(:,i)=getMeanInRegions([E.Chr E.StartPos],E.TumorRD(:,i),segsMerged)+1;
     meanNormalRDexon(:,i)=getMeanInRegions([E.Chr E.StartPos],E.NormalRD(:,i),segsMerged)+1;
     meanTumorRD(:,i)=getMeanInRegions([D.Chr D.Pos],D.TotalReadCount(:,i),segsMerged);
@@ -89,15 +89,15 @@ end
 meanTumorRDexon(isnan(meanTumorRDexon))=0;
 
 %%% calculate log2FC
-log2FC=NaN(size(segsMerged,1),length(Tcell));
-for i=1:length(Tcell)
+log2FC=NaN(size(segsMerged,1),inputParam.sampleCount);
+for i=1:inputParam.sampleCount
     log2FC(:,i)=log2((CNAscale(i)./2).*meanTumorRDexon(:,i)./(meanNormalRDexon(:,i)));
 end
 
 %%% find copy number per segment and clone
-NsegSample=NaN(size(segsMerged,1),size(f,2),length(Tcell));
+NsegSample=NaN(size(segsMerged,1),size(f,2),inputParam.sampleCount);
 for i=1:size(f,2)
-    for j=1:length(Tcell)
+    for j=1:inputParam.sampleCount
         if(f(j,i)==0)
             NsegSample(:,i,j)=2*ones(size(segsMerged,1),1);
         else
@@ -113,9 +113,9 @@ for i=1:size(f,2)
 end
 
 %%% find minor allele copy number per segment and clone
-MsegSample=NaN(size(segsMerged,1),size(f,2),length(Tcell),2);
+MsegSample=NaN(size(segsMerged,1),size(f,2),inputParam.sampleCount,2);
 for i=1:size(f,2)
-    for j=1:length(Tcell)
+    for j=1:inputParam.sampleCount
         if(f(j,i)==0)
             MsegSample(:,i,j,1)=ones(size(segsMerged,1),1);
             MsegSample(:,i,j,2)=ones(size(segsMerged,1),1);
@@ -161,14 +161,14 @@ end
     
 
 %%% lookup copy number for positions and exons
-idx=getPosInRegions([D.Chr D.Pos], segsMerged);
+idx=hetData{1}.idxSeg;
 Nmat=Nseg(idx,:,:);
 Mmat=Mseg(idx,:,:,:);
 germPriorMat=germPrior(idx,:,:);
 idxExon=getPosInRegions([E.Chr E.StartPos],segsMerged);
 NmatExon=Nseg(idxExon,:,:);
 germPriorExon=germPrior(idxExon,:,:);
-idxAll=getPosInRegions([Tcell{1}.Chr Tcell{1}.Pos], segsMerged);
+%idxAll=getPosInRegions([Tcell{1}.Chr Tcell{1}.Pos], segsMerged);
 
 
 %%% find prior of copy number
@@ -188,7 +188,7 @@ priorMinAllele(:,end,:,:)=germPriorMat;
 
 %%% find prior of clonal group sample fractions
 posCounts=accumarray(idxExon,E.EndPos-E.StartPos,[size(segsMerged,1) 1],[],NaN);
-pHet=sum(hetPos)./sum(posCounts);
+pHet=height(hetData{1})./sum(posCounts);
 priorCNAf=NaN(size(Mmat));
 fDiff=nan(size(f,2)-1,1);
 for i=1:size(f,2)-1
@@ -206,32 +206,32 @@ end
 
 %%%find number of somatic and germline variants called at database
 %%%positions
-corrSeg=NaN(size(Nseg,1),size(f,2),length(Tcell),2,2);
+corrSeg=NaN(size(Nseg,1),size(f,2),inputParam.sampleCount,2,2);
 hetCountOrig=hist(idx,1:size(segsMerged,1))';
-hetPosDB=zeros(length(hetPos),1,size(f,2),2);
+%hetPosDB=zeros(length(hetPos),1,size(f,2),2);
 exonCounts=hist(idxExon,1:size(segsMerged,1))';
-idxDB=getPosInRegionSplit([Tcell{1}.Chr(dbPos) Tcell{1}.Pos(dbPos)],segsMerged(:,1:3),inputParam.blockSize);
+idxDB=dbData.idxSeg;
+%idxDB=getPosInRegionSplit([Tcell{1}.Chr(dbPos) Tcell{1}.Pos(dbPos)],segsMerged(:,1:3),inputParam.blockSize);
 hetCount=NaN(size(Mseg));
 somDBcounts=NaN(size(Mseg));
 dbLik=NaN(size(Mseg));
-Tdb=cell(size(Tcell));
+%Tdb=cell(size(Tcell));
 if inputParam.NormalSample<1
     for i=1:size(f,2)
         for k=1:2
             for m=1:2
-                for j=1:length(Tcell)
-                    T=Tcell{j}(dbPos,:);
-                    T.NumCopies=Nseg(idxDB,i,k);
-                    T.MinAlCopies=Mseg(idxDB,i,k,m);
-                    T.cnaF=f(j,i)*ones(height(T),1);
-                    T.W=W(j)*ones(height(T),1);
-                    Tdb{j}=T;
+                dbData.N=Nseg(idxDB,i,k);
+                dbData.M=Mseg(idxDB,i,k);
+                for j=1:inputParam.sampleCount
+                    dbData.(strcat('cnaF_',num2str(j-1)))=f(j,i)*ones(height(dbData),1);
+		    dbData.(strcat('W_',num2str(j-1)))=W(j)*ones(height(dbData),1);
                 end
-                postComb=jointSNV(Tdb, f(tIdx,1:end-1), W, inputParam);
+                postComb=jointSNV(dbData, f(tIdx,1:end-1), W, inputParam);
                 somDBpos=postComb.Somatic>inputParam.pSomaticThresh;
-                [lia,locb]=ismember([Tcell{1}.Chr Tcell{1}.Pos],[postComb.Chr postComb.Pos],'rows');
-                hetPosDB(lia,i,k,m)=postComb.Het(locb(lia))>inputParam.pGermlineThresh;
-                hetCount(:,i,k,m)=hist(idxAll(hetPosDB(:,i,k,m)==1),1:size(segsMerged),1);
+                hetPosDB=postComb.Het>inputParam.pGermlineThresh;
+                %[lia,locb]=ismember([Tcell{1}.Chr Tcell{1}.Pos],[postComb.Chr postComb.Pos],'rows');
+                %hetPosDB(lia,i,k,m)=postComb.Het(locb(lia))>inputParam.pGermlineThresh;
+                hetCount(:,i,k,m)=hist(idxDB(hetPosDB==1),1:size(segsMerged),1);
                 somDBcounts(:,i,k,m)=hist(idxDB(somDBpos),1:size(segsMerged,1));
                 dbLik(:,i,k,m)=1-binocdf(somDBcounts(:,i,k,m),dbCounts,inputParam.priorSomaticSNV);
             end
@@ -240,17 +240,17 @@ if inputParam.NormalSample<1
 end
 
 %%% find likelihoods of read depths and allele fractions
-expReadCount=NaN(height(E),size(f,2),length(Tcell),2);
-depthlik=NaN(height(E),size(f,2),length(Tcell),2);
+expReadCount=NaN(height(E),size(f,2),inputParam.sampleCount,2);
+depthlik=NaN(height(E),size(f,2),inputParam.sampleCount,2);
 corr=NaN(size(Mmat));
-hetlik=NaN(height(D),size(f,2),length(Tcell),2,2);
-pHetDetect=NaN(size(segsMerged,1),size(f,2),length(Tcell),2,2);
-hetCountLik=NaN(size(segsMerged,1),size(f,2),length(Tcell),2,2);
-hetExp=NaN(size(segsMerged,1),size(f,2),length(Tcell),2,2);
-segLik=NaN(size(segsMerged,1),size(f,2),length(Tcell),2,2);
+hetlik=NaN(height(D),size(f,2),inputParam.sampleCount,2,2);
+pHetDetect=NaN(size(segsMerged,1),size(f,2),inputParam.sampleCount,2,2);
+hetCountLik=NaN(size(segsMerged,1),size(f,2),inputParam.sampleCount,2,2);
+hetExp=NaN(size(segsMerged,1),size(f,2),inputParam.sampleCount,2,2);
+segLik=NaN(size(segsMerged,1),size(f,2),inputParam.sampleCount,2,2);
 for i=1:size(f,2)
     for k=1:2
-        for j=1:length(Tcell)
+        for j=1:inputParam.sampleCount
             expReadCount(:,i,j,k)=f(j,i)*E.NormalRD(:,j).*NmatExon(:,i,k)./CNAscale(j)+(1-f(j,i))*E.NormalRD(:,j)*2./CNAscale(j);
             depthlik(:,i,j,k)=poisspdf(round(E.TumorRD(:,j)),round(expReadCount(:,i,j,k)))+inputParam.minLik;
             for m=1:2
@@ -316,8 +316,8 @@ for i=1:size(f,2)
     end
 end
 
-Fout=NaN(length(cnaIdx),length(Tcell));
-for j=1:length(Tcell)
+Fout=NaN(length(cnaIdx),inputParam.sampleCount);
+for j=1:inputParam.sampleCount
     Fout(:,j)=f(j,cnaIdx);
     %Wout(:,j)=W(j,cnaIdx);
 end

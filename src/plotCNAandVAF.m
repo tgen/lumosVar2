@@ -36,11 +36,11 @@ function plotCNAandVAF(exonRD,segsTable,CNAscale,fIn,Tcell,somPos,hetPos,cloneId
 
 %%%fill in sample fractions for normal sample
 if inputParam.NormalSample>0
-    f=[zeros(length(Tcell),inputParam.numClones) ones(length(Tcell),1)];
-    tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
+    f=[zeros(inputParam.sampleCount,inputParam.numClones) ones(inputParam.sampleCount,1)];
+    tIdx=setdiff(1:inputParam.sampleCount,inputParam.NormalSample);
     f(tIdx,1:end-1)=[fIn];
 else
-   f=[fIn ones(length(Tcell),1)];
+   f=[fIn ones(inputParam.sampleCount,1)];
 end
 
 %%% transform chromosome coord to linear coord
@@ -68,14 +68,14 @@ end
 
 
 %%% calculate log2FC
-for i=1:length(Tcell)
+for i=1:inputParam.sampleCount
     log2FC(:,i)=log2((CNAscale(i)./2).*exonRD{i}(:,4)./exonRD{i}(:,5));
     Nlog2R(:,i)=log2(segsTable.F(:,i).*segsTable.N/2+(1-segsTable.F(:,i)));
 end
 
 %%% plot exon log2FC
-for j=1:length(Tcell)
-    subplot(length(Tcell)+1,5,[j*5-4 j*5-1]);
+for j=1:inputParam.sampleCount
+    subplot(inputParam.sampleCount+1,5,[j*5-4 j*5-1]);
     for k=1:2:length(chrNum)
 	i=chrNum(k);
         idx=exonRD{j}(:,1)==i;
@@ -94,8 +94,8 @@ end
 %%%make sample fraction bar plots
 colors=linspecer(size(f,2)-1);
 colors=[colors; [0 0 0]];
-for j=1:length(Tcell)
-    subplot(length(Tcell)+1,5,j*5);
+for j=1:inputParam.sampleCount
+    subplot(inputParam.sampleCount+1,5,j*5);
     hold on;
     for i=1:size(f,2)-1
         b=bar(i,f(j,i));
@@ -108,8 +108,8 @@ end
 
 %%% plot fitted segments
 samples=regexp(inputParam.sampleNames,',','split');
-for j=1:length(Tcell)
-    subplot(length(Tcell)+1,5,[j*5-4 j*5-1])
+for j=1:inputParam.sampleCount
+    subplot(inputParam.sampleCount+1,5,[j*5-4 j*5-1])
     plot(reshape(segCoord',[],1),reshape(ones(2,1)*Nlog2R(:,j)',[],1),'k','linewidth',1);
     hold on;
     for i=1:size(f,2)
@@ -124,7 +124,7 @@ for j=1:length(Tcell)
 end
 
 %%%plot integer copy number
-subplot(length(Tcell)+1,5,[5*(length(Tcell)+1)-4 5*(length(Tcell)+1)-1])
+subplot(inputParam.sampleCount+1,5,[5*(inputParam.sampleCount+1)-4 5*(inputParam.sampleCount+1)-1])
 hold on;
 plot(reshape(segCoord',[],1),reshape(log2(ones(2,1)*segsTable.N'+1),[],1),'k','linewidth',1);
 for i=1:size(f,2)
@@ -151,11 +151,11 @@ close(gcf);
 
 
 %%% plot het AF
-for j=1:length(Tcell)
-    subplot(length(Tcell)+1,5,[j*5-4 j*5-1])
+for j=1:inputParam.sampleCount
+    subplot(inputParam.sampleCount+1,5,[j*5-4 j*5-1])
     T=Tcell{j};
-    bIdx=T.ApopAFcomb>=T.BpopAFcomb;
-    aIdx=T.ApopAFcomb<T.BpopAFcomb;
+    bIdx=T.ApopAF>=T.BpopAF;
+    aIdx=T.ApopAF<T.BpopAF;
     AF(bIdx)=(T.BCountF(bIdx)+T.BCountR(bIdx))./T.ReadDepthPass(bIdx);
     AF(aIdx)=(T.ACountF(aIdx)+T.ACountR(aIdx))./T.ReadDepthPass(aIdx);
     for k=1:2:length(chrNum)
@@ -170,12 +170,12 @@ for j=1:length(Tcell)
 end
 
 %%% plot somatic AF
-for j=1:length(Tcell)
-    subplot(length(Tcell)+1,5,[j*5-4 j*5-1])
+for j=1:inputParam.sampleCount
+    subplot(inputParam.sampleCount+1,5,[j*5-4 j*5-1])
     hold on;
     T=Tcell{j};
-    bIdx=T.ApopAFcomb>=T.BpopAFcomb;
-    aIdx=T.ApopAFcomb<T.BpopAFcomb;
+    bIdx=T.ApopAF>=T.BpopAF;
+    aIdx=T.ApopAF<T.BpopAF;
     AF(bIdx)=(T.BCountF(bIdx)+T.BCountR(bIdx))./T.ReadDepthPass(bIdx);
     AF(aIdx)=(T.ACountF(aIdx)+T.ACountR(aIdx))./T.ReadDepthPass(aIdx);
     for i=1:size(f,2)
@@ -188,8 +188,8 @@ for j=1:length(Tcell)
 end
 
 %%%make sample fraction bar plots
-for j=1:length(Tcell)
-    subplot(length(Tcell)+1,5,j*5);
+for j=1:inputParam.sampleCount
+    subplot(inputParam.sampleCount+1,5,j*5);
     hold on;
     for i=1:size(f,2)-1
         b=bar(i,f(j,i));
@@ -201,14 +201,14 @@ for j=1:length(Tcell)
 end
 
 %%%find expected hetAF per segment
-for j=1:length(Tcell)
+for j=1:inputParam.sampleCount
     cnCorr(:,j)=(segsTable.F(:,j).*segsTable.M+(1-segsTable.F(:,j)))./(segsTable.F(:,j).*segsTable.N+2*(1-segsTable.F(:,j)));
     cnCorr(segsTable.N==0,j)=0.5;
 end
 
 %%% plot segment expected het AF
-for j=1:length(Tcell)
-    subplot(length(Tcell)+1,5,[j*5-4 j*5-1])
+for j=1:inputParam.sampleCount
+    subplot(inputParam.sampleCount+1,5,[j*5-4 j*5-1])
     for i=1:size(f,2)
         pos=segsTable.cnaIdx==i & (segsTable.N~=2 | segsTable.M~=1);
         plot(segCoord(pos,:)',ones(2,1)*cnCorr(pos,j)','Color','k','linewidth',2);
@@ -222,7 +222,7 @@ for j=1:length(Tcell)
 end
 
 %%% plot M/N (expected hetAF for 100% tumor)
-subplot(length(Tcell)+1,5,[5*(length(Tcell)+1)-4 5*(length(Tcell)+1)-1])
+subplot(inputParam.sampleCount+1,5,[5*(inputParam.sampleCount+1)-4 5*(inputParam.sampleCount+1)-1])
 hold on;
 for i=1:size(f,2)
     pos=segsTable.cnaIdx==i & (segsTable.N~=2 | segsTable.M~=1);

@@ -1,8 +1,8 @@
-function segsTableCond=writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputParam)
+function segsTableCond=writeSegVCF(segsTable,exonRD,CNAscale,hetData,inputParam)
 %writeSegVCF - writes VCF for copy number alterations to file - name/path
 %specified by inputParam.outName, as well as table of data by exon
 %
-% Syntax: segsTableCond=writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputParam)
+% Syntax: segsTableCond=writeSegVCF(segsTable,exonRD,CNAscale,hetData,hetPos,inputParam)
 %
 % Inputs:
 %   segsTable: matrix of segment data with columns:
@@ -11,7 +11,7 @@ function segsTableCond=writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputP
 %   exonRD: cell array oi matrices of exon data with columns: 1-'Chr',2-'StartPos',3-'EndPos',
 %       4-'TumorRD',5-'NormalRD',6-'MapQC',7-'perReadPass',8-'abFrac'
 %   CNAscale: centering parameter
-%   Tcell - cell array of tables with length equal to the number of bams,
+%   hetData - cell array of tables with length equal to the number of bams,
 %       each table must have the following columns:  {'Chr','Pos', 'ReadDepthPass',
 %       'BCountsComb'}
 %   hetPos - vector of positions in of heterozygous positions 
@@ -41,13 +41,17 @@ fout=fopen([inputParam.outName '.lumosVarSeg.vcf'],'w');
 fprintf(fout,'%s','##fileformat=VCFv4.2\n');
 fprintf(fout,['##fileData=' datestr(clock) '\n']);
 inputFields=fieldnames(inputParam);
+
 for i=1:length(inputFields)
     if(isnumeric(inputParam.(inputFields{i})))
         fprintf(fout,['##INPUT=<' inputFields{i} '=' mat2str(inputParam.(inputFields{i})') '>\n']);
+    elseif(iscell(inputParam.(inputFields{i})))
+        fprintf(fout,['##INPUT=<' inputFields{i} '=' strjoin(inputParam.(inputFields{i}),',') '>\n']);       
     else
         fprintf(fout,['##INPUT=<' inputFields{i} '=' inputParam.(inputFields{i}) '>\n']);
     end
 end
+
 fprintf(fout,['##INFO=<ID=CN,Number=1,Type=Integer,Description="Copy Number">\n']);
 fprintf(fout,['##INFO=<ID=MACN,Number=1,Type=Integer,Description="Min Allele Copy Number">\n']);
 fprintf(fout,['##INFO=<ID=SVLEN,Number=1,Type=Float,Description="Length of Segment">\n']);
@@ -78,7 +82,7 @@ end
 for i=1:length(exonRD)
     meanTumorRDexon(:,i)=getMeanInRegions(exonRD{i}(:,1:2),exonRD{i}(:,4),segsTableCond{:,1:3});
     meanNormalRDexon(:,i)=getMeanInRegions(exonRD{i}(:,1:2),exonRD{i}(:,5),segsTableCond{:,1:3});
-    meanBAF(:,i)=getMeanInRegions([Tcell{i}.Chr(hetPos) Tcell{i}.Pos(hetPos)],Tcell{i}.BcountsComb(hetPos)./Tcell{i}.ReadDepthPass(hetPos),segsTableCond{:,1:3});
+    meanBAF(:,i)=getMeanInRegions([hetData{i}.Chr hetData{i}.Pos],hetData{i}.BcountsComb./hetData{i}.ReadDepthPass,segsTableCond{:,1:3});
 end
 
 %%% calculate log2FC
@@ -91,7 +95,7 @@ segsTableCond.meanBAF=meanBAF;
 %%%get exon and het counts per segment
 idx=getPosInRegions(exonRD{1}(:,1:2),segsTableCond{:,1:3});
 exonCounts=hist(idx,1:size(segsTableCond,1));
-idxHet=getPosInRegions([Tcell{1}.Chr(hetPos) Tcell{1}.Pos(hetPos)],segsTableCond{:,1:3});
+idxHet=getPosInRegions([hetData{1}.Chr hetData{1}.Pos],segsTableCond{:,1:3});
 hetCounts=hist(idxHet,1:size(segsTableCond,1));
 segsTableCond.exonCounts=exonCounts';
 segsTableCond.hetCounts=hetCounts';

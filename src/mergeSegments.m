@@ -1,4 +1,4 @@
-function mergeSeg=mergeSegments(segs,exonRD,Tcell,hetPos,inputParam)
+function mergeSeg=mergeSegments(segs,exonRD,hetData,inputParam)
 %segmentData - takes segments from different samples and data types and
 %merges them
 %
@@ -39,9 +39,6 @@ function mergeSeg=mergeSegments(segs,exonRD,Tcell,hetPos,inputParam)
 segPosList=[];
 for i=1:length(segs)
     segPosList=[segPosList; segs{i}(:,1:2); segs{i}(:,[1 3])];
-end
-for i=1:length(Tcell)
-    hetData{i}=Tcell{i}(hetPos,:);
 end
 segPosList=sortrows(segPosList,[1 2]);
 segPosList=unique(segPosList,'rows');

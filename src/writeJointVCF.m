@@ -1,4 +1,4 @@
-function sampleFrac=writeJointVCF(Tcell,P,fIn,cloneId,alleleId,Filter,somaticDetected,trustScore,artifactScore,inputParam)
+function sampleFrac=writeJointVCF(Tcell,P,fIn,cloneId,alleleId,Filter,somaticDetected,trustScore,inputParam,name)
 %writeJointVCF - writes snv/indel VCF for joint lumosVar calls, outputs
 %table of sample fractions
 %
@@ -7,8 +7,8 @@ function sampleFrac=writeJointVCF(Tcell,P,fIn,cloneId,alleleId,Filter,somaticDet
 % Inputs:
 %    Tcell - cell array of tables with length equal to the number of bams,
 %       each table must have the following columns:  {'Chr','Pos', 'ReadDepthPass',
-%       'RefComb','AComb','AcountsComb','AmeanBQ','BComb','BCountsComb','BmeanBQ',
-%       'ApopAFcomb','BpopAFcomb','CosmicCount','PosMapQC'};
+%       'Ref','A','AcountsComb','AmeanBQ','B','BCountsComb','BmeanBQ',
+%       'ApopAF','BpopAF','CosmicCount','PosMapQC'};
 %   P: table of probabilites with the following variables: 'Somatic',
 %      'SomaticPair', 'Het', 'Hom', 'trust', 'artifact', 'DataSomatic',
 %       'DataHom', 'NonDip'
@@ -44,15 +44,18 @@ f=zeros(length(Tcell),inputParam.numClones);
 tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
 f(tIdx,1:end)=reshape(fIn,[],inputParam.numClones);
 
-fout=fopen([inputParam.outName '.lumosVarSNV.vcf'],'w');
+fout=fopen([inputParam.outName '.' name '.lumosVarSNV.vcf'],'w');
 
 %%%print VCF header
 fprintf(fout,'##fileformat=VCFv4.2\n');
 fprintf(fout,['##fileData=' datestr(clock) '\n']);
 inputFields=fieldnames(inputParam);
+
 for i=1:length(inputFields)
     if(isnumeric(inputParam.(inputFields{i})))
         fprintf(fout,['##INPUT=<' inputFields{i} '=' mat2str(inputParam.(inputFields{i})') '>\n']);
+    elseif(iscell(inputParam.(inputFields{i})))
+        fprintf(fout,['##INPUT=<' inputFields{i} '=' strjoin(inputParam.(inputFields{i}),',') '>\n']);       
     else
         fprintf(fout,['##INPUT=<' inputFields{i} '=' inputParam.(inputFields{i}) '>\n']);
     end
@@ -62,13 +65,12 @@ for i=1:size(f,2)
     for j=1:size(f,1)
         outString=[outString ',f' num2str(j) '=' num2str(f(j,i))];
     end
-    outString=[outString ',PassCount=' num2str(sum(P.Somatic(:,1)>inputParam.pSomaticThresh & max(P.trust,[],2)>inputParam.pGoodThresh & min([Tcell{1}.ApopAFcomb Tcell{1}.BpopAFcomb],[],2)<inputParam.maxSomPopFreq & cloneId(:,1)==i))];
+    outString=[outString ',PassCount=' num2str(sum(P.Somatic(:,1)>inputParam.pSomaticThresh & max(P.trust,[],2)>inputParam.pGoodThresh & min([Tcell{1}.ApopAF Tcell{1}.BpopAF],[],2)<inputParam.maxSomPopFreq & cloneId(:,1)==i))];
     fprintf(fout,[outString '\n']);
 end
 fprintf(fout,['##INFO=<ID=A,Number=1,Type=String,Description="Major Allele Base">\n']);
 fprintf(fout,['##INFO=<ID=B,Number=1,Type=String,Description="Minor Allele Base">\n']);
 fprintf(fout,['##INFO=<ID=JPT,Number=1,Type=Float,Description="Phred Scaled Joint Posterior Probability the Call can be Trusted">\n']);
-fprintf(fout,['##INFO=<ID=JPA,Number=1,Type=Float,Description="Phred Scaled Joint Posterior Probability the Position is an Artifact">\n']);
 fprintf(fout,['##INFO=<ID=JPS,Number=1,Type=Float,Description="Joint Posterior Probability of Somatic Mutation">\n']);
 fprintf(fout,['##INFO=<ID=JPGAB,Number=1,Type=Float,Description="Joint Posterior Probability of No Somatic Mutation and Position is Germline AB">\n']);
 fprintf(fout,['##INFO=<ID=JPGAA,Number=1,Type=Float,Description="Joint Posterior Probability of No Somatic Mutation and Position is Germline AA">\n']);
@@ -97,7 +99,6 @@ fprintf(fout,['##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allele Depths"
 fprintf(fout,['##FORMAT=<ID=FT,Number=.,Type=String,Description="Filters">\n']);
 fprintf(fout,['##FORMAT=<ID=PPS,Number=1,Type=Float,Description="Phred Scaled Posterior Probability Position is Somatic Based on Paired Analysis with Control">\n']);
 fprintf(fout,['##FORMAT=<ID=PT,Number=1,Type=Float,Description="Phred Scaled Posterior Probability Position is Trusted">\n']);
-fprintf(fout,['##FORMAT=<ID=PA,Number=1,Type=Float,Description="Phred Scaled Posterior Probability Position is Artifact">\n']);
 fprintf(fout,['##FORMAT=<ID=PLS,Number=1,Type=Float,Description="Phred Scaled Likelihood Somatic">\n']);
 fprintf(fout,['##FORMAT=<ID=PL,Number=G,Type=Float,Description="Phred Scaled Likelihood of Germline Genotypes">\n']);
 fprintf(fout,['##FORMAT=<ID=PLND,Number=1,Type=Float,Description="Phred Scaled Likelihood of NonDiploid">\n']);
@@ -106,7 +107,7 @@ fprintf(fout,['##FORMAT=<ID=CNF,Number=1,Type=Float,Description="Fraction contai
 
 %%% get reference and alternate bases
 T=Tcell{1};
-RefNT=int2ntIndels(T.RefComb);
+RefNT=int2ntIndels(T.Ref);
 delPos=cellfun('length',RefNT)>1;
 longDelPos=strncmp(RefNT,'L',1);
 svLen=zeros(height(T),1);
@@ -115,12 +116,12 @@ svLen(longDelPos)=-1*str2double(regexprep(RefNT(longDelPos),'L',''));
 endPos=T.Pos-svLen;
 RefNT(longDelPos)={'N'};
 AltNT=repmat({'.'},height(T),1);
-AltNT(T.RefComb~=T.Acomb & T.RefComb~=T.Bcomb,:)=cellstr(strcat(int2ntIndels(T.Acomb(T.RefComb~=T.Acomb & T.RefComb~=T.Bcomb)),',', int2ntIndels(T.Bcomb(T.RefComb~=T.Acomb & T.RefComb~=T.Bcomb))));
-AltNT(T.RefComb==T.Acomb & P.Hom(:,1)<=0.5,:)=cellstr(int2ntIndels(T.Bcomb(T.RefComb==T.Acomb & P.Hom(:,1)<=0.5)));
-AltNT(T.RefComb==T.Bcomb,:)=cellstr(int2ntIndels(T.Acomb(T.RefComb==T.Bcomb)));
-AltNT(T.RefComb==T.Acomb & P.Hom(:,1)>0.5,:)={'.'};
-AltNT(strncmp('SomaticPair',Filter,10) & T.RefComb==T.Acomb,:)=int2ntIndels(T.Bcomb(strncmp('SomaticPair',Filter,10) & T.RefComb==T.Acomb,:));
-AltNT(strncmp('SomaticPair',Filter,10) & T.RefComb~=T.Acomb,:)=int2ntIndels(T.Acomb(strncmp('SomaticPair',Filter,10) & T.RefComb~=T.Acomb,:));
+AltNT(T.Ref~=T.A & T.Ref~=T.B,:)=cellstr(strcat(int2ntIndels(T.A(T.Ref~=T.A & T.Ref~=T.B)),',', int2ntIndels(T.B(T.Ref~=T.A & T.Ref~=T.B))));
+AltNT(T.Ref==T.A & P.Hom(:,1)<=0.5,:)=cellstr(int2ntIndels(T.B(T.Ref==T.A & P.Hom(:,1)<=0.5)));
+AltNT(T.Ref==T.B,:)=cellstr(int2ntIndels(T.A(T.Ref==T.B)));
+AltNT(T.Ref==T.A & P.Hom(:,1)>0.5,:)={'.'};
+AltNT(strncmp('SomaticPair',Filter,10) & T.Ref==T.A,:)=int2ntIndels(T.B(strncmp('SomaticPair',Filter,10) & T.Ref==T.A,:));
+AltNT(strncmp('SomaticPair',Filter,10) & T.Ref~=T.A,:)=int2ntIndels(T.A(strncmp('SomaticPair',Filter,10) & T.Ref~=T.A,:));
 insPos=cellfun('length',AltNT)>1;
 AltNT(longDelPos,:)={'<DEL>'};
 svLen(insPos)=cellfun(@(x) max(cellfun('length',strsplit(x,','))),AltNT(insPos))-1;
@@ -129,17 +130,22 @@ svLen(longInsPos)=str2double(regexprep(AltNT(longInsPos),'L',''));
 AltNT(longInsPos)={'<INS>'};
 
 %%%calculate quality scores
-Qual=-10*log10(1-geomean(max(min([trustScore 1-artifactScore max([P.Het P.Hom P.Somatic P.NonDip],[],2)],1-inputParam.minLik),inputParam.minLik),2));
+Qual=-10*log10(1-geomean(max(min([trustScore max([P.Het P.Hom P.Somatic P.NonDip],[],2)],1-inputParam.minLik),inputParam.minLik),2));
+%Qual=-10*log10(1-geomean(max(min([trustScore 1-artifactScore max([P.Het P.Hom P.Somatic P.NonDip],[],2)],1-inputParam.minLik),inputParam.minLik),2));
 
 %%%construct info field
-Info=cellstr(strcat('JPT=',strsplit(sprintf('%-.1f\n',real(-10*log10(1-trustScore))))',';JPA=',strsplit(sprintf('%-.1f\n',real(-10*log10(1-artifactScore))))',';JPS=',strsplit(sprintf('%-.5f\n',P.Somatic(:,1)))',';JPGAB=',strsplit(sprintf('%-.5f\n',P.Het(:,1)))',';JPGAA=',strsplit(sprintf('%-.5f\n',P.Hom(:,1)))',';JPND=',strsplit(sprintf('%-.5f\n',P.NonDip(:,1)))'));
-Info=strcat(Info,';A=',[int2ntIndels(T.Acomb);{''}],';B=',[int2ntIndels(T.Bcomb); {''}]);
-Info=strcat(Info,';ApopAF=',strsplit(sprintf('%-.5f\n',T.ApopAFcomb))',';BpopAF=',strsplit(sprintf('%-.5f\n',T.BpopAFcomb))',';CosmicCount=',strsplit(sprintf('%-.0f\n',T.CosmicCount))');
+Info=cellstr(strcat('JPT=',strsplit(sprintf('%-.1f\n',real(-10*log10(1-trustScore))))',';JPS=',strsplit(sprintf('%-.5f\n',P.Somatic(:,1)))',';JPGAB=',strsplit(sprintf('%-.5f\n',P.Het(:,1)))',';JPGAA=',strsplit(sprintf('%-.5f\n',P.Hom(:,1)))',';JPND=',strsplit(sprintf('%-.5f\n',P.NonDip(:,1)))'));
+Info=strcat(Info,';A=',[int2ntIndels(T.A);{''}],';B=',[int2ntIndels(T.B); {''}]);
+Info=strcat(Info,';ApopAF=',strsplit(sprintf('%-.5f\n',T.ApopAF))',';BpopAF=',strsplit(sprintf('%-.5f\n',T.BpopAF))',';CosmicCount=',strsplit(sprintf('%-.0f\n',T.CosmicCount))');
 Info=strcat(Info,';CloneId=',strsplit(sprintf('%d\n',cloneId(:,1)))');
-Info([delPos; true])=strcat(Info([delPos; true]),';END=',strsplit(sprintf('%d\n',endPos(delPos)))');
-Info([insPos; true])=strcat(Info([insPos; true]),';SVLEN=',strsplit(sprintf('%d\n',svLen(insPos)))');
-cnPos=T.NumCopies~=2 | T.MinAlCopies~=1;
-Info([cnPos; true])=strcat(Info([cnPos; true]),';CN=',strsplit(sprintf('%d\n',T.NumCopies(cnPos)))',';MACN=',strsplit(sprintf('%d\n',T.MinAlCopies(cnPos)))');
+if(sum(delPos)>0)
+    Info([delPos; true])=strcat(Info([delPos; true]),';END=',strsplit(sprintf('%d\n',endPos(delPos)))');
+end
+if(sum(insPos)>0)
+    Info([insPos; true])=strcat(Info([insPos; true]),';SVLEN=',strsplit(sprintf('%d\n',svLen(insPos)))');
+end
+cnPos=T.N~=2 | T.M~=1;
+Info([cnPos; true])=strcat(Info([cnPos; true]),';CN=',strsplit(sprintf('%d\n',T.N(cnPos)))',';MACN=',strsplit(sprintf('%d\n',T.M(cnPos)))');
 Info=Info(1:height(T));
 
 %%%determine genotypes
@@ -148,25 +154,25 @@ if inputParam.NormalSample>0
     bIdx=Tcell{inputParam.NormalSample}.AcountsComb>=Tcell{inputParam.NormalSample}.BcountsComb;
     aIdx=Tcell{inputParam.NormalSample}.AcountsComb<Tcell{inputParam.NormalSample}.BcountsComb;    
 else
-    bIdx=Tcell{1}.ApopAFcomb>=Tcell{1}.BpopAFcomb;
-    aIdx=Tcell{1}.ApopAFcomb<Tcell{1}.BpopAFcomb;
+    bIdx=Tcell{1}.ApopAF>=Tcell{1}.BpopAF;
+    aIdx=Tcell{1}.ApopAF<Tcell{1}.BpopAF;
 end
-gt(bIdx & T.Acomb==T.RefComb,1)='0';
-gt(bIdx & T.Acomb~=T.RefComb,1)='1';
-gt(aIdx & T.Bcomb==T.RefComb,1)='0';
-gt(aIdx & T.Bcomb~=T.RefComb & T.Acomb==T.RefComb,1)='1';
-gt(aIdx & T.Acomb~=T.RefComb & T.Bcomb~=T.RefComb,1)='2';
-gt(bIdx & T.Acomb==T.RefComb,2)='1';
-gt(bIdx & T.Bcomb==T.RefComb,2)='0';
-gt(bIdx & T.Acomb~=T.RefComb & T.Bcomb~=T.RefComb,2)='2';
-gt(aIdx & T.Acomb==T.RefComb,2)='0';
-gt(aIdx & T.Bcomb==T.RefComb,2)='1';
-gt(aIdx & T.Acomb~=T.RefComb & T.Bcomb~=T.RefComb,2)='1';
-copyList=unique([T.NumCopies T.MinAlCopies],'rows');
+gt(bIdx & T.A==T.Ref,1)='0';
+gt(bIdx & T.A~=T.Ref,1)='1';
+gt(aIdx & T.B==T.Ref,1)='0';
+gt(aIdx & T.B~=T.Ref & T.A==T.Ref,1)='1';
+gt(aIdx & T.A~=T.Ref & T.B~=T.Ref,1)='2';
+gt(bIdx & T.A==T.Ref,2)='1';
+gt(bIdx & T.B==T.Ref,2)='0';
+gt(bIdx & T.A~=T.Ref & T.B~=T.Ref,2)='2';
+gt(aIdx & T.A==T.Ref,2)='0';
+gt(aIdx & T.B==T.Ref,2)='1';
+gt(aIdx & T.A~=T.Ref & T.B~=T.Ref,2)='1';
+copyList=unique([T.N T.M],'rows');
 tumorGT=cell(1,size(T,1));
 T=Tcell{tIdx(1)};
 for i=1:size(copyList,1)
-    idx=T.NumCopies==copyList(i,1) & T.MinAlCopies==copyList(i,2);
+    idx=T.N==copyList(i,1) & T.M==copyList(i,2);
     currSomIdx=strncmp(Filter,'Somatic',7) & T.cnaF==f(tIdx(1),cloneId(:,1))' & idx;
     if copyList(i,1)>1
         tumorGT(P.Hom(:,1)>0.5 & idx)=cellstr(repmat(gt(P.Hom(:,1)>0.5 & idx,1),1,copyList(i,1)));
@@ -178,9 +184,9 @@ for i=1:size(copyList,1)
     else
         tumorGT(idx)={'.'};
     end            
-    tumorGT(P.Het(:,1)>0.5 & T.Acomb==T.Ref & idx)={strjoin(cellstr(num2str([zeros(copyList(i,1)-copyList(i,2),1); ones(copyList(i,2),1)])),'')};
-    tumorGT(P.Het(:,1)>0.5 & T.Bcomb==T.Ref & idx)={strjoin(cellstr(num2str([zeros(copyList(i,2),1); ones(copyList(i,1)-copyList(i,2),1)])),'')};
-    tumorGT(P.Het(:,1)>0.5 & T.Acomb~=T.Ref & T.Bcomb~=T.Ref & idx)={strjoin(cellstr(num2str([ones(copyList(i,1)-copyList(i,2),1); 2*ones(copyList(i,2),1)])),'')};
+    tumorGT(P.Het(:,1)>0.5 & T.A==T.Ref & idx)={strjoin(cellstr(num2str([zeros(copyList(i,1)-copyList(i,2),1); ones(copyList(i,2),1)])),'')};
+    tumorGT(P.Het(:,1)>0.5 & T.B==T.Ref & idx)={strjoin(cellstr(num2str([zeros(copyList(i,2),1); ones(copyList(i,1)-copyList(i,2),1)])),'')};
+    tumorGT(P.Het(:,1)>0.5 & T.A~=T.Ref & T.B~=T.Ref & idx)={strjoin(cellstr(num2str([ones(copyList(i,1)-copyList(i,2),1); 2*ones(copyList(i,2),1)])),'')};
 end
 currSomIdx=strncmp(Filter,'Somatic',7) & T.cnaF~=f(tIdx(1),cloneId(:,1))';
 tumorGT(currSomIdx)=cellstr(sort(gt(currSomIdx,:),2));
@@ -198,7 +204,7 @@ germGT=regexprep(germGT,'\\$','');
 if inputParam.NormalSample>0
     bIdx=Tcell{inputParam.NormalSample}.AcountsComb>=Tcell{inputParam.NormalSample}.BcountsComb;
 else
-    bIdx=T.ApopAFcomb>=T.BpopAFcomb;
+    bIdx=T.ApopAF>=T.BpopAF;
 end
 AF=NaN(height(Tcell{1}),length(Tcell));
 sampleFrac=NaN(height(Tcell{1}),length(Tcell));
@@ -206,9 +212,9 @@ for j=1:length(Tcell)
     T=Tcell{j};
     AF(bIdx,j)=T.BcountsComb(bIdx)./T.ReadDepthPass(bIdx);
     AF(~bIdx,j)=T.AcountsComb(~bIdx)./T.ReadDepthPass(~bIdx);
-    matchIdx=f(j,cloneId(:,j))'==T.cnaF;
-    sfMajor=AF(:,j).*(T.cnaF.*T.NumCopies+2.*(1-T.cnaF))./(T.NumCopies-T.MinAlCopies);
-    sfMinor=AF(:,j).*(T.cnaF.*T.NumCopies+2.*(1-T.cnaF));
+    matchIdx=f(j,cloneId)'==T.cnaF;
+    sfMajor=AF(:,j).*(T.cnaF.*T.N+2.*(1-T.cnaF))./(T.N-T.M);
+    sfMinor=AF(:,j).*(T.cnaF.*T.N+2.*(1-T.cnaF));
     %pairIdx=strncmp(Filter,'SomaticPair',10);
     sampleFrac(matchIdx & alleleId==2,j)=sfMajor(matchIdx & alleleId==2);
     sampleFrac(~matchIdx | alleleId==1,j)=sfMinor(~matchIdx | alleleId==1);
@@ -231,44 +237,46 @@ for i=1:length(Tcell)
        formatStr(:,n)=[tumorGT'; {''}];
     end
     formatStr(:,n)=strcat(formatStr(:,n),':',strsplit(sprintf('%-.0f\n',T.ReadDepthPass))');
-    aIdx=T.RefComb==T.Acomb;
+    aIdx=T.Ref==T.A;
     formatStr([aIdx; true],n)=strcat(formatStr([aIdx; true],n),':',strsplit(sprintf('%-.0f\n',T.AcountsComb(aIdx)))',',',strsplit(sprintf('%-.0f\n',T.BcountsComb(aIdx)))');
-    bIdx=T.RefComb==T.Bcomb;
+    bIdx=T.Ref==T.B;
     formatStr([bIdx; true],n)=strcat(formatStr([bIdx; true],n),':',strsplit(sprintf('%-.0f\n',T.BcountsComb(bIdx)))',',',strsplit(sprintf('%-.0f\n',T.AcountsComb(bIdx)))');
-    formatStr([~aIdx & ~bIdx; true],n)=strcat(formatStr([~aIdx & ~bIdx; true],n),':NA,',strsplit(sprintf('%-.0f\n',T.AcountsComb(~aIdx & ~bIdx)))',',',strsplit(sprintf('%-.0f\n',T.BcountsComb(~aIdx & ~bIdx)))');
+    if(sum(~aIdx & ~bIdx)>0)
+        formatStr([~aIdx & ~bIdx; true],n)=strcat(formatStr([~aIdx & ~bIdx; true],n),':NA,',strsplit(sprintf('%-.0f\n',T.AcountsComb(~aIdx & ~bIdx)))',',',strsplit(sprintf('%-.0f\n',T.BcountsComb(~aIdx & ~bIdx)))');
+    end
     filtStr=repmat({'REJECT'},height(T),1);
     filtStr(P.trust(:,i)>=inputParam.pGoodThresh)={'PASS'};
-    filtStr(P.trust(:,i)<inputParam.pGoodThresh & P.artifact(:,i)<inputParam.pGoodThresh)={'LowQC'};
+    filtStr(P.trust(:,i)<inputParam.pGoodThresh)={'LowQC'};
     if inputParam.NormalSample<1
         filtStr(somaticDetected(:,i)==1)=strcat(filtStr(somaticDetected(:,i)==1),';SomaticDetected');
-        filtStr(P.Somatic(:,i)>0.5 & ~somaticDetected(:,i))=strcat(filtStr(P.Somatic(:,i)>0.5 & ~somaticDetected(:,i)),';SomaticNotDetected');
+        filtStr(P.Somatic>0.5 & ~somaticDetected(:,i))=strcat(filtStr(P.Somatic>0.5 & ~somaticDetected(:,i)),';SomaticNotDetected');
         formatStr(:,n)=strcat(formatStr(:,n),':',[filtStr; {''}],':NA');
     else
         filtStr(somaticDetected(:,i)==1)=strcat(filtStr(somaticDetected(:,i)==1),';SomaticDetected');
-        filtStr(P.Somatic(:,i)>0.5 & ~somaticDetected(:,i))=strcat(filtStr(P.Somatic(:,i)>0.5 & ~somaticDetected(:,i)),';SomaticNotDetected');
+        filtStr(P.Somatic>0.5 & ~somaticDetected(:,i))=strcat(filtStr(P.Somatic>0.5 & ~somaticDetected(:,i)),';SomaticNotDetected');
         formatStr(:,n)=strcat(formatStr(:,n),':',[filtStr; {''}],':',strsplit(sprintf('%-.3f\n',P.SomaticPair(:,i)))');
     end
-    formatStr(:,n)=strcat(formatStr(:,n),':',strsplit(sprintf('%-.0f\n',-10*log10(1-P.trust(:,i))))',':',strsplit(sprintf('%-.0f\n',-10*log10(1-P.artifact(:,i))))',':',strsplit(sprintf('%-.0f\n',P.DataSomatic(:,i)))');
-    formatStr([aIdx; true],n)=strcat(formatStr([aIdx; true],n),':',strsplit(sprintf('%-.0f\n',-10*log10(P.DataHom(aIdx,i))))',',',strsplit(sprintf('%-.0f\n',-10*log10(P.DataHet(aIdx,i))))',',NA');
-    formatStr([bIdx; true],n)=strcat(formatStr([bIdx; true],n),':NA,',strsplit(sprintf('%-.0f\n',-10*log10(P.DataHet(bIdx,i))))',',',strsplit(sprintf('%-.0f\n',-10*log10(P.DataHom(bIdx,i))))');
-    formatStr(~aIdx & ~bIdx,n)=strcat(formatStr(~aIdx & ~bIdx,n),':.');
-    if inputParam.NormalSample>0
-        formatStr(:,n)=strcat(formatStr(:,n),':',strsplit(sprintf('%-.0f\n',-10*log10(P.DataNonDip(:,i))))');
-    else
-        formatStr(:,n)=strcat(formatStr(:,n),':NA');
-    end
+    formatStr(:,n)=strcat(formatStr(:,n),':',strsplit(sprintf('%-.0f\n',-10*log10(1-P.trust(:,i))))');
+    %formatStr([aIdx; true],n)=strcat(formatStr([aIdx; true],n),':',strsplit(sprintf('%-.0f\n',-10*log10(P.DataHom(aIdx,i))))',',',strsplit(sprintf('%-.0f\n',-10*log10(P.DataHet(aIdx,i))))',',NA');
+    %formatStr([bIdx; true],n)=strcat(formatStr([bIdx; true],n),':NA,',strsplit(sprintf('%-.0f\n',-10*log10(P.DataHet(bIdx,i))))',',',strsplit(sprintf('%-.0f\n',-10*log10(P.DataHom(bIdx,i))))');
+    %formatStr(~aIdx & ~bIdx,n)=strcat(formatStr(~aIdx & ~bIdx,n),':.');
+    %if inputParam.NormalSample>0
+    %    formatStr(:,n)=strcat(formatStr(:,n),':',strsplit(sprintf('%-.0f\n',-10*log10(P.DataNonDip(:,i))))');
+    %else
+    %    formatStr(:,n)=strcat(formatStr(:,n),':NA');
+    %end
     if(sum(strncmp(Filter,'Somatic',7))>0)
         formatStr([strncmp(Filter,'Somatic',7); true],n)=strcat(formatStr([strncmp(Filter,'Somatic',7); true],n),':',strsplit(sprintf('%-.3f\n',sampleFrac(strncmp(Filter,'Somatic',7),i)))');
         formatStr(~strncmp(Filter,'Somatic',7),n)=strcat(formatStr(~strncmp(Filter,'Somatic',7),n),':NA');
     end
-    formatStr(T.NumCopies==2 & T.MinAlCopies==1,n)=strcat(formatStr(T.NumCopies==2 & T.MinAlCopies==1,n),':NA');
-    formatStr([T.NumCopies~=2 | T.MinAlCopies~=1; true],n)=strcat(formatStr([T.NumCopies~=2 | T.MinAlCopies~=1; true],n),':',strsplit(sprintf('%-.3f\n',T.cnaF(T.NumCopies~=2 | T.MinAlCopies~=1)))');
+    formatStr(T.N==2 & T.M==1,n)=strcat(formatStr(T.N==2 & T.M==1,n),':NA');
+    formatStr([T.N~=2 | T.M~=1; true],n)=strcat(formatStr([T.N~=2 | T.M~=1; true],n),':',strsplit(sprintf('%-.3f\n',T.cnaF(T.N~=2 | T.M~=1)))');
     n=n+1;
 end
 formatStr=formatStr(1:height(T),:);
 
 
-formatFields=repmat({'GT:DP:AD:FT:PPS:PT:PA:PLS:PL:PLND:VSF:CNF'},size(P,1),1);
+formatFields=repmat({'GT:DP:AD:FT:PPS:PT:VSF:CNF'},size(P,1),1);
 
 sexChr=regexp(inputParam.sexChr,',','split');
 if cellfun('length',(regexp(sexChr,',','split')))==0
