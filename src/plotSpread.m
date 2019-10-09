@@ -107,6 +107,7 @@ def.categoryColors = [];
 def.categoryMarkers = '';
 def.yLabel = '';
 def.spreadWidth = [];
+def.markerSize=6;
 
 %% CHECK INPUT
 
@@ -472,7 +473,7 @@ for iData = 1:nData
                         'marker',plotMarkers{iData,iCategory},...
                         'color',plotColors{iData,iCategory},...
                         'lineStyle','none',...
-                        'DisplayName',plotLabels{iData,iCategory});
+                        'DisplayName',plotLabels{iData,iCategory},'MarkerSize',opt.markerSize);
                 case 'flipped'
                     ph(iData,iCategory) = plot(ah,data(currentIdx,2),...
                         data(currentIdx,1),...
