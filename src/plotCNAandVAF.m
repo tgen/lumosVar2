@@ -176,8 +176,8 @@ for j=1:length(Tcell)
     T=Tcell{j};
     bIdx=T.ApopAFcomb>=T.BpopAFcomb;
     aIdx=T.ApopAFcomb<T.BpopAFcomb;
-    AF(bIdx)=(T.BCountF(bIdx)+T.BCountR(bIdx))./T.ReadDepthPass(bIdx);
-    AF(aIdx)=(T.ACountF(aIdx)+T.ACountR(aIdx))./T.ReadDepthPass(aIdx);
+    AF(bIdx)=(T.BcountsComb(bIdx))./T.ReadDepthPass(bIdx);
+    AF(aIdx)=(T.AcountsComb(aIdx))./T.ReadDepthPass(aIdx);
     for i=1:size(f,2)
         pos=cloneId(:,1)==i & somPos;
         scatter(Tcoord(pos),AF(pos),5,'o','MarkerFaceColor',colors(i,:),'MarkerEdgeColor',colors(i,:));
