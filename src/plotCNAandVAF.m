@@ -44,7 +44,8 @@ else
 end
 
 %%% transform chromosome coord to linear coord
-chrNum=unique(segsTable.Chr);
+chrTable=inputParam.chrTable;
+chrNum=chrTable.chrIdx;
 T=Tcell{1};
 for i=1:length(chrNum)
     chrLen(i)=max(segsTable{segsTable.Chr==chrNum(i),3})+1E7;
@@ -59,12 +60,6 @@ for i=1:length(chrNum)
 end
 
 %%%get chromosomes
-sexChr=regexp(inputParam.sexChr,',','split');
-if cellfun('length',(regexp(sexChr,',','split')))==0
-    chrList=cellstr(num2str(inputParam.autosomes','%-d'));
-else
-    chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
-end
 
 
 %%% calculate log2FC
@@ -118,7 +113,7 @@ for j=1:length(Tcell)
     end
     pos=(segsTable.N==2 & segsTable.M==1);
     plot(segCoord(pos,:)',ones(2,1)*Nlog2R(pos,j)','k','linewidth',3);
-    set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',chrList,'FontSize',6);
+    set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',chrTable.chrName,'FontSize',6);
     axis([0 max(segCoord(:,2)) min(Nlog2R(:))-1 max(Nlog2R(:))+1])
     title(samples{j},'FontSize',10,'Interpreter','none');
 end
@@ -138,7 +133,7 @@ end
 ticks=[0 2.^[0:7]];
 tickpos=log2(ticks+1);
 set(gca,'YTick',tickpos,'YTickLabel',ticks,'tickDir','out');
-set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',chrList,'FontSize',6);
+set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',chrTable.chrName,'FontSize',6);
 axis([0 max(segCoord(:,2)) log2(1) log2(max(segsTable.N)+1)])
 title('Copy Number','FontSize',10);
 
@@ -183,7 +178,7 @@ for j=1:length(Tcell)
         scatter(Tcoord(pos),AF(pos),5,'o','MarkerFaceColor',colors(i,:),'MarkerEdgeColor',colors(i,:));
     end
     axis([0 max(segCoord(:,2)) 0 1]);
-    set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',chrList,'tickDir','out','FontSize',8);
+    set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',chrTable.chrName,'tickDir','out','FontSize',8);
     title('Allele Frequencies','FontSize',10);
 end
 
@@ -216,7 +211,7 @@ for j=1:length(Tcell)
      end
     pos=(segsTable.N==2 & segsTable.M==1);
     plot(segCoord(pos,:)',ones(2,1)*cnCorr(pos,j)','k','linewidth',2);
-    set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',chrList,'FontSize',6);
+    set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',chrTable.chrName,'FontSize',6);
     axis([0 max(segCoord(:,2)) 0 1])
     title(samples{j},'FontSize',10,'Interpreter','none');
 end
@@ -230,7 +225,7 @@ for i=1:size(f,2)
 end
 pos=(segsTable.N==2 & segsTable.M==1);
 plot(segCoord(pos,:)',ones(2,1)*(segsTable.M(pos)'./segsTable.N(pos)'),'k','linewidth',2);
-set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',chrList,'FontSize',6);
+set(gca,'XTick',(chrOffset'+chrLen./2)/1E6,'XTickLabel',chrTable.chrName,'FontSize',6);
 axis([0 max(segCoord(:,2)) 0 0.5])
 title('M/N','FontSize',10);
 

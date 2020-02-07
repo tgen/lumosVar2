@@ -44,7 +44,7 @@ inputFields=fieldnames(inputParam);
 for i=1:length(inputFields)
     if(isnumeric(inputParam.(inputFields{i})))
         fprintf(fout,['##INPUT=<' inputFields{i} '=' mat2str(inputParam.(inputFields{i})') '>\n']);
-    else
+    elseif ~(istable(inputParam.(inputFields{i})))
         fprintf(fout,['##INPUT=<' inputFields{i} '=' inputParam.(inputFields{i}) '>\n']);
     end
 end
@@ -119,17 +119,10 @@ formatFields=repmat({'CNF:LOG2FC:MEANBAF'},size(segsTableCond,1),1);
 
 %%% write output vcf
 
-sexChr=regexp(inputParam.sexChr,',','split');
-if max(cellfun('length',(regexp(sexChr,',','split'))))==0
-    chrList=cellstr(num2str(inputParam.autosomes','%-d'));
-else
-    chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
-end
+chrTable=inputParam.chrTable;
+[~,locb]=ismember(segsTableCond.Chr,chrTable.chrIdx);
 
-chrNum=unique(segsTableCond.Chr);
-[lia,locb]=ismember(segsTableCond.Chr,chrNum);
-
-outData=[chrList(locb) num2cell(segsTableCond.StartPos) num2cell(segsTableCond.EndPos) cellstr(char(ones(size(segsTableCond,1),1)*78)) strcat('<',regexprep(type,'DUPLOH','DUP'),'>') num2cell(abs(mean(segsTableCond.log2FC,2))) cellstr(char(ones(size(segsTableCond,1),1)*46)) Info formatFields formatStr];
+outData=[chrTable.chrName(locb) num2cell(segsTableCond.StartPos) num2cell(segsTableCond.EndPos) cellstr(char(ones(size(segsTableCond,1),1)*78)) strcat('<',regexprep(type,'DUPLOH','DUP'),'>') num2cell(abs(mean(segsTableCond.log2FC,2))) cellstr(char(ones(size(segsTableCond,1),1)*46)) Info formatFields formatStr];
 headers={'#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILT', 'INFO', 'FORMAT'};
 headers=[headers regexp(inputParam.sampleNames,',','split')];
 for i=1:length(headers)

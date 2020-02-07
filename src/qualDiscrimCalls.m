@@ -185,8 +185,12 @@ if(sum(homPos)>0)
 	sampleSNV=F{~indelPos & homPos,:};
 	trainingSNV=[F{sum(goodPos,2)==16 & ~indelPos & homPos,:}; F{sum(badPos,2)>0 & ~indelPos & homPos,:}];
 	groupSNV=[ones(sum(sum(goodPos,2)==16 & ~indelPos & homPos),1); zeros(sum(sum(badPos,2)>0 & ~indelPos & homPos),1)];
-	discrSNV=fitcdiscr(trainingSNV,groupSNV,'DiscrimType', 'pseudoQuadratic');
-	[~,pTrust(~indelPos & homPos,:)] = predict(discrSNV,sampleSNV);
+	if sum(groupSNV==1)>1 && sum(groupSNV==0)>1
+		discrSNV=fitcdiscr(trainingSNV,groupSNV,'DiscrimType', 'pseudoQuadratic');
+		[~,pTrust(~indelPos & homPos,:)] = predict(discrSNV,sampleSNV);
+	else
+		pTrust(~indelPos & homPos,:)=NaN;
+	end	
 end
 
 %%%classify indels as variants vs artifacts

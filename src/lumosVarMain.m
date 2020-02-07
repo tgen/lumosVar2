@@ -32,6 +32,8 @@ function output=lumosVarMain(paramFile,numCPU)
 %------------- BEGIN CODE --------------
 
 inputParam=readInputs(paramFile);
+chrTable=chr2idx(inputParam);
+inputParam.chrTable=chrTable;
 cd(inputParam.workingDirectory);
 
 %%%% Initial parallel pool
@@ -63,6 +65,7 @@ if(exist([inputParam.outMat],'file'))
     if length(priorF)==length(Tcell)
         inputParam.priorF=priorF;
     end
+    inputParam.chrTable=chrTable;
 else
     [T, E]=readBams(inputParam,paramFile);   
     fid=fopen(inputParam.bamList);
@@ -79,18 +82,10 @@ else
     save([inputParam.outMat],'-v7.3');
 end
 
-
-%%%% get chromosomes to examine
-sexChr=regexp(inputParam.sexChr,',','split');
-if cellfun('length',(regexp('',',','split')))==0
-    chrList=cellstr(num2str(inputParam.autosomes','%-d'));
-else
-    chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
-end
 %%%% find positions within bed file that have a population allele frequency
 %%%% greater than maxSomPopFreq
-parfor i=1:length(chrList)
-    cmd=strcat({'bcftools view -q '},num2str(inputParam.maxSomPopFreq),{' -R '},inputParam.regionsFile,{' '},inputParam.snpVCFpath,chrList(i),inputParam.snpVCFname,' | grep -v ^# | awk ''{ print $2 "\n" }''')
+parfor i=1:height(chrTable)
+    cmd=strcat({'bcftools view -q '},num2str(inputParam.maxSomPopFreq),{' -R '},inputParam.regionsFile,{' '},inputParam.snpVCFpath,chrTable.chrName{i},inputParam.snpVCFname,' | grep -v ^# | awk ''{ print $2 "\n" }''')
     [~,output]=system(cmd{1});
     tmp=strsplit(output,'\n');
     dbPosList{i}=[i*ones(length(tmp)-1,1) str2double(tmp(1:end-1)')]; 

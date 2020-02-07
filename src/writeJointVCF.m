@@ -53,7 +53,7 @@ inputFields=fieldnames(inputParam);
 for i=1:length(inputFields)
     if(isnumeric(inputParam.(inputFields{i})))
         fprintf(fout,['##INPUT=<' inputFields{i} '=' mat2str(inputParam.(inputFields{i})') '>\n']);
-    else
+    elseif ~(istable(inputParam.(inputFields{i})))
         fprintf(fout,['##INPUT=<' inputFields{i} '=' inputParam.(inputFields{i}) '>\n']);
     end
 end
@@ -270,17 +270,10 @@ formatStr=formatStr(1:height(T),:);
 
 formatFields=repmat({'GT:DP:AD:FT:PPS:PT:PA:PLS:PL:PLND:VSF:CNF'},size(P,1),1);
 
-sexChr=regexp(inputParam.sexChr,',','split');
-if cellfun('length',(regexp(sexChr,',','split')))==0
-    chrList=cellstr(num2str(inputParam.autosomes','%-d'));
-else
-    chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
-end
-
-chrNum=unique(T.Chr);
-[lia,locb]=ismember(T.Chr,chrNum);
+chrTable=inputParam.chrTable;
+[~,locb]=ismember(T.Chr,chrTable.chrIdx);
 %%% print output
-outData=[chrList(locb) num2cell(T.Pos) cellstr(char(ones(size(T.Pos))*46)) cellstr(RefNT) squeeze(AltNT) num2cell(Qual) Filter Info formatFields formatStr];
+outData=[chrTable.chrName(locb) num2cell(T.Pos) cellstr(char(ones(size(T.Pos))*46)) cellstr(RefNT) squeeze(AltNT) num2cell(Qual) Filter Info formatFields formatStr];
 headers={'#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT'};
 if inputParam.NormalSample<1
     headers=[headers 'InferredGermline' regexp(inputParam.sampleNames,',','split')];
