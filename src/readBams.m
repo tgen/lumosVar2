@@ -1,4 +1,5 @@
 function [T, E]=readBams(inputParam,paramFile)
+
 %preprocessTumorOnly - creates data structures for tumor only calling
 %calls parsePileupData.packed.pl to parse samtools output
 %

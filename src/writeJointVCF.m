@@ -139,7 +139,9 @@ Info=strcat(Info,';CloneId=',strsplit(sprintf('%d\n',cloneId(:,1)))');
 Info([delPos; true])=strcat(Info([delPos; true]),';END=',strsplit(sprintf('%d\n',endPos(delPos)))');
 Info([insPos; true])=strcat(Info([insPos; true]),';SVLEN=',strsplit(sprintf('%d\n',svLen(insPos)))');
 cnPos=T.NumCopies~=2 | T.MinAlCopies~=1;
-Info([cnPos; true])=strcat(Info([cnPos; true]),';CN=',strsplit(sprintf('%d\n',T.NumCopies(cnPos)))',';MACN=',strsplit(sprintf('%d\n',T.MinAlCopies(cnPos)))');
+if sum(cnPos)>0
+	Info([cnPos; true])=strcat(Info([cnPos; true]),';CN=',strsplit(sprintf('%d\n',T.NumCopies(cnPos)))',';MACN=',strsplit(sprintf('%d\n',T.MinAlCopies(cnPos)))');
+end
 Info=Info(1:height(T));
 
 %%%determine genotypes
@@ -262,7 +264,9 @@ for i=1:length(Tcell)
         formatStr(~strncmp(Filter,'Somatic',7),n)=strcat(formatStr(~strncmp(Filter,'Somatic',7),n),':NA');
     end
     formatStr(T.NumCopies==2 & T.MinAlCopies==1,n)=strcat(formatStr(T.NumCopies==2 & T.MinAlCopies==1,n),':NA');
-    formatStr([T.NumCopies~=2 | T.MinAlCopies~=1; true],n)=strcat(formatStr([T.NumCopies~=2 | T.MinAlCopies~=1; true],n),':',strsplit(sprintf('%-.3f\n',T.cnaF(T.NumCopies~=2 | T.MinAlCopies~=1)))');
+    if sum(T.NumCopies~=2 | T.MinAlCopies~=1)>0
+    	formatStr([T.NumCopies~=2 | T.MinAlCopies~=1; true],n)=strcat(formatStr([T.NumCopies~=2 | T.MinAlCopies~=1; true],n),':',strsplit(sprintf('%-.3f\n',T.cnaF(T.NumCopies~=2 | T.MinAlCopies~=1)))');
+    end
     n=n+1;
 end
 formatStr=formatStr(1:height(T),:);
