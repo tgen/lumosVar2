@@ -349,6 +349,7 @@ end
 
 %%%write output files
 sampleFrac=writeJointVCF(Tcell,P,fSort,cloneIdSort,alleleId,Filter,somaticDetected,trustScore,artifactScore,inputParam);
+writeSomTable(Tcell,somPos,cloneIdSort,sampleFrac,somaticDetected,inputParam.outName)
 segsTableCond=writeSegVCF(segsTable,exonRD,CNAscale,Tcell,hetPos,inputParam);
 save([inputParam.outMat],'-v7.3');
 writeCloneSummary(segsTable,exonRD,Tcell,fSort,cloneIdSort,inputParam,Filter,somaticDetected,sampleFrac);
