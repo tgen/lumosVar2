@@ -45,18 +45,23 @@ tIdx=setdiff(1:length(Tcell),inputParam.NormalSample);
 f(tIdx,1:end)=reshape(fIn,[],inputParam.numClones);
 
 fout=fopen([inputParam.outName '.lumosVarSNV.vcf'],'w');
+fparam=fopen([inputParam.outName '.lumosVarParam.txt'],'w');
 
 %%%print VCF header
 fprintf(fout,'##fileformat=VCFv4.2\n');
 fprintf(fout,['##fileData=' datestr(clock) '\n']);
+for i=1:height(inputParam.chrTable)
+    fprintf(fout,['##contig=<ID=' inputParam.chrTable.chrName{i} '>\n'])
+end
 inputFields=fieldnames(inputParam);
 for i=1:length(inputFields)
     if(isnumeric(inputParam.(inputFields{i})))
-        fprintf(fout,['##INPUT=<' inputFields{i} '=' mat2str(inputParam.(inputFields{i})') '>\n']);
+        fprintf(fparam,[inputFields{i} ': ' mat2str(inputParam.(inputFields{i})') '>\n']);
     elseif ~(istable(inputParam.(inputFields{i})))
-        fprintf(fout,['##INPUT=<' inputFields{i} '=' inputParam.(inputFields{i}) '>\n']);
+        fprintf(fparam,[inputFields{i} ': ' inputParam.(inputFields{i}) '>\n']);
     end
 end
+fclose(fparam);
 for i=1:size(f,2)
     outString=['##CloneID=' num2str(i)];
     for j=1:size(f,1)
@@ -70,6 +75,7 @@ fprintf(fout,['##INFO=<ID=B,Number=1,Type=String,Description="Minor Allele Base"
 fprintf(fout,['##INFO=<ID=JPT,Number=1,Type=Float,Description="Phred Scaled Joint Posterior Probability the Call can be Trusted">\n']);
 fprintf(fout,['##INFO=<ID=JPA,Number=1,Type=Float,Description="Phred Scaled Joint Posterior Probability the Position is an Artifact">\n']);
 fprintf(fout,['##INFO=<ID=JPS,Number=1,Type=Float,Description="Joint Posterior Probability of Somatic Mutation">\n']);
+fprintf(fout,['##INFO=<ID=JPND,Number=1,Type=Float,Description="Joint Posterior Probability of non-diploid germline variant">\n']);
 fprintf(fout,['##INFO=<ID=JPGAB,Number=1,Type=Float,Description="Joint Posterior Probability of No Somatic Mutation and Position is Germline AB">\n']);
 fprintf(fout,['##INFO=<ID=JPGAA,Number=1,Type=Float,Description="Joint Posterior Probability of No Somatic Mutation and Position is Germline AA">\n']);
 fprintf(fout,['##INFO=<ID=JPGND,Number=1,Type=Float,Description="Joint Posterior Probability of Variant Present in Germline Not Following Diploid Model">\n']);
@@ -79,7 +85,10 @@ fprintf(fout,['##INFO=<ID=CosmicCount,Number=1,Type=Float,Description="Count of 
 fprintf(fout,['##INFO=<ID=CloneId,Number=1,Type=Integer,Description="CloneId">\n']);
 fprintf(fout,['##INFO=<ID=CN,Number=1,Type=Integer,Description="Copy Number">\n']);
 fprintf(fout,['##INFO=<ID=MACN,Number=1,Type=Integer,Description="Min Allele Copy Number">\n']);
+fprintf(fout,['##INFO=<ID=SVLEN,Number=.,Type=Integer,Description="Difference in length between REF and ALT alleles">\n']);
+fprintf(fout,['##INFO=<ID=END,Number=.,Type=Integer,Description="end position of the variant described in this record">\n']);
 fprintf(fout,['##FILTER=<ID=SomaticPASS,Description="JPS>pSomaticThresh and pass filters">\n']);
+fprintf(fout,['##FILTER=<ID=SomaticDBsnp,Description="JPS>pSomaticThresh and pass filters and population AF>maxSomPopFreq">\n']);
 fprintf(fout,['##FILTER=<ID=SomaticLowQC,Description="JPS>0.5 and artifact filters">\n']);
 fprintf(fout,['##FILTER=<ID=SomaticPairPASS,Description="PPS>pSomaticThresh and JPS<0.5 pass filters">\n']);
 fprintf(fout,['##FILTER=<ID=SomaticPairLowQC,Description="PPS>0.5 and JPS<0.5 and artifact filters">\n']);
@@ -187,14 +196,14 @@ end
 currSomIdx=strncmp(Filter,'Somatic',7) & T.cnaF~=f(tIdx(1),cloneId(:,1))';
 tumorGT(currSomIdx)=cellstr(sort(gt(currSomIdx,:),2));
 tumorGT(cellfun('isempty',tumorGT))={'.'};
-tumorGT=regexprep(tumorGT,'([0-9])','$1\');
-tumorGT=regexprep(tumorGT,'\\$','');
+tumorGT=regexprep(tumorGT,'([0-9])','$1/');
+tumorGT=regexprep(tumorGT,'\/$','');
 germGT=cell(1,size(T,1));
 germGT(P.Hom(:,1)>0.5 | P.Somatic(:,1)>0.5)=cellstr(repmat(gt(P.Hom(:,1)>0.5 | P.Somatic(:,1)>0.5,1),1,2));
 germGT(P.Het(:,1)>0.5)=cellstr(sort(gt(P.Het(:,1)>0.5,:),2));
 germGT(cellfun('isempty',germGT))={'.'};
-germGT=regexprep(germGT,'([0-9])','$1\');
-germGT=regexprep(germGT,'\\$','');
+germGT=regexprep(germGT,'([0-9])','$1/');
+germGT=regexprep(germGT,'\/$','');
 
 %%%calculate sample fractions
 if inputParam.NormalSample>0
@@ -237,33 +246,33 @@ for i=1:length(Tcell)
     formatStr([aIdx; true],n)=strcat(formatStr([aIdx; true],n),':',strsplit(sprintf('%-.0f\n',T.AcountsComb(aIdx)))',',',strsplit(sprintf('%-.0f\n',T.BcountsComb(aIdx)))');
     bIdx=T.RefComb==T.Bcomb;
     formatStr([bIdx; true],n)=strcat(formatStr([bIdx; true],n),':',strsplit(sprintf('%-.0f\n',T.BcountsComb(bIdx)))',',',strsplit(sprintf('%-.0f\n',T.AcountsComb(bIdx)))');
-    formatStr([~aIdx & ~bIdx; true],n)=strcat(formatStr([~aIdx & ~bIdx; true],n),':NA,',strsplit(sprintf('%-.0f\n',T.AcountsComb(~aIdx & ~bIdx)))',',',strsplit(sprintf('%-.0f\n',T.BcountsComb(~aIdx & ~bIdx)))');
+    formatStr([~aIdx & ~bIdx; true],n)=strcat(formatStr([~aIdx & ~bIdx; true],n),':.,',strsplit(sprintf('%-.0f\n',T.AcountsComb(~aIdx & ~bIdx)))',',',strsplit(sprintf('%-.0f\n',T.BcountsComb(~aIdx & ~bIdx)))');
     filtStr=repmat({'REJECT'},height(T),1);
     filtStr(P.trust(:,i)>=inputParam.pGoodThresh)={'PASS'};
     filtStr(P.trust(:,i)<inputParam.pGoodThresh & P.artifact(:,i)<inputParam.pGoodThresh)={'LowQC'};
     if inputParam.NormalSample<1
         filtStr(somaticDetected(:,i)==1)=strcat(filtStr(somaticDetected(:,i)==1),';SomaticDetected');
         filtStr(P.Somatic(:,i)>0.5 & ~somaticDetected(:,i))=strcat(filtStr(P.Somatic(:,i)>0.5 & ~somaticDetected(:,i)),';SomaticNotDetected');
-        formatStr(:,n)=strcat(formatStr(:,n),':',[filtStr; {''}],':NA');
+        formatStr(:,n)=strcat(formatStr(:,n),':',[filtStr; {''}],':.');
     else
         filtStr(somaticDetected(:,i)==1)=strcat(filtStr(somaticDetected(:,i)==1),';SomaticDetected');
         filtStr(P.Somatic(:,i)>0.5 & ~somaticDetected(:,i))=strcat(filtStr(P.Somatic(:,i)>0.5 & ~somaticDetected(:,i)),';SomaticNotDetected');
         formatStr(:,n)=strcat(formatStr(:,n),':',[filtStr; {''}],':',strsplit(sprintf('%-.3f\n',P.SomaticPair(:,i)))');
     end
     formatStr(:,n)=strcat(formatStr(:,n),':',strsplit(sprintf('%-.0f\n',-10*log10(1-P.trust(:,i))))',':',strsplit(sprintf('%-.0f\n',-10*log10(1-P.artifact(:,i))))',':',strsplit(sprintf('%-.0f\n',P.DataSomatic(:,i)))');
-    formatStr([aIdx; true],n)=strcat(formatStr([aIdx; true],n),':',strsplit(sprintf('%-.0f\n',-10*log10(P.DataHom(aIdx,i))))',',',strsplit(sprintf('%-.0f\n',-10*log10(P.DataHet(aIdx,i))))',',NA');
-    formatStr([bIdx; true],n)=strcat(formatStr([bIdx; true],n),':NA,',strsplit(sprintf('%-.0f\n',-10*log10(P.DataHet(bIdx,i))))',',',strsplit(sprintf('%-.0f\n',-10*log10(P.DataHom(bIdx,i))))');
+    formatStr([aIdx; true],n)=strcat(formatStr([aIdx; true],n),':',strsplit(sprintf('%-.0f\n',-10*log10(P.DataHom(aIdx,i))))',',',strsplit(sprintf('%-.0f\n',-10*log10(P.DataHet(aIdx,i))))',',.');
+    formatStr([bIdx; true],n)=strcat(formatStr([bIdx; true],n),':.,',strsplit(sprintf('%-.0f\n',-10*log10(P.DataHet(bIdx,i))))',',',strsplit(sprintf('%-.0f\n',-10*log10(P.DataHom(bIdx,i))))');
     formatStr(~aIdx & ~bIdx,n)=strcat(formatStr(~aIdx & ~bIdx,n),':.');
     if inputParam.NormalSample>0
         formatStr(:,n)=strcat(formatStr(:,n),':',strsplit(sprintf('%-.0f\n',-10*log10(P.DataNonDip(:,i))))');
     else
-        formatStr(:,n)=strcat(formatStr(:,n),':NA');
+        formatStr(:,n)=strcat(formatStr(:,n),':.');
     end
     if(sum(strncmp(Filter,'Somatic',7))>0)
         formatStr([strncmp(Filter,'Somatic',7); true],n)=strcat(formatStr([strncmp(Filter,'Somatic',7); true],n),':',strsplit(sprintf('%-.3f\n',sampleFrac(strncmp(Filter,'Somatic',7),i)))');
-        formatStr(~strncmp(Filter,'Somatic',7),n)=strcat(formatStr(~strncmp(Filter,'Somatic',7),n),':NA');
+        formatStr(~strncmp(Filter,'Somatic',7),n)=strcat(formatStr(~strncmp(Filter,'Somatic',7),n),':.');
     end
-    formatStr(T.NumCopies==2 & T.MinAlCopies==1,n)=strcat(formatStr(T.NumCopies==2 & T.MinAlCopies==1,n),':NA');
+    formatStr(T.NumCopies==2 & T.MinAlCopies==1,n)=strcat(formatStr(T.NumCopies==2 & T.MinAlCopies==1,n),':.');
     if sum(T.NumCopies~=2 | T.MinAlCopies~=1)>0
     	formatStr([T.NumCopies~=2 | T.MinAlCopies~=1; true],n)=strcat(formatStr([T.NumCopies~=2 | T.MinAlCopies~=1; true],n),':',strsplit(sprintf('%-.3f\n',T.cnaF(T.NumCopies~=2 | T.MinAlCopies~=1)))');
     end
@@ -284,9 +293,10 @@ if inputParam.NormalSample<1
 else
     headers=[headers regexp(inputParam.sampleNames,',','split')];
 end
-for i=1:length(headers)
+for i=1:length(headers)-1
     fprintf(fout,'%s\t',headers{i});
 end
+fprintf(fout,'%s',headers{i+1});
 
 for i=1:size(outData,1)
     fprintf(fout,strcat('\n%s\t%d\t%s\t%s\t%s\t%f\t%s\t%s\t%s',repmat('\t%s',1,n)),outData{i,:});
