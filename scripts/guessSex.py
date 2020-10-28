@@ -1,5 +1,6 @@
 import sys, yaml
 import os, subprocess
+import shlex
 
 def die(msg):
   sys.stderr.write("%s: " % sys.argv[0])
@@ -7,26 +8,27 @@ def die(msg):
   sys.stderr.write("\n")
   exit(1)
 
-def chr_lists(autosomes, sexs):
+def chr_lists(autosomes, sexs, prefix):
   a_start, a_end = map(int, autosomes.split(":"))
 
-  sex_list = sexs.split(",")
+  sex_list = list(map(lambda x: prefix + x, sexs.split(",")))
 
-  autosomes_list = list(range(a_start, a_end + 1))
+  autosomes_list = list(map(lambda x: prefix + str(x), range(a_start, a_end + 1)))
 
-  return list(map(str, autosomes_list)), sex_list
+  return autosomes_list, sex_list
 
 def pipe_commands(command_list):
   print("process " + str(0) + " is: " +  command_list[0])
-  print(command_list[0].split())
-  plist = [subprocess.Popen(command_list[0].split(),stdout=subprocess.PIPE)]
+  command=shlex.split(command_list[0])
+  print(command)
+  plist = [subprocess.Popen(command,stdout=subprocess.PIPE)]
   #print("first process is " + str(plist[0].pid))
   for i in range(1,len(command_list)):
     print("process " + str(i) + " is: " +  command_list[i])
-    print(command_list[i].split())
+    command=shlex.split(command_list[i])
     #print("input is :")
     #print(plist[i-1].stdout)
-    plist.append(subprocess.Popen(command_list[i].split(), stdin=plist[i-1].stdout,stdout=subprocess.PIPE))
+    plist.append(subprocess.Popen(command, stdin=plist[i-1].stdout,stdout=subprocess.PIPE))
     #print("prev process is " + str(plist[i-1].pid))
     #print("curr process is " + str(plist[i].pid))
     #plist[i-1].stdout.close()
@@ -61,13 +63,15 @@ if __name__ == "__main__":
   cfile=sys.argv[1]
   with open(cfile) as f:
     config = yaml.load(f)
-
-  autosomes, sexs = chr_lists(config["autosomes"], config["sexChr"])
+  try:
+    autosomes, sexs = chr_lists(config["autosomes"], config["sexChr"], config['contigPrefix'])
+  except:
+    autosomes, sexs = chr_lists(config["autosomes"], config["sexChr"],'')
   chrs = autosomes + sexs
 
   mlist = list(map(int, config["M"].split(",")))
   flist = list(map(int, config["F"].split(",")))
-  
+
   #print(flist)
   try:
     index = flist.index(2)
@@ -78,16 +82,16 @@ if __name__ == "__main__":
       diploid = "M"
     except ValueError:
       die("diploid sex chr not found")
-  
+
   testChrs=[autosomes[-1],sexs[index]]
   plist=[]
   for chrom in testChrs:
     print("finding common var pos for " + chrom)
-    command_list=["bcftools view -q 0.2:nonmajor -v snps -R " + config["regionsFile"] + " " + config["snpVCFpath"] + chrom + config["snpVCFname"]]
+    command_list=["bcftools view -i \'INFO/AF[0] > 0.2\' -v snps -R " + config["regionsFile"] + " " + config["snpVCFpath"] + chrom + config["snpVCFname"]]
     command_list.append("grep -v ^#")
     p=pipe_commands(command_list)
     plist.append(p)
-    bedfile = open("commonVar.chr" + chrom + ".bed","w")
+    bedfile = open("commonVar." + chrom + ".bed","w")
     while True:
       line = p[-1].stdout.readline().decode("utf8")
       if line != '':
@@ -96,15 +100,15 @@ if __name__ == "__main__":
       else:
         break
     bedfile.close()
-  
-  #print(plist) 
+
+  #print(plist)
   for i in range(0,len(plist)):
     check_plist(plist[i],testChrs[i])
-  
+
   plist=[]
   stats=[]
   for chrom in testChrs:
-    command_list=["bcftools mpileup -Ou -b " + config["bamList"] +  " -B -f " + config["refGenome"] + " -R commonVar.chr" + chrom  + ".bed -I -Ou"]
+    command_list=["bcftools mpileup -Ou -b " + config["bamList"] +  " -B -f " + config["refGenome"] + " -R commonVar." + chrom  + ".bed -I -Ou"]
     command_list.append("bcftools call -Ou -m")
     command_list.append("bcftools stats -s -")
     command_list.append("grep ^PSC")
@@ -112,13 +116,13 @@ if __name__ == "__main__":
     p=pipe_commands(command_list)
     plist.append(p)
     stats.append(p[-1].stdout)
-  
+
   for i in range(0,len(plist)):
     check_plist(plist[i],testChrs[i])
     #print(stats[i].readline().decode("utf8"))
   out=open(config["bamList"] + ".guessSex.txt","w")
   header=["sample",testChrs[0] + "-nHomRef",testChrs[0] + "-nHomAlt",testChrs[0] + "-nHet",testChrs[0]+"-none"]
-  header.extend([testChrs[1] + "-nHomRef",testChrs[1] + "-nHomAlt",testChrs[1] + "-nHet",testChrs[1]+"-none"]) 
+  header.extend([testChrs[1] + "-nHomRef",testChrs[1] + "-nHomAlt",testChrs[1] + "-nHet",testChrs[1]+"-none"])
   header.extend([testChrs[0] + "-Het/Hom",testChrs[1] + "-Het/Hom","sex"])
   out.write("\t".join(header) + "\n")
   sex_list=[]
@@ -148,7 +152,7 @@ if __name__ == "__main__":
     out.write("\t".join(dataA) + "\t" + "\t".join(dataS[1:len(dataA)]) + "\t" + str(hetA) + "\t" + str(hetS) + "\t" + sex + "\n")
     sex_list.append(sex)
   out.write("\nsexList: " + ','.join(sex_list) + "\n")
-  out.close()  
+  out.close()
 
 #module load samtools/1.7
 #PATH=$PATH:/home/rhalperin/bin/samtools-1.5/bin/
@@ -158,6 +162,3 @@ if __name__ == "__main__":
 
 #bcftools view -q 0.2:nonmajor -v snps -R $BED ${VCFPATH}${TCHR}${VCFEXT} | grep -v ^# | awk '{ print $1 "\t" ($2-1) "\t" $2}' >commonVar.chr${TCHR}.bed
 #bcftools mpileup -Ou -b $BAMLIST -B -f $REF -R commonVar.chr${TCHR}.bed -I -Ou | bcftools call -Ou -m | bcftools stats -i '%QUAL>20' -s - |  grep -B 1 ^PSC | cut -f3,4,5,6,14 >${BAMLIST}.callCounts.chr${TCHR}.txt &
-
-
-

@@ -32,12 +32,15 @@ function chrTable=chr2idx(inputParam)
 %profile('-memory','on');
 %profile on;
 
-sexChr=regexprep(inputParam.sexChr,'''','')
-sexChr=regexp(sexChr,',','split')
+sexChr=regexprep(inputParam.sexChr,'''','');
+sexChr=regexp(sexChr,',','split');
 if max(cellfun('length',sexChr))==0
     chrList=cellstr(num2str(inputParam.autosomes','%-d'))
 else
     chrList=[cellstr(num2str(inputParam.autosomes','%-d')); sexChr'];
+end
+if isfield(inputParam,'contigPrefix')
+    chrList=strcat(inputParam.contigPrefix,chrList)
 end
 
 [~,out]=system(['samtools view -H `head -n1 ' inputParam.bamList ' ` | grep ^@SQ']);

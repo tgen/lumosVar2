@@ -7,15 +7,14 @@ def die(msg):
   sys.stderr.write("\n")
   exit(1)
 
-def chr_lists(autosomes, sexs):
+def chr_lists(autosomes, sexs, prefix):
   a_start, a_end = map(int, autosomes.split(":"))
 
-  sex_list = sexs.split(",")
+  sex_list = list(map(lambda x: prefix + x, sexs.split(",")))
 
-  autosomes_list = list(range(a_start, a_end + 1))
+  autosomes_list = list(map(lambda x: prefix + str(x), range(a_start, a_end + 1)))
 
-  return list(map(str, autosomes_list)), sex_list
-  
+  return autosomes_list, sex_list
 
 if __name__ == "__main__":
   if len(sys.argv) < 2:
@@ -28,9 +27,12 @@ if __name__ == "__main__":
   with open(cfile) as f:
     config = yaml.load(f)
 
-  chro = sys.argv[2]
-
-  autosomes, sexs = chr_lists(config["autosomes"], config["sexChr"])
+  try:
+    chro = config['contigPrefix'] + sys.argv[2]
+    autosomes, sexs = chr_lists(config["autosomes"], config["sexChr"], config['contigPrefix'])
+  except:
+    chro = sys.argv[2]
+    autosomes, sexs = chr_lists(config["autosomes"], config["sexChr"],'')
   chrs = autosomes + sexs
 
   sexlist = config["sexList"].split(",")
@@ -50,7 +52,7 @@ if __name__ == "__main__":
     ploidyStr=''.join(ploidy)
   except ValueError:
     ploidyStr=('2' * nsample)
-  
+
   command=config["gvmPath"] + "/gvm -c " + cfile + " -C " + chro + " -P -E -N --ploidystr=" + ploidyStr
   print("Running:\n" + command)
   process = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
@@ -58,7 +60,7 @@ if __name__ == "__main__":
   print(stdout)
   if not process.returncode == 0:
     die("gvm failed:\n" + stderr)
-  
+
   command1="sort -n -k2 " + config["outfile"] + chro + ".txt"
   command2="bgzip -c >" + config["outfile"] + chro + ".txt.gz"
   print("Running:\n" + command1 + " | " + command2)
@@ -74,13 +76,13 @@ if __name__ == "__main__":
   p2.wait()
   if not p2.returncode == 0:
     print(p2.stderr)
-    die("bgzip failed")  
-  
+    die("bgzip failed")
+
   command="tabix -b 2 -e 2 " + config["outfile"] + chro +  ".txt.gz"
   print("Running:\n" + command)
   process = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
   stdout, stderr = process.communicate()
   print(stdout)
   if not process.returncode == 0:
-    print(stderr) 
+    print(stderr)
     die("tabix failed")
