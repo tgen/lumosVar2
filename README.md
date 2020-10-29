@@ -11,7 +11,7 @@ Joint analysis of matched tumor samples with varying tumor contents improves som
 ### Dependencies
 - bcftools and htslib (tested with 1.2-1.8)
 http://www.htslib.org/download/
-- Matlab Runtime (MCR 9.0)
+- Matlab Runtime (MCR 9.4) (or MCR 9.0 for releases 1.0-1.03)
 http://www.mathworks.com/products/compiler/mcr/
 - pyyaml and libYAML
 https://pyyaml.org/wiki/PyYAMLDocumentation
@@ -111,6 +111,8 @@ To run lumosVar
 ## LumosVar Output
 - .lumosVarSNV.vcf - somatic and germline SNV/indel calls
 - .lumosVarSeg.vcf - copy number calls by segment
+- .somaticPass.txt - table of somatic variant calls
+- .lumosVarParam.txt - parameters used in the lumosVar run
 - .exonData.tsv - copy number calls by regions in bed file
 - .cloneSummary.tsv - summary of clonal variant groups
 - .cloneSummary.pdf - graphical summary of clonal variant groups
