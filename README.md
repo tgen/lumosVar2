@@ -11,7 +11,7 @@ Joint analysis of matched tumor samples with varying tumor contents improves som
 ### Dependencies
 - bcftools and htslib (tested with 1.2-1.8)
 http://www.htslib.org/download/
-- Matlab Runtime (MCR 9.4) (or MCR 9.0 for releases 1.0-1.03)
+- Matlab Runtime MCR 9.4 (or MCR 9.0 for releases 1.0-1.03)
 http://www.mathworks.com/products/compiler/mcr/
 - pyyaml and libYAML
 https://pyyaml.org/wiki/PyYAMLDocumentation
